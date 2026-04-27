@@ -480,6 +480,80 @@ def test_medium_gap_can_use_spot_object_filler(tmp_path):
     assert chosen.id == "spot"
 
 
+def test_large_gap_rejects_small_spot_art(tmp_path):
+    catalog = FillerCatalog(
+        enabled=True,
+        slots={
+            "class-end": FillerSlot(
+                name="class-end",
+                min_space_in=1.2,
+                max_space_in=8.5,
+                shapes=["spot", "bottom-band"],
+            )
+        },
+        assets=[
+            FillerAsset(
+                "spot",
+                tmp_path / "filler-spot-class-helmet.png",
+                "spot",
+                1.35,
+            )
+        ],
+    )
+
+    chosen, reason = _select_filler_with_reason(
+        catalog,
+        FillerMeasurement(
+            slot_id="slot-class",
+            slot_name="class-end",
+            chapter_slug="shepherd",
+            page_number=10,
+            available_in=4.0,
+        ),
+        recipe_title="Book",
+    )
+
+    assert chosen is None
+    assert reason == "no size-matched context asset"
+
+
+def test_huge_gap_requires_page_finisher_art(tmp_path):
+    catalog = FillerCatalog(
+        enabled=True,
+        slots={
+            "chapter-end": FillerSlot(
+                name="chapter-end",
+                min_space_in=1.2,
+                max_space_in=8.5,
+                shapes=["bottom-band"],
+            )
+        },
+        assets=[
+            FillerAsset(
+                "bottom",
+                tmp_path / "filler-bottom-general-dock.png",
+                "bottom-band",
+                2.4,
+            )
+        ],
+    )
+
+    chosen, reason = _select_filler_with_reason(
+        catalog,
+        FillerMeasurement(
+            slot_id="slot-chapter",
+            slot_name="chapter-end",
+            chapter_slug="languages",
+            page_number=10,
+            available_in=7.0,
+        ),
+        recipe_title="Book",
+    )
+
+    assert chosen is None
+    assert reason == "no size-matched context asset"
+
+
 def test_page_filler_context_and_height_can_win_for_huge_gap(tmp_path):
     catalog = FillerCatalog(
         enabled=True,

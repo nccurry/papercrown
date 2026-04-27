@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import textwrap
 
+from PIL import Image
 from typer.main import get_command
 from typer.testing import CliRunner
 
@@ -231,6 +232,31 @@ def test_verify_command_uses_config_scope_and_profile(tmp_path, monkeypatch):
         "--scope",
         "book",
     ]
+
+
+def test_art_audit_command_reports_role_counts(tmp_path):
+    recipe = _write_recipe(
+        tmp_path,
+        """
+        title: Art Audit Book
+        art_dir: art
+        vaults:
+          v: vault
+        chapters:
+          - kind: file
+            title: Foo
+            source: v:Foo.md
+        """,
+    )
+    filler = tmp_path / "art" / "fillers" / "spot" / "filler-spot-general-01.png"
+    filler.parent.mkdir(parents=True)
+    Image.new("RGBA", (128, 128), (0, 0, 0, 0)).save(filler)
+
+    result = runner.invoke(cli.app, ["art", "audit", str(recipe), "--strict"])
+
+    assert result.exit_code == 0, result.output
+    assert "papercrown art audit" in result.output
+    assert "filler-spot: 1" in result.output
 
 
 def test_init_command_accepts_new_book_options(tmp_path):

@@ -23,6 +23,7 @@ from collections.abc import Iterator
 from dataclasses import dataclass, field
 from pathlib import Path
 
+from .art_roles import IMAGE_SUFFIXES, PAGE_WEAR_FILENAME_RE, classify_art_path
 from .catalog import parse_catalog_file
 from .recipe import (
     PAGE_DAMAGE_FAMILIES,
@@ -35,11 +36,9 @@ from .recipe import (
 )
 from .vaults import VaultIndex, WikilinkTarget
 
-FILLER_IMAGE_SUFFIXES = {".apng", ".avif", ".jpeg", ".jpg", ".png", ".webp"}
+FILLER_IMAGE_SUFFIXES = IMAGE_SUFFIXES
 PAGE_DAMAGE_IMAGE_SUFFIXES = {".png", ".webp"}
-PAGE_DAMAGE_FILENAME_RE = re.compile(
-    r"^wear-(?P<family>[a-z0-9-]+)-(?P<size>[a-z0-9-]+)-(?P<variant>[a-z0-9-]+)$"
-)
+PAGE_DAMAGE_FILENAME_RE = PAGE_WEAR_FILENAME_RE
 
 # ---------------------------------------------------------------------------
 # Errors
@@ -328,79 +327,36 @@ def classify_filler_art_path(
     *,
     art_root: Path | None = None,
 ) -> FillerArtClassification:
-    """Classify an art path using the recipe filename conventions."""
-    try:
-        relative = path.relative_to(art_root) if art_root is not None else path
-    except ValueError:
-        relative = path
-    parts = [part.lower() for part in relative.parts]
-    stem = path.stem.lower()
-    name = path.name.lower()
+    """Classify an art path using the central art role registry."""
+    classification = classify_art_path(path, art_root=art_root)
+    category = _legacy_filler_category(path, classification.role)
+    return FillerArtClassification(
+        category=category,
+        shape=classification.shape,
+        height_in=classification.height_in,
+        auto_selectable=classification.auto_placeable,
+    )
 
-    if "unused" in parts or "corner" in stem:
-        return FillerArtClassification("excluded")
-    if stem.startswith("cover-front-") or stem.startswith("cover-back-"):
-        return FillerArtClassification("cover-art")
-    if stem.startswith("splash-chapter-") or stem.startswith("splash-section-"):
-        return FillerArtClassification("manual-splash")
-    if stem.startswith("divider-"):
-        return FillerArtClassification("divider-art")
-    if "class-spots" in parts or stem.startswith("spot-class-"):
-        return FillerArtClassification("class-opening")
-    if stem.startswith("frame-"):
-        return FillerArtClassification("frame-divider")
-    if stem.startswith("ornament-tailpiece-"):
-        return FillerArtClassification("tailpiece", shape="tailpiece", height_in=0.65)
-    if stem.startswith("filler-spot-"):
-        return FillerArtClassification(
-            "filler-spot",
-            shape="spot",
-            height_in=1.35,
-            auto_selectable=True,
-        )
-    if stem.startswith("filler-wide-"):
-        return FillerArtClassification(
-            "filler-wide",
-            shape="small-wide",
-            height_in=1.25,
-            auto_selectable=True,
-        )
-    if stem.startswith("filler-bottom-"):
-        return FillerArtClassification(
-            "filler-bottom",
-            shape="bottom-band",
-            height_in=2.4,
-            auto_selectable=True,
-        )
-    if stem.startswith("filler-page-"):
-        return FillerArtClassification(
-            "filler-page",
-            shape="bottom-band",
-            height_in=5.25,
-            auto_selectable=True,
-        )
-    # Scene art can be explicitly opted into filler slots, but the current
-    # files are opaque chapter/content illustrations rather than natural fills.
-    if stem.startswith("faction-"):
-        return FillerArtClassification(
-            "setting-wide",
-            shape="bottom-band",
-            height_in=2.4,
-        )
-    if stem.startswith("gear-"):
-        return FillerArtClassification(
-            "equipment-wide",
-            shape="bottom-band",
-            height_in=2.4,
-        )
-    if stem.startswith("vista-"):
-        return FillerArtClassification(
-            "vista-wide",
-            shape="bottom-band",
-            height_in=2.4,
-        )
-    if stem.startswith("wear-"):
-        return FillerArtClassification("page-wear", shape="page-wear")
+
+def _legacy_filler_category(path: Path, role: str) -> str:
+    """Map the role registry back to the historical filler category names."""
+    stem = path.stem.lower()
+    if role == "cover":
+        return "cover-art"
+    if role == "splash":
+        return "manual-splash"
+    if role == "chapter-divider":
+        return "divider-art"
+    if role == "class-opening-spot":
+        return "class-opening"
+    if role == "ornament-tailpiece":
+        return "tailpiece"
+    if role == "faction":
+        return "setting-wide"
+    if role == "gear":
+        return "equipment-wide"
+    if role == "vista":
+        return "vista-wide"
     for prefix in (
         "stamp-",
         "label-",
@@ -413,14 +369,8 @@ def classify_filler_art_path(
         "location-",
     ):
         if stem.startswith(prefix):
-            return FillerArtClassification(prefix.removesuffix("-"))
-    if (
-        "splashes" in parts
-        or name.startswith("opening-")
-        or name.startswith("closing-")
-    ):
-        return FillerArtClassification("manual-splash")
-    return FillerArtClassification("unclassified")
+            return prefix.removesuffix("-")
+    return role
 
 
 def _auto_filler_asset_id(path: Path, *, art_root: Path) -> str:
@@ -449,9 +399,9 @@ def _auto_filler_assets(
         resolved = path.resolve()
         if resolved in seen_paths:
             continue
-        classification = classify_filler_art_path(resolved, art_root=root)
+        classification = classify_art_path(resolved, art_root=root)
         if (
-            not classification.auto_selectable
+            not classification.auto_placeable
             or classification.shape is None
             or classification.height_in is None
         ):
@@ -885,7 +835,19 @@ def _build_classes_catalog_chapters(
                 f"classes-catalog: skipping {class_name!r} (no resolved files)"
             )
             continue
-        art = _per_class_art(recipe, slug) if spec.art_per_class else None
+        art = _art_path_from_pattern(
+            recipe,
+            spec.class_art_pattern,
+            slug=slug,
+            title=clean_name,
+        )
+        if art is None and spec.art_per_class:
+            art = _per_class_art(recipe, slug)
+        if spec.class_art_pattern and art is None:
+            warnings.append(
+                f"classes-catalog {src.name} [{class_name}]: "
+                f"class divider art not found for slug {slug!r}"
+            )
         spot_art = _art_path_from_pattern(
             recipe,
             spec.class_spot_art_pattern,

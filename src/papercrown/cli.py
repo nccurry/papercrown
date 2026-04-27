@@ -13,6 +13,11 @@ import typer
 from . import manifest as manifest_mod
 from . import themes as themes_mod
 from . import verify as verify_mod
+from .art_audit import (
+    audit_recipe_art,
+    format_art_audit_markdown,
+    format_art_audit_text,
+)
 from .build import BuildRequest, BuildResult, build_outputs
 from .config import (
     BuildConfig,
@@ -44,8 +49,10 @@ app = typer.Typer(
 )
 deps_app = typer.Typer(help="Dependency diagnostics.")
 themes_app = typer.Typer(help="Inspect and copy bundled themes.")
+art_app = typer.Typer(help="Inspect and audit recipe art.")
 app.add_typer(deps_app, name="deps")
 app.add_typer(themes_app, name="themes")
+app.add_typer(art_app, name="art")
 
 
 RecipeArg = Annotated[
@@ -336,6 +343,42 @@ def manifest_command(
     )
     _recipe, manifest = _load_recipe_and_manifest(build_config)
     print(manifest_mod.dump(manifest))
+
+
+@art_app.command("audit")
+def art_audit_command(
+    recipe: RecipeArg = None,
+    output_format: Annotated[
+        str,
+        typer.Option(
+            "--format",
+            help="Output format: text or markdown.",
+        ),
+    ] = "text",
+    strict: Annotated[
+        bool,
+        typer.Option("--strict", help="Fail on warnings as well as errors."),
+    ] = False,
+    config: ConfigOpt = None,
+    no_config: NoConfigOpt = False,
+) -> None:
+    """Audit the recipe art library against the Paper Crown art contract."""
+    if output_format not in {"text", "markdown"}:
+        print("--format must be 'text' or 'markdown'", file=sys.stderr)
+        raise typer.Exit(2)
+    build_config = _resolve_config(
+        recipe,
+        config=config,
+        no_config=no_config,
+        cli_patch=BuildConfigPatch(),
+    )
+    recipe_obj, manifest = _load_recipe_and_manifest(build_config)
+    result = audit_recipe_art(recipe_obj, manifest)
+    if output_format == "markdown":
+        print(format_art_audit_markdown(result))
+    else:
+        print(format_art_audit_text(result))
+    raise typer.Exit(result.exit_code(strict=strict))
 
 
 @app.command("doctor")

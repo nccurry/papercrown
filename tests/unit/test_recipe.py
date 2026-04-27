@@ -173,6 +173,7 @@ class TestLoadRecipeHappy:
                 individual_pdfs: true
                 individual_pdf_subdir: classes
                 art_per_class: true
+                class_art_pattern: classes/dividers/class-{slug}.png
                 class_spot_art_pattern: class-spots/spot-class-{slug}.png
                 replace_existing_opening_art: true
             """,
@@ -227,6 +228,7 @@ class TestLoadRecipeHappy:
         assert ch.individual_pdfs is True
         assert ch.individual_pdf_subdir == "classes"
         assert ch.art_per_class is True
+        assert ch.class_art_pattern == "classes/dividers/class-{slug}.png"
         assert ch.class_spot_art_pattern == "class-spots/spot-class-{slug}.png"
         assert ch.replace_existing_opening_art is True
         assert ch.child_style == "class"
