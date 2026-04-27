@@ -1,0 +1,119 @@
+schema_version: 1
+project: Paper Crown
+
+python:
+  requires: ">=3.11"
+  managed_by: uv
+  source_files:
+    - pyproject.toml
+    - uv.lock
+  check: "uv sync --locked"
+  update: "uv lock --upgrade"
+
+python_groups:
+  runtime:
+    managed_by: "pyproject.toml [project.dependencies] + uv.lock"
+    source_files:
+      - pyproject.toml
+      - uv.lock
+    check_commands:
+      - "uv sync --locked"
+  dev:
+    managed_by: "pyproject.toml [dependency-groups.dev] + uv.lock"
+    source_files:
+      - pyproject.toml
+      - uv.lock
+    tools:
+      ruff:
+        check: "uv run ruff check src tests tools"
+      mypy:
+        check: "uv run mypy"
+      pytest:
+        check: "uv run pytest"
+      pytest-snapshot:
+        check: "uv run pytest tests/html"
+      types-PyYAML:
+        check: "uv run mypy"
+
+external_tools:
+  pandoc:
+    command: pandoc
+    version_command: ["pandoc", "--version"]
+    managed_by: system package manager
+    install:
+      windows: "winget install JohnMacFarlane.Pandoc"
+      linux: "sudo apt-get install -y pandoc"
+      macos: "brew install pandoc"
+      default: "task deps:install"
+    update:
+      windows: "winget upgrade JohnMacFarlane.Pandoc"
+      linux: "sudo apt-get update && sudo apt-get install -y pandoc"
+      macos: "brew upgrade pandoc"
+      default: "task deps:install"
+  obsidian-export:
+    command: obsidian-export
+    version_command: ["obsidian-export", "--version"]
+    managed_by: cargo
+    install: "cargo install obsidian-export"
+    update: "cargo install obsidian-export --force"
+  uv:
+    command: uv
+    version_command: ["uv", "--version"]
+    managed_by: uv installer
+    install:
+      windows: "powershell -ExecutionPolicy ByPass -c \"irm https://astral.sh/uv/install.ps1 | iex\""
+      posix: "curl -LsSf https://astral.sh/uv/install.sh | sh"
+    update: "uv self update"
+  task:
+    command: task
+    version_command: ["task", "--version"]
+    managed_by: system package manager or Task installer
+    install:
+      windows: "winget install Task.Task"
+      posix: 'curl -sL https://taskfile.dev/install.sh | sh -s -- -d -b "$HOME/.local/bin"'
+    update:
+      windows: "winget upgrade Task.Task"
+      posix: 'curl -sL https://taskfile.dev/install.sh | sh -s -- -d -b "$HOME/.local/bin"'
+
+native_pdf_runtime:
+  windows:
+    managed_by: MSYS2 pacman + WEASYPRINT_DLL_DIRECTORIES
+    check: "uv run papercrown deps check"
+    preferred:
+      name: MSYS2 Pango/GLib
+      dll_dir: 'C:\msys64\mingw64\bin'
+      package: mingw-w64-x86_64-pango
+      install_commands:
+        - "winget install --id MSYS2.MSYS2 -e"
+        - 'C:\msys64\usr\bin\bash.exe -lc "pacman -Syu --noconfirm"'
+        - 'C:\msys64\usr\bin\bash.exe -lc "pacman -S --needed --noconfirm mingw-w64-x86_64-pango"'
+        - 'setx WEASYPRINT_DLL_DIRECTORIES "C:\msys64\mingw64\bin"'
+        - 'add C:\msys64\mingw64\bin to User PATH'
+      update_commands:
+        - 'C:\msys64\usr\bin\bash.exe -lc "pacman -Syu --noconfirm"'
+        - 'C:\msys64\usr\bin\bash.exe -lc "pacman -S --needed --noconfirm mingw-w64-x86_64-pango"'
+        - 'setx WEASYPRINT_DLL_DIRECTORIES "C:\msys64\mingw64\bin"'
+        - 'add C:\msys64\mingw64\bin to User PATH'
+    stale_unsupported:
+      - name: GTK3-Runtime Win64
+        dll_dir: 'C:\Program Files\GTK3-Runtime Win64\bin'
+        known_glib_versions:
+          - "2.70.2"
+        warning: "Old GTK3-Runtime GLib can emit GLib-GIO UWP app-info warnings during WeasyPrint PDF builds."
+        action: 'Remove this directory from PATH or supersede it with WEASYPRINT_DLL_DIRECTORIES="C:\msys64\mingw64\bin" and C:\msys64\mingw64\bin earlier on PATH.'
+
+bundled_assets:
+  fonts:
+    managed_by: package resources
+    source: src/papercrown/resources/assets/fonts
+    check: "uv run papercrown deps check"
+    update: "uv sync --locked"
+    required:
+      - Rajdhani-Regular.ttf
+      - Rajdhani-SemiBold.ttf
+      - Rajdhani-Bold.ttf
+      - ShareTechMono-Regular.ttf
+      - IBMPlexSerif-Regular.ttf
+      - IBMPlexSerif-Italic.ttf
+      - IBMPlexSerif-Bold.ttf
+      - IBMPlexSerif-BoldItalic.ttf

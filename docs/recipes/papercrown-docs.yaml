@@ -1,0 +1,51 @@
+title: Paper Crown Documentation
+subtitle: Task-first setup and recipe-driven publishing
+cover_eyebrow: Documentation
+cover_footer: nccurry/papercrown
+output_dir: ../site
+output_name: papercrown-docs
+art_dir: ../assets
+theme: modern-minimal
+
+metadata:
+  authors:
+    - nccurry
+  description: Developer and user documentation for Paper Crown.
+  keywords:
+    - Markdown
+    - TTRPG
+    - PDF
+    - static web
+  license: AGPL-3.0-or-later
+
+cover:
+  enabled: true
+  art: papercrown-readme-hero.svg
+
+vaults:
+  docs: ../vault
+
+chapters:
+  - kind: file
+    title: Overview
+    slug: overview
+    source: docs:Overview.md
+  - kind: sequence
+    title: Setup
+    slug: setup
+    sources:
+      - docs:Bootstrap.md
+      - docs:Quick Start.md
+  - kind: sequence
+    title: Authoring
+    slug: authoring
+    sources:
+      - docs:Recipes.md
+      - docs:Themes.md
+      - docs:CLI.md
+  - kind: sequence
+    title: Maintaining Paper Crown
+    slug: maintaining-paper-crown
+    sources:
+      - docs:Development.md
+      - docs:GitHub Pages.md

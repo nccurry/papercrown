@@ -1,0 +1,28 @@
+:root {
+  --paper: #ffffff;
+  --ink: #171717;
+  --ink-soft: #3f3f46;
+  --muted: #71717a;
+  --rule: #27272a;
+  --rule-light: #d4d4d8;
+  --accent: #2563eb;
+  --accent-deep: #1e40af;
+  --warn: #b91c1c;
+  --success: #15803d;
+  --tint-block: #f4f4f5;
+  --tint-callout: #f8fafc;
+  --paper-grain: none;
+  --page-patina: none;
+  --font-head: 'Rajdhani', 'Segoe UI', 'Helvetica Neue', sans-serif;
+}
+
+h1, h2, h3 {
+  text-transform: none;
+  letter-spacing: 0;
+}
+
+.section-divider-text,
+.cover-text {
+  border-top-width: 2px;
+  border-bottom-width: 2px;
+}

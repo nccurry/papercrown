@@ -1,0 +1,20 @@
+title: Starfall Field Guide
+subtitle: A public sample for Paper Crown
+output_dir: ../output
+output_name: starfall-field-guide
+theme: clean-srd
+
+vaults:
+  rules: ../vault
+
+chapters:
+  - kind: file
+    title: Primer
+    slug: primer
+    source: rules:Primer.md
+  - kind: sequence
+    title: Running the Game
+    slug: running-the-game
+    sources:
+      - rules:Rules/Quick Start.md
+      - rules:Bestiary/Clockwork Lantern.md

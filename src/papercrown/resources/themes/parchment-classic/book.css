@@ -1,0 +1,23 @@
+:root {
+  --paper: #f7edcf;
+  --ink: #24160d;
+  --ink-soft: #4c3622;
+  --muted: #776044;
+  --rule: #3d2614;
+  --rule-light: #b99860;
+  --accent: #8f5f22;
+  --accent-deep: #5b2417;
+  --warn: #8f2d2a;
+  --success: #4f6f36;
+  --tint-block: #efe0b8;
+  --tint-callout: #f3e5bf;
+}
+
+body {
+  hyphens: auto;
+}
+
+.generated-matter,
+.ttrpg-block {
+  border-radius: 0;
+}

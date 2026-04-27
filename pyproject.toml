@@ -1,0 +1,79 @@
+[project]
+name = "papercrown"
+version = "1.0.0"
+description = "Recipe-driven PDF and web generator for TTRPG Markdown vaults"
+license = "AGPL-3.0-or-later"
+license-files = ["LICENSE", "THIRD_PARTY_LICENSES.md"]
+requires-python = ">=3.11"
+dependencies = [
+    "pillow>=12.0",
+    "pymupdf>=1.24",
+    "pypdf>=4.0",
+    "pyyaml>=6.0",
+    "typer>=0.12",
+    "weasyprint>=66.0",
+]
+
+[project.scripts]
+papercrown = "papercrown.cli:main"
+
+[build-system]
+requires = ["setuptools>=69"]
+build-backend = "setuptools.build_meta"
+
+[dependency-groups]
+dev = [
+    "mypy>=1.13",
+    "pytest>=8.0",
+    "pytest-snapshot>=0.9",
+    "ruff>=0.8",
+    "types-PyYAML>=6.0",
+]
+
+[tool.uv]
+package = true
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.setuptools.package-data]
+papercrown = [
+    "py.typed",
+    "resources/**/*.css",
+    "resources/**/*.html",
+    "resources/**/*.lua",
+    "resources/**/*.png",
+    "resources/**/*.ttf",
+    "resources/**/*.yaml",
+]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+python_files = ["test_*.py"]
+addopts = "-q"
+pythonpath = ["src"]
+
+[tool.ruff]
+line-length = 88
+target-version = "py311"
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "B", "UP", "D"]
+ignore = [
+    "D105", # Magic methods are clear enough here.
+    "D107", # Dataclass fields document constructor shape.
+]
+
+[tool.ruff.lint.per-file-ignores]
+"tests/**/*.py" = ["D"]
+
+[tool.ruff.lint.pydocstyle]
+convention = "google"
+
+[tool.mypy]
+python_version = "3.11"
+files = ["src/papercrown"]
+strict = true
+check_untyped_defs = true
+no_implicit_optional = true
+warn_return_any = true

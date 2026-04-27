@@ -1,0 +1,57 @@
+name: Docs
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - '.github/workflows/pages.yml'
+      - 'docs/**'
+      - 'scripts/**'
+      - 'src/**'
+      - 'Taskfile.yml'
+      - 'pyproject.toml'
+      - 'uv.lock'
+      - 'README.md'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-python@v6
+        with:
+          python-version: '3.12'
+      - name: Bootstrap
+        run: |
+          chmod +x scripts/bootstrap.sh scripts/deps-install.sh
+          ./scripts/bootstrap.sh
+      - name: Build docs
+        run: task docs:build
+      - name: Configure Pages
+        uses: actions/configure-pages@v6
+      - name: Upload Pages artifact
+        uses: actions/upload-pages-artifact@v5
+        with:
+          path: 'docs/site/Paper Crown/papercrown-docs/web'
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v5

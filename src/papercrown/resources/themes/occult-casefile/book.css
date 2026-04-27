@@ -1,0 +1,25 @@
+:root {
+  --paper: #f4f1ea;
+  --ink: #161513;
+  --ink-soft: #3a342f;
+  --muted: #70685e;
+  --rule: #22201c;
+  --rule-light: #999084;
+  --accent: #355f5b;
+  --accent-deep: #762d34;
+  --warn: #8f1d2c;
+  --success: #4a6f45;
+  --tint-block: #e9e3d8;
+  --tint-callout: #efe7dc;
+}
+
+h2,
+h3 {
+  font-family: var(--font-mono);
+}
+
+.ttrpg-clue,
+.ttrpg-clock,
+.ttrpg-handout {
+  border-style: dashed;
+}

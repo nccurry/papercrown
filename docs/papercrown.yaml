@@ -1,0 +1,7 @@
+default_recipe: recipes/papercrown-docs.yaml
+
+build:
+  target: web
+  scope: book
+  profile: print
+  jobs: auto

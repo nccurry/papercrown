@@ -1,0 +1,26 @@
+:root {
+  --paper: #1c1816;
+  --ink: #f1e7d2;
+  --ink-soft: #d2c0a4;
+  --muted: #a08b72;
+  --rule: #dfc589;
+  --rule-light: #6e5945;
+  --accent: #b23a48;
+  --accent-deep: #e0b15d;
+  --warn: #ef6351;
+  --success: #6a994e;
+  --tint-block: #2a2421;
+  --tint-callout: #241f1d;
+  --paper-grain: none;
+  --page-patina: none;
+}
+
+table th {
+  color: #1c1816;
+  background: var(--rule);
+}
+
+pre {
+  color: var(--ink);
+  background: #0f0d0c;
+}

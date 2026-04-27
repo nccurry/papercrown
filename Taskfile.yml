@@ -1,0 +1,159 @@
+version: '3'
+
+vars:
+  RECIPE: '{{default "examples/starfall/recipes/starfall-field-guide.yaml" .RECIPE}}'
+  DOCS_RECIPE: '{{default "docs/recipes/papercrown-docs.yaml" .DOCS_RECIPE}}'
+  DOCS_WEB: '{{default "docs/site/Paper Crown/papercrown-docs/web" .DOCS_WEB}}'
+  PORT: '{{default "8000" .PORT}}'
+  SCOPE: '{{default "book" .SCOPE}}'
+  PROFILE: '{{default "print" .PROFILE}}'
+  JOBS: '{{default "auto" .JOBS}}'
+
+tasks:
+  setup:
+    desc: Install local development dependencies.
+    cmds:
+      - task deps:install
+
+  deps:
+    desc: Report project dependency status.
+    cmds:
+      - task deps:check
+
+  deps:check:
+    desc: Report project dependency status.
+    cmds:
+      - uv run --locked papercrown deps check
+
+  deps:install:
+    desc: Install platform and Python dependencies, then verify them.
+    cmds:
+      - task: deps:install:windows
+      - task: deps:install:posix
+
+  deps:install:windows:
+    internal: true
+    platforms: [windows]
+    cmds:
+      - powershell -NoProfile -ExecutionPolicy Bypass -File scripts/deps-install.ps1
+
+  deps:install:posix:
+    internal: true
+    platforms: [linux, darwin]
+    cmds:
+      - bash scripts/deps-install.sh
+
+  lint:
+    desc: Run static analysis and formatting checks.
+    cmds:
+      - uv run ruff check src tests tools
+      - uv run ruff format --check src tests tools
+      - uv run mypy
+
+  format:
+    desc: Format and apply safe lint fixes.
+    cmds:
+      - uv run ruff check --fix src tests tools
+      - uv run ruff format src tests tools
+
+  test:
+    desc: Run the test suite.
+    cmds:
+      - uv run pytest
+
+  package:
+    desc: Build source and wheel distributions.
+    cmds:
+      - uv build
+
+  package:verify:
+    desc: Verify built distributions include runtime resources and CLI metadata.
+    deps: [package]
+    cmds:
+      - uv run python tools/verify_package.py
+
+  audit:public:
+    desc: Scan the public subtree for private project/content references.
+    cmds:
+      - uv run python tools/audit_public.py
+
+  check:
+    desc: Run the full local quality gate used by CI.
+    cmds:
+      - task deps
+      - task lint
+      - task test
+      - task package
+      - task package:verify
+      - task audit:public
+
+  docker:check:
+    desc: Run the same local quality gate inside the CI Docker image.
+    cmds:
+      - docker build -f Dockerfile.ci -t papercrown-ci .
+      - docker run --rm papercrown-ci
+
+  build:
+    desc: Build a recipe with the installed Paper Crown CLI.
+    cmds:
+      - uv run papercrown build {{.RECIPE | toSlash | quote}} --scope {{.SCOPE | quote}} --profile {{.PROFILE | quote}} --jobs {{.JOBS | quote}}
+
+  manifest:
+    desc: Print a recipe manifest.
+    cmds:
+      - uv run papercrown manifest {{.RECIPE | toSlash | quote}}
+
+  doctor:
+    desc: Run preflight diagnostics for a recipe.
+    cmds:
+      - uv run papercrown doctor {{.RECIPE | toSlash | quote}}
+
+  doctor:strict:
+    desc: Run strict preflight diagnostics for CI/release checks.
+    cmds:
+      - uv run papercrown doctor {{.RECIPE | toSlash | quote}} --strict
+
+  verify:
+    desc: Verify generated PDFs for a recipe.
+    cmds:
+      - uv run papercrown verify {{.RECIPE | toSlash | quote}} --scope {{.SCOPE | quote}} --profile {{.PROFILE | quote}} --strict
+
+  init:
+    desc: Create a sample Paper Crown project in ./scratch.
+    cmds:
+      - uv run papercrown init scratch --force
+
+  docs:build:
+    desc: Build the GitHub Pages documentation with Paper Crown.
+    cmds:
+      - uv run papercrown build {{.DOCS_RECIPE | toSlash | quote}} --target web --force
+
+  docs:serve:
+    desc: Serve the generated documentation locally.
+    deps: [docs:build]
+    cmds:
+      - uv run python -m http.server {{.PORT | quote}} --directory {{.DOCS_WEB | toSlash | quote}}
+
+  docs:clean:
+    desc: Remove generated documentation output.
+    cmds:
+      - uv run python -c "import shutil; shutil.rmtree('docs/site', ignore_errors=True)"
+
+  themes:list:
+    desc: List bundled Paper Crown themes.
+    cmds:
+      - uv run papercrown themes list
+
+  themes:copy:
+    desc: Copy a bundled Paper Crown theme.
+    cmds:
+      - uv run papercrown themes copy {{.THEME | quote}} {{.DEST | quote}}
+
+  release:
+    desc: Build, verify, audit, and create a GitHub release for the current tag.
+    deps: [package, package:verify, audit:public]
+    preconditions:
+      - sh: test -n "$GITHUB_REF_NAME"
+        msg: GITHUB_REF_NAME must be set to the tag name.
+    cmds:
+      - gh release create "$GITHUB_REF_NAME" dist/* --generate-notes

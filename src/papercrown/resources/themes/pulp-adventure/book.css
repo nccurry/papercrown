@@ -1,0 +1,23 @@
+:root {
+  --paper: #fff6d8;
+  --ink: #201713;
+  --ink-soft: #47342b;
+  --muted: #735f4f;
+  --rule: #2f2119;
+  --rule-light: #bb9e79;
+  --accent: #d8342a;
+  --accent-deep: #0f5c77;
+  --warn: #9d1f17;
+  --success: #2f7a50;
+  --tint-block: #f9e7bf;
+  --tint-callout: #fdecc2;
+}
+
+.cover-title,
+.section-divider-title {
+  text-transform: uppercase;
+}
+
+blockquote {
+  border-left-width: 6px;
+}

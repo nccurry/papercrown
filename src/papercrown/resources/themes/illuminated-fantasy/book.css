@@ -1,0 +1,25 @@
+:root {
+  --paper: #fff8e6;
+  --ink: #21170f;
+  --ink-soft: #4b3324;
+  --muted: #7a6248;
+  --rule: #3a2618;
+  --rule-light: #c6a66d;
+  --accent: #b8860b;
+  --accent-deep: #7a271a;
+  --warn: #8d1d1d;
+  --success: #3f6f37;
+  --tint-block: #f7ecd0;
+  --tint-callout: #fff2d5;
+}
+
+h1::first-letter,
+.section-divider-title::first-letter {
+  color: var(--accent-deep);
+  font-size: 1.22em;
+}
+
+.ttrpg-block {
+  border-width: 1px;
+  border-left-width: 5px;
+}

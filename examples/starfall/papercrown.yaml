@@ -1,0 +1,8 @@
+default_recipe: recipes/starfall-field-guide.yaml
+
+build:
+  target: pdf
+  scope: book
+  profile: print
+  jobs: auto
+  pagination: report

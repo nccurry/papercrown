@@ -1,0 +1,32 @@
+FROM ghcr.io/astral-sh/uv:python3.12-bookworm-slim
+
+ENV UV_SYSTEM_PYTHON=1 \
+    CARGO_HOME=/usr/local/cargo \
+    RUSTUP_HOME=/usr/local/rustup \
+    PATH=/usr/local/cargo/bin:$PATH
+WORKDIR /workspace
+
+RUN apt-get update \
+    && apt-get install -y --no-install-recommends \
+        build-essential \
+        ca-certificates \
+        curl \
+        git \
+        libharfbuzz-subset0 \
+        libpango-1.0-0 \
+        libpangoft2-1.0-0 \
+        libssl-dev \
+        pandoc \
+        pkg-config \
+    && curl -sL https://taskfile.dev/install.sh | sh -s -- -d -b /usr/local/bin \
+    && rm -rf /var/lib/apt/lists/*
+
+RUN curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs \
+        | sh -s -- -y --profile minimal --default-toolchain stable \
+    && cargo install obsidian-export --locked
+
+COPY pyproject.toml uv.lock ./
+RUN uv sync --all-groups
+
+COPY . .
+CMD ["task", "check"]

@@ -1,0 +1,39 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-python@v6
+        with:
+          python-version: '3.12'
+      - name: Install uv
+        uses: astral-sh/setup-uv@v8.1.0
+      - name: Install system tools
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y pandoc libpango-1.0-0 libpangoft2-1.0-0 libharfbuzz-subset0
+      - name: Install Rust
+        uses: dtolnay/rust-toolchain@stable
+      - name: Install obsidian-export
+        run: cargo install obsidian-export --locked
+      - name: Install task
+        run: |
+          curl -sL https://taskfile.dev/install.sh | sh -s -- -d -b "$HOME/.local/bin"
+          echo "$HOME/.local/bin" >> "$GITHUB_PATH"
+      - name: Install dependencies
+        run: task setup
+      - name: Release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GITHUB_REF_NAME: ${{ github.ref_name }}
+        run: task release

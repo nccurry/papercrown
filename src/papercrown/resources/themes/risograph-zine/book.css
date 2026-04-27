@@ -1,0 +1,25 @@
+:root {
+  --paper: #fff7f0;
+  --ink: #251b2d;
+  --ink-soft: #493657;
+  --muted: #705d7a;
+  --rule: #251b2d;
+  --rule-light: #f3a6b4;
+  --accent: #ff4f87;
+  --accent-deep: #008b8b;
+  --warn: #e21f26;
+  --success: #00a66c;
+  --tint-block: #ffe0e8;
+  --tint-callout: #e5fbf8;
+  --paper-grain: none;
+  --page-patina: none;
+}
+
+table th,
+pre {
+  background: var(--accent-deep);
+}
+
+.ttrpg-block {
+  box-shadow: 0.06in 0.06in 0 var(--rule-light);
+}

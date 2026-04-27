@@ -1,0 +1,32 @@
+# Mini test recipe -- exercises every chapter kind on a tiny synthetic vault.
+# Used by HTML snapshot and PDF smoke tests.
+
+title: "Mini Test Book"
+subtitle: "Fixture for the Test Suite"
+cover_eyebrow: "Test Fixture"
+
+vaults:
+  base: ../vaults/mini/base
+  overlay: ../vaults/mini/overlay
+
+vault_overlay: [base, overlay]
+
+output_dir: ../output
+output_name: mini-test
+
+cover:
+  enabled: false
+
+chapters:
+  - kind: file
+    style: setting
+    title: Setting
+    eyebrow: Setting
+    source: base:Setting.md
+
+  - kind: classes-catalog
+    source: base:Heroes/Classes List.md
+    wrapper: false
+    child_style: class
+    individual_pdfs: true
+    individual_pdf_subdir: classes
