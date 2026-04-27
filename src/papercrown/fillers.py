@@ -380,10 +380,11 @@ def _select_filler_with_reason(
         and _asset_matches_context(asset, measurement)
         and _candidate_is_useful(asset, measurement)
     ]
+    size_gap_in = min(fit_limit, slot.max_space_in)
     candidates = [
         asset
         for asset in fitting_candidates
-        if _candidate_matches_gap_size(asset, fit_limit)
+        if _candidate_matches_gap_size(asset, size_gap_in)
     ]
     if not candidates:
         if fitting_candidates:
