@@ -18,3 +18,4 @@ toP*.pdf
 htmlcov/
 papercrown-html-*/
 docs/site/
+.idea

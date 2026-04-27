@@ -1,6 +1,11 @@
 # CLI
 
-The installed `papercrown` command is the supported product interface.
+The installed `papercrown` command is the supported product interface. Install
+it once with uv:
+
+```sh
+uv tool install papercrown
+```
 
 ```text
 papercrown build [RECIPE]

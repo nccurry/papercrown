@@ -7,13 +7,13 @@ modern minimal, and more expressive genre styles.
 List bundled themes:
 
 ```sh
-task themes:list
+papercrown themes list
 ```
 
 Copy a bundled theme into a project for customization:
 
 ```sh
-task themes:copy THEME=clean-srd DEST=themes/my-clean-srd
+papercrown themes copy clean-srd themes/my-clean-srd
 ```
 
 Then point a recipe at the custom theme:

@@ -7,8 +7,8 @@ assemble.
 
 The project has two audiences:
 
-- Authors use the `papercrown` command to initialize projects, check recipes,
-  and build books.
+- Authors install Paper Crown with `uv tool install papercrown`, then use the
+  `papercrown` command to initialize projects, check recipes, and build books.
 - Maintainers use `task` for every repository workflow, including bootstrap,
   dependency installation, tests, packaging, docs, and releases.
 
@@ -18,11 +18,12 @@ close to the product behavior.
 
 ## Core Flow
 
-1. Write Markdown in a vault.
-2. Describe output in a recipe YAML file.
-3. Run `papercrown manifest` to inspect the resolved book.
-4. Run `papercrown doctor` to catch missing tools, paths, and content issues.
-5. Run `papercrown build` for PDFs or `papercrown build --target web` for a
+1. Install once with `uv tool install papercrown`.
+2. Write Markdown in a vault.
+3. Describe output in a recipe YAML file.
+4. Run `papercrown manifest` to inspect the resolved book.
+5. Run `papercrown doctor` to catch missing tools, paths, and content issues.
+6. Run `papercrown build` for PDFs or `papercrown build --target web` for a
    static HTML export.
 
 Generated output is always caller-owned and goes under:

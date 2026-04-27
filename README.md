@@ -19,10 +19,52 @@ vaults, chooses a theme, and declares the chapters to assemble.
 
 Documentation: [https://nccurry.github.io/papercrown/](https://nccurry.github.io/papercrown/)
 
-## Bootstrap
+## Install
+
+Paper Crown is distributed as an installed `papercrown` command. Install the
+released CLI with uv:
+
+```sh
+uv tool install papercrown
+papercrown --help
+```
+
+If your shell cannot find `papercrown` after installation, run:
+
+```sh
+uv tool update-shell
+```
+
+Then open a new terminal. Paper Crown installs its Python runtime dependencies
+into the uv tool environment. Builds also use external tools such as Pandoc and
+`obsidian-export`; run `papercrown doctor` inside a project to check the local
+machine before rendering.
+
+## Quick Start
+
+The installed `papercrown` command is the supported product interface.
+
+Create a new project:
+
+```sh
+papercrown init my-book
+cd my-book
+papercrown manifest
+papercrown doctor
+papercrown build
+papercrown verify
+```
+
+Or run against the bundled public example from a repository checkout:
+
+```sh
+papercrown manifest examples/starfall/recipes/starfall-field-guide.yaml
+```
+
+## Repository Bootstrap
 
 Repository development is task-first. Bootstrap installs Task if it is missing,
-then lets `task deps:install` install and verify the rest of the toolchain.
+then lets `task deps:install` install and verify the maintainer toolchain.
 
 Windows PowerShell:
 
@@ -42,27 +84,6 @@ After bootstrap, use Task for repository work:
 task deps
 task docs:build
 task check
-```
-
-## Quick Start
-
-The installed `papercrown` command is the supported product interface.
-
-Create a new project:
-
-```sh
-papercrown init my-book
-cd my-book
-papercrown manifest
-papercrown doctor
-papercrown build
-papercrown verify
-```
-
-Or run against the bundled public example from this repository:
-
-```sh
-papercrown manifest examples/starfall/recipes/starfall-field-guide.yaml
 ```
 
 ## CLI
@@ -132,13 +153,13 @@ arbitrary filesystem locations.
 List bundled themes:
 
 ```sh
-task themes:list
+papercrown themes list
 ```
 
 Copy a theme for customization:
 
 ```sh
-task themes:copy THEME=clean-srd DEST=themes/my-clean-srd
+papercrown themes copy clean-srd themes/my-clean-srd
 ```
 
 Then set `theme_dir: ../themes` and `theme: my-clean-srd` in a recipe.
@@ -185,14 +206,17 @@ does not duplicate lockfiles: Python runtime and dev packages stay in
 Windows WeasyPrint native libraries are managed through MSYS2, and bundled
 fonts are package resources.
 
-Run `task deps` to see the current path, version, managing file/tool, status,
-and exact install/update command for each dependency. Run `task deps:install`
-to install or synchronize the supported dependency set.
+For users, `papercrown doctor` is the normal preflight check for a project. In a
+repository checkout, maintainers can run `task deps` to see the current path,
+version, managing file/tool, status, and exact install/update command for each
+dependency. Run `task deps:install` to install or synchronize the supported
+development dependency set.
 
 ## Windows PDF Runtime
 
-Paper Crown uses MSYS2 Pango/GLib for WeasyPrint on Windows. The supported path
-is:
+Paper Crown uses MSYS2 Pango/GLib for WeasyPrint on Windows. Installed users
+should run `papercrown doctor` in a project to detect missing or stale native
+PDF runtime libraries. In a repository checkout, the maintainer setup path is:
 
 ```powershell
 task deps:install

@@ -1,5 +1,11 @@
 # Quick Start
 
+Install the CLI once:
+
+```sh
+uv tool install papercrown
+```
+
 Create a new Paper Crown project:
 
 ```sh

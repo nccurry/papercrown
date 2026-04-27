@@ -1,7 +1,31 @@
-# Bootstrap
+# Install
 
-Use one bootstrap command on a new checkout. Bootstrap only makes sure Task is
-available, then hands off to `task deps:install`.
+Install Paper Crown as a uv tool. This creates the `papercrown` command in uv's
+tool directory and keeps Paper Crown isolated from project virtual
+environments.
+
+```sh
+uv tool install papercrown
+papercrown --help
+```
+
+If your shell cannot find `papercrown` after installation, run:
+
+```sh
+uv tool update-shell
+```
+
+Then open a new terminal.
+
+Run `papercrown doctor` inside a project before rendering. It checks the recipe,
+content, bundled resources, and local external tools such as Pandoc,
+`obsidian-export`, and the native PDF runtime used by WeasyPrint.
+
+## Repository Bootstrap
+
+Maintainers working from a source checkout can use one bootstrap command.
+Bootstrap only makes sure Task is available, then hands off to
+`task deps:install`.
 
 ## Windows
 
@@ -33,7 +57,7 @@ On Git Bash for Windows, the shell bootstrap delegates to
 `scripts/bootstrap.ps1` if Task is missing. On Linux, macOS, and WSL it installs
 Task into `$HOME/.local/bin` when needed and then runs `task deps:install`.
 
-## After Bootstrap
+## After Repository Bootstrap
 
 The most useful maintenance commands are:
 

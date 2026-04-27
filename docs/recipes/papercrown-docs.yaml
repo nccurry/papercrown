@@ -1,5 +1,5 @@
 title: Paper Crown Documentation
-subtitle: Task-first setup and recipe-driven publishing
+subtitle: uv tool install and recipe-driven publishing
 cover_eyebrow: Documentation
 cover_footer: nccurry/papercrown
 output_dir: ../site
