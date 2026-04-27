@@ -821,6 +821,34 @@ def test_fast_draft_chapter_pdf_skips_page_art_and_cleanup(tmp_path, monkeypatch
     assert captured["page_damage_catalog"] is None
 
 
+def test_bottom_bleed_display_size_does_not_upscale_small_art(tmp_path):
+    image = tmp_path / "small-bottom.png"
+    Image.new("RGB", (240, 120), color="red").save(image)
+
+    width_pt, height_pt = build.pipeline._bottom_bleed_display_size_pt(
+        image,
+        max_width_pt=8.5 * 72.0,
+        max_height_pt=2.4 * 72.0,
+    )
+
+    assert round(width_pt, 3) == 180.0
+    assert round(height_pt, 3) == 90.0
+
+
+def test_bottom_bleed_display_size_caps_large_art_without_distortion(tmp_path):
+    image = tmp_path / "large-bottom.png"
+    Image.new("RGB", (2550, 720), color="red").save(image)
+
+    width_pt, height_pt = build.pipeline._bottom_bleed_display_size_pt(
+        image,
+        max_width_pt=8.5 * 72.0,
+        max_height_pt=2.4 * 72.0,
+    )
+
+    assert round(width_pt, 3) == 612.0
+    assert round(height_pt, 3) == 172.8
+
+
 def test_draft_page_damage_catalog_is_boosted_for_inspection(tmp_path):
     asset_path = tmp_path / "wear-coffee-small-01.png"
     Image.new("RGBA", (2, 2), (0, 0, 0, 0)).save(asset_path)

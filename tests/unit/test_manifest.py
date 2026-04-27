@@ -825,6 +825,34 @@ class TestKindClassesCatalog:
         assert mage.replace_opening_art is True
         assert not m.warnings
 
+    def test_class_art_pattern_resolves_divider_art_for_children(self, mini_workspace):
+        ws, base, _ = mini_workspace
+        art = ws / "art"
+        (art / "classes" / "dividers").mkdir(parents=True)
+        mage_art = art / "classes" / "dividers" / "class-mage.png"
+        rogue_art = art / "classes" / "dividers" / "class-rogue.png"
+        mage_art.write_text("fake", encoding="utf-8")
+        rogue_art.write_text("fake", encoding="utf-8")
+        rp = _write_recipe(
+            ws,
+            """
+            title: Test
+            art_dir: art
+            vaults:
+              base: base
+            chapters:
+              - kind: classes-catalog
+                source: base:Heroes/Classes List.md
+                class_art_pattern: classes/dividers/class-{slug}.png
+        """,
+        )
+        m = build_manifest(load_recipe(rp))
+        mage = next(c for c in m.chapters if c.title == "Mage")
+        rogue = next(c for c in m.chapters if c.title == "Rogue")
+        assert mage.art_path == mage_art.resolve()
+        assert rogue.art_path == rogue_art.resolve()
+        assert not m.warnings
+
 
 # ---------------------------------------------------------------------------
 # kind: folder

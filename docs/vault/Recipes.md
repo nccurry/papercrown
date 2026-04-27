@@ -45,6 +45,10 @@ front_matter:
 Generated front matter appears before the table of contents in combined book
 outputs. Generated back matter still appears after the assembled chapters.
 
+Art lives under `art_dir` and follows the [art contract](Art.md). The contract
+defines canonical folders, filename shapes, automatic filler roles, and the
+checks performed by `papercrown art audit`.
+
 Common chapter shapes:
 
 - `file`: one Markdown source becomes one chapter.
@@ -53,3 +57,10 @@ Common chapter shapes:
 
 Use `papercrown manifest` to inspect exactly which files and chapters a recipe
 resolves before rendering.
+
+Class catalogs can use role-based art patterns:
+
+```yaml
+class_art_pattern: classes/dividers/class-{slug}.png
+class_spot_art_pattern: classes/spots/spot-class-{slug}.png
+```

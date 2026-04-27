@@ -10,6 +10,7 @@ uv tool install papercrown
 ```text
 papercrown build [RECIPE]
 papercrown manifest [RECIPE]
+papercrown art audit [RECIPE]
 papercrown doctor [RECIPE]
 papercrown verify [RECIPE]
 papercrown deps check
@@ -32,6 +33,15 @@ between machines:
 
 ```sh
 papercrown doctor book.yaml --strict
+```
+
+Use `art audit` after adding or reorganizing art. It checks the
+[art contract](Art.md), recipe references, dimensions, and automatic filler
+coverage:
+
+```sh
+papercrown art audit book.yaml --strict
+papercrown art audit book.yaml --format markdown
 ```
 
 Use `verify` after rendering PDFs:
