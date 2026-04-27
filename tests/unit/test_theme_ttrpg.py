@@ -5,8 +5,10 @@ from __future__ import annotations
 import textwrap
 from pathlib import Path
 
+from papercrown import build as build_mod
 from papercrown import themes, ttrpg
 from papercrown.diagnostics import DiagnosticSeverity
+from papercrown.manifest import Chapter
 from papercrown.recipe import (
     BookMetadataSpec,
     CoverSpec,
@@ -175,6 +177,31 @@ def test_typed_blocks_resolve_refs_and_generate_index(tmp_path):
     assert "## Powers" in prepared.markdown
     assert "- [Mara Voss](#npc-mara-voss) (rival, knight)" in prepared.markdown
     assert "- [Advantage](#rule-advantage)" in prepared.markdown
+
+
+def test_combined_book_orders_front_matter_before_manual_toc(tmp_path):
+    recipe = _recipe(tmp_path)
+    recipe.metadata = BookMetadataSpec(license="Legal copy.")
+    recipe.front_matter = [MatterSpec("license", title="Legal & Support")]
+    recipe.back_matter = [MatterSpec("copyright", title="Copyright")]
+    chapters = [Chapter(title="First Chapter", slug="first-chapter")]
+
+    prepared = build_mod._prepare_book_markdown_with_manual_toc(
+        "# First Chapter\n\nMain content.\n",
+        recipe,
+        chapters,
+    )
+
+    legal_pos = prepared.index("# Legal & Support")
+    toc_pos = prepared.index("# Table of Contents")
+    chapter_pos = prepared.index("# First Chapter")
+    copyright_pos = prepared.index("# Copyright")
+    toc_block = prepared[toc_pos:chapter_pos]
+
+    assert legal_pos < toc_pos < chapter_pos < copyright_pos
+    assert "Legal & Support" not in toc_block
+    assert "Copyright" not in toc_block
+    assert "First Chapter" in toc_block
 
 
 def test_duplicate_typed_block_ids_are_errors():

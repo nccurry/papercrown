@@ -462,10 +462,42 @@ def _prepare_ttrpg_markdown(
     include_generated_matter: bool,
 ) -> str:
     """Apply typed-block normalization and fail on invalid cross-references."""
+    prepared = _prepare_ttrpg_markdown_result(markdown, recipe)
+    if include_generated_matter:
+        return ttrpg.add_generated_matter(
+            prepared.markdown,
+            recipe,
+            prepared.registry,
+        )
+    return prepared.markdown
+
+
+def _prepare_book_markdown_with_manual_toc(
+    markdown: str,
+    recipe: Recipe,
+    chapters: list[Chapter],
+    *,
+    toc_max_depth: int | None = None,
+) -> str:
+    """Prepare book markdown with front matter before the generated TOC."""
+    prepared = _prepare_ttrpg_markdown_result(markdown, recipe)
+    markdown = assembly.add_manual_toc(
+        prepared.markdown,
+        chapters,
+        max_depth=toc_max_depth,
+    )
+    return ttrpg.add_generated_matter(markdown, recipe, prepared.registry)
+
+
+def _prepare_ttrpg_markdown_result(
+    markdown: str,
+    recipe: Recipe,
+) -> ttrpg.PreparedMarkdown:
+    """Apply typed-block normalization and return the prepared result."""
     prepared = ttrpg.prepare_book_markdown(
         markdown,
         recipe,
-        include_generated_matter=include_generated_matter,
+        include_generated_matter=False,
     )
     errors = [
         diagnostic
@@ -479,7 +511,7 @@ def _prepare_ttrpg_markdown(
             for diagnostic in errors[:10]
         )
         raise RuntimeError("typed TTRPG validation failed:\n" + details)
-    return prepared.markdown
+    return prepared
 
 
 def _prepare_chapter_pdf_job(
@@ -631,12 +663,11 @@ def _prepare_combined_book_job(
         splashes=manifest.splashes,
         include_source_markers=True,
     )
-    markdown = _prepare_ttrpg_markdown(
+    markdown = _prepare_book_markdown_with_manual_toc(
         markdown,
         recipe,
-        include_generated_matter=True,
+        manifest.chapters,
     )
-    markdown = assembly.add_manual_toc(markdown, manifest.chapters)
     markdown = _rewrite_render_images(
         markdown,
         recipe,
@@ -751,12 +782,12 @@ def build_web_book(
         splashes=manifest.splashes,
         include_source_markers=True,
     )
-    markdown = _prepare_ttrpg_markdown(
+    markdown = _prepare_book_markdown_with_manual_toc(
         markdown,
         recipe,
-        include_generated_matter=True,
+        manifest.chapters,
+        toc_max_depth=2,
     )
-    markdown = assembly.add_manual_toc(markdown, manifest.chapters, max_depth=2)
     markdown = _rewrite_render_images(markdown, recipe, manifest, profile="web")
     ctx = context_for_web(tools, recipe, manifest, include_art=include_art)
     html = pipeline.render_markdown_to_html(markdown, ctx)
