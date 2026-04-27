@@ -125,6 +125,49 @@ Generated files live under one caller-owned tree:
 `output_dir` and `output_name` are recipe fields. `output_dir` may be absolute
 or relative to the recipe file.
 
+## Container Image
+
+This repository publishes a reusable runtime image to GitHub Container Registry:
+
+```text
+ghcr.io/nccurry/papercrown
+```
+
+The image includes the installed `papercrown` CLI plus Pandoc, WeasyPrint's
+native Linux libraries, and `obsidian-export`. It is intended for downstream CI
+jobs that only need to build Paper Crown projects, including static HTML output
+for GitLab Pages.
+
+Run a local project through the image:
+
+```sh
+docker run --rm -v "$PWD:/workspace" -w /workspace ghcr.io/nccurry/papercrown:latest papercrown build --target web
+```
+
+Prefer a version tag such as `ghcr.io/nccurry/papercrown:1.0.0` for repeatable
+CI. The `latest` and `main` tags track the default branch; release tags are
+published from `v*` repository tags.
+
+Keep the GHCR package public, or grant package access to downstream projects
+that need to pull the image during CI.
+
+Minimal GitLab Pages job:
+
+```yaml
+pages:
+  image: ghcr.io/nccurry/papercrown:latest
+  script:
+    - papercrown build --target web --force
+    - mkdir -p public
+    - cp -R "output/Paper Crown/my-book/web/." public/
+  artifacts:
+    paths:
+      - public
+```
+
+Replace the `cp` source with the web output path produced by your recipe's
+`output_dir` and `output_name`.
+
 ## Recipes
 
 Minimal recipe:

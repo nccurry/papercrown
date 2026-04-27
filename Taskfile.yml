@@ -93,6 +93,17 @@ tasks:
       - docker build -f Dockerfile.ci -t papercrown-ci .
       - docker run --rm papercrown-ci
 
+  docker:image:
+    desc: Build the reusable Paper Crown runtime container image.
+    cmds:
+      - docker build -t papercrown .
+
+  docker:image:publish:
+    desc: Build and optionally publish the reusable Paper Crown runtime container image.
+    platforms: [linux]
+    cmds:
+      - bash scripts/container-build.sh
+
   build:
     desc: Build a recipe with the installed Paper Crown CLI.
     cmds:

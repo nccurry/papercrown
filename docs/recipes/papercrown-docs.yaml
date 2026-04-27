@@ -48,4 +48,5 @@ chapters:
     slug: maintaining-paper-crown
     sources:
       - docs:Development.md
+      - docs:Container Image.md
       - docs:GitHub Pages.md
