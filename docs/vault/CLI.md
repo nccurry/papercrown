@@ -19,6 +19,13 @@ papercrown themes list
 papercrown themes copy NAME DEST
 ```
 
+:::: {.rule #cli-surface title="CLI Surface" tags="docs,cli,reference"}
+### CLI Surface
+
+The CLI keeps author work in four repeatable phases: inspect with `manifest`,
+preflight with `doctor`, render with `build`, and check results with `verify`.
+::::
+
 Common build options:
 
 ```sh
@@ -49,3 +56,15 @@ Use `verify` after rendering PDFs:
 ```sh
 papercrown verify book.yaml --scope book --profile print --strict
 ```
+
+## Build Option Map
+
+| Option | Use |
+| --- | --- |
+| `--target pdf` or `--target web` | Choose PDF output or static HTML |
+| `--scope book`, `sections`, or `all` | Choose which PDF artifacts to emit |
+| `--profile print`, `digital`, or `draft` | Tune render quality and image handling |
+| `--chapter <slug-or-title>` | Build one section while iterating |
+| `--jobs auto` | Parallelize independent PDF work |
+| `--draft-mode fast` or `visual` | Decide whether draft builds skip or keep art |
+| `--page-damage auto`, `off`, `fast`, `full`, or `proof` | Control PDF page-wear overlays |

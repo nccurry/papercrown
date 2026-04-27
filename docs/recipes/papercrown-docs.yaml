@@ -1,11 +1,12 @@
 title: Paper Crown Documentation
-subtitle: uv tool install and recipe-driven publishing
-cover_eyebrow: Documentation
+subtitle: A genre anthology for recipe-driven publishing
+cover_eyebrow: Field Codex
 cover_footer: nccurry/papercrown
 output_dir: ../site
 output_name: papercrown-docs
 art_dir: ../assets
-theme: modern-minimal
+theme_dir: ../themes
+theme: papercrown-docs
 
 metadata:
   authors:
@@ -17,35 +18,183 @@ metadata:
     - PDF
     - static web
   license: AGPL-3.0-or-later
+  credits:
+    design:
+      - Paper Crown maintainers
+    art:
+      - Current cover uses the Paper Crown README hero; final anthology art is scoped in docs/assets/papercrown-docs/ART_BRIEF.md
+
+back_matter:
+  - type: appendix-index
+    title: Feature Index
+  - art-credits
+  - license
 
 cover:
   enabled: true
-  art: papercrown-readme-hero.svg
+  art: papercrown-docs/covers/cover-front-genre-anthology.png
+
+splashes:
+  - id: product-model-codex-route
+    art: papercrown-docs/splashes/splash-product-model-codex-route.png
+    target: after-heading
+    chapter: overview
+    heading: Product Model
+    placement: bottom-half
+  - id: core-flow-quest-map
+    art: papercrown-docs/splashes/splash-core-flow-quest-map.png
+    target: after-heading
+    chapter: overview
+    heading: Core Flow
+    placement: bottom-half
+  - id: repository-bootstrap-launch-panel
+    art: papercrown-docs/splashes/splash-repository-bootstrap-launch-panel.png
+    target: after-heading
+    chapter: setup
+    heading: Repository Bootstrap
+    placement: bottom-half
+  - id: compact-reference-casefile-ritual
+    art: papercrown-docs/splashes/splash-compact-reference-casefile-ritual.png
+    target: after-heading
+    chapter: authoring
+    heading: Compact Field Reference
+    placement: bottom-half
+  - id: theme-gallery-spread
+    art: papercrown-docs/splashes/splash-theme-gallery-spread.png
+    target: after-heading
+    chapter: authoring
+    heading: Themes
+    placement: bottom-half
+  - id: pages-field-guide-press
+    art: papercrown-docs/splashes/splash-pages-field-guide-press.png
+    target: after-heading
+    chapter: maintaining-paper-crown
+    heading: GitHub Pages
+    placement: bottom-half
+
+fillers:
+  enabled: true
+  art_dir: papercrown-docs
+  slots:
+    chapter-end:
+      min_space: 0.75in
+      max_space: 6.00in
+      shapes:
+        - tailpiece
+        - spot
+        - small-wide
+        - bottom-band
+  assets:
+    - id: ornament-tailpiece-codex
+      art: ornaments/tailpieces/ornament-tailpiece-codex.png
+      shape: tailpiece
+      height: 0.65in
+    - id: ornament-tailpiece-launch
+      art: ornaments/tailpieces/ornament-tailpiece-launch.png
+      shape: tailpiece
+      height: 0.65in
+    - id: ornament-tailpiece-casefile
+      art: ornaments/tailpieces/ornament-tailpiece-casefile.png
+      shape: tailpiece
+      height: 0.65in
+    - id: ornament-tailpiece-field-guide
+      art: ornaments/tailpieces/ornament-tailpiece-field-guide.png
+      shape: tailpiece
+      height: 0.65in
+    - id: filler-spot-codex-crown
+      art: fillers/spot/filler-spot-codex-crown-01.png
+      shape: spot
+      height: 1.10in
+    - id: filler-spot-launch-console
+      art: fillers/spot/filler-spot-launch-console-01.png
+      shape: spot
+      height: 1.10in
+    - id: filler-spot-casefile-orbit
+      art: fillers/spot/filler-spot-casefile-orbit-01.png
+      shape: spot
+      height: 1.10in
+    - id: filler-spot-field-guide-tag
+      art: fillers/spot/filler-spot-field-guide-tag-01.png
+      shape: spot
+      height: 1.10in
+    - id: filler-wide-codex-route
+      art: fillers/wide/filler-wide-codex-route-01.png
+      shape: small-wide
+      height: 0.72in
+    - id: filler-wide-launch-panel
+      art: fillers/wide/filler-wide-launch-panel-01.png
+      shape: small-wide
+      height: 0.72in
+    - id: filler-wide-casefile-ritual
+      art: fillers/wide/filler-wide-casefile-ritual-01.png
+      shape: small-wide
+      height: 0.72in
+    - id: filler-bottom-field-guide-press
+      art: fillers/bottom/filler-bottom-field-guide-press-01.png
+      shape: bottom-band
+      height: 1.18in
+
+page_damage:
+  enabled: true
+  art_dir: papercrown-docs/page-wear
+  seed: papercrown-docs-anthology-v1
+  density: 0.32
+  max_assets_per_page: 1
+  opacity: 0.22
+  skip:
+    - cover
+    - toc
+    - divider
+    - splash
 
 vaults:
   docs: ../vault
 
 chapters:
   - kind: file
+    style: codex
     title: Overview
     slug: overview
+    eyebrow: High Fantasy Codex
+    art: papercrown-docs/dividers/divider-overview-fantasy-codex.png
+    headpiece: papercrown-docs/ornaments/headpieces/ornament-headpiece-codex.png
+    tailpiece: papercrown-docs/ornaments/tailpieces/ornament-tailpiece-codex.png
+    toc_depth: 3
     source: docs:Overview.md
   - kind: sequence
+    style: launch
     title: Setup
     slug: setup
+    eyebrow: Space Opera Launch Manual
+    art: papercrown-docs/dividers/divider-setup-launch-manual.png
+    headpiece: papercrown-docs/ornaments/headpieces/ornament-headpiece-launch.png
+    tailpiece: papercrown-docs/ornaments/tailpieces/ornament-tailpiece-launch.png
+    toc_depth: 3
     sources:
       - docs:Bootstrap.md
       - docs:Quick Start.md
   - kind: sequence
+    style: casefile
     title: Authoring
     slug: authoring
+    eyebrow: Occult Recipe Casefile
+    art: papercrown-docs/dividers/divider-authoring-occult-casefile.png
+    headpiece: papercrown-docs/ornaments/headpieces/ornament-headpiece-casefile.png
+    tailpiece: papercrown-docs/ornaments/tailpieces/ornament-tailpiece-casefile.png
+    toc_depth: 3
     sources:
       - docs:Recipes.md
       - docs:Themes.md
       - docs:CLI.md
   - kind: sequence
+    style: field-guide
     title: Maintaining Paper Crown
     slug: maintaining-paper-crown
+    eyebrow: Pulp Industrial Field Guide
+    art: papercrown-docs/dividers/divider-maintaining-industrial-guide.png
+    headpiece: papercrown-docs/ornaments/headpieces/ornament-headpiece-field-guide.png
+    tailpiece: papercrown-docs/ornaments/tailpieces/ornament-tailpiece-field-guide.png
+    toc_depth: 3
     sources:
       - docs:Development.md
       - docs:Container Image.md

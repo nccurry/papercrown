@@ -21,6 +21,20 @@ Run `papercrown doctor` inside a project before rendering. It checks the recipe,
 content, bundled resources, and local external tools such as Pandoc,
 `obsidian-export`, and the native PDF runtime used by WeasyPrint.
 
+:::: {.handout #launch-checklist title="Launch Checklist" tags="docs,setup,doctor"}
+### Launch Checklist
+
+- `uv tool install papercrown`
+- `papercrown init my-book`
+- `papercrown manifest`
+- `papercrown doctor`
+- `papercrown build`
+- `papercrown verify`
+::::
+
+@handout.launch-checklist is the shortest path from a blank folder to a
+rendered book.
+
 ## Repository Bootstrap
 
 Maintainers working from a source checkout can use one bootstrap command.
@@ -43,7 +57,7 @@ task deps:install
 ```
 
 `task deps:install` installs or verifies uv, Python dependencies, Pandoc,
-Rust, obsidian-export, and the MSYS2 Pango/GLib runtime used by WeasyPrint.
+Rust, obsidian-export, and the MSYS2 UCRT64 Pango/GLib runtime used by WeasyPrint.
 
 ## Linux, macOS, WSL, And Git Bash
 
@@ -66,3 +80,15 @@ task deps
 task docs:build
 task check
 ```
+
+## Troubleshooting
+
+:::: {.clue #external-toolchain title="External Toolchain Checks" tags="docs,setup,troubleshooting"}
+### External Toolchain Checks
+
+If rendering fails after the Python package installs, run `papercrown doctor`.
+Most failures are missing or stale external tools: Pandoc, `obsidian-export`,
+or the native libraries used by WeasyPrint on Windows.
+::::
+
+Use @clue.external-toolchain before chasing theme or Markdown problems.

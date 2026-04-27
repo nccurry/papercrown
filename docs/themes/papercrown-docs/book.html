@@ -1,0 +1,115 @@
+<!DOCTYPE html>
+<html lang="$lang$" xml:lang="$lang$"$if(dir)$ dir="$dir$"$endif$>
+<head>
+  <meta charset="utf-8" />
+  <meta name="generator" content="pandoc + weasyprint (papercrown)" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+$if(book-author)$
+  <meta name="author" content="$book-author$" />
+$endif$
+$if(book-description)$
+  <meta name="description" content="$book-description$" />
+$endif$
+$if(book-keywords)$
+  <meta name="keywords" content="$book-keywords$" />
+$endif$
+$if(book-date)$
+  <meta name="date" content="$book-date$" />
+$endif$
+$if(book-publisher)$
+  <meta name="publisher" content="$book-publisher$" />
+$endif$
+$if(book-version)$
+  <meta name="book-version" content="$book-version$" />
+$endif$
+$if(book-license)$
+  <meta name="license" content="$book-license$" />
+$endif$
+  <title>$if(title-prefix)$$title-prefix$ - $endif$$pagetitle$</title>
+$for(css)$
+  <link rel="stylesheet" href="$css$" />
+$endfor$
+$if(page-background-underlay)$
+  <style>
+    @page { background-color: transparent; background-image: none; }
+    @page divider-page { background-color: transparent; background-image: none; }
+    @page digital { background-color: transparent; background-image: none; }
+    @page digital-divider-page { background-color: transparent; background-image: none; }
+    @page cover-page { background-color: transparent; background-image: none; }
+  </style>
+$endif$
+$if(ornament-folio-frame)$
+  <style>
+    :root { --ornament-folio-frame: url("$ornament-folio-frame$"); }
+  </style>
+$endif$
+$if(ornament-corner-bracket)$
+  <style>
+    :root { --ornament-corner-bracket: url("$ornament-corner-bracket$"); }
+  </style>
+$endif$
+$for(header-includes)$
+  $header-includes$
+$endfor$
+</head>
+<body class="paper-anthology $if(output-profile)$mode-$output-profile$$else$$if(digital)$mode-digital$else$mode-print$endif$$endif$$if(section-kind)$ section-$section-kind$$endif$">
+
+$if(title-prefix)$
+<div class="book-title-stringset" aria-hidden="true">$title-prefix$</div>
+$endif$
+
+$if(cover)$
+<section class="cover docs-cover" data-cover>
+  <div class="cover-art-wrap">
+$if(cover-art)$
+    <img class="cover-art" src="$cover-art$" alt="" />
+$endif$
+$if(draft-placeholders)$
+$if(cover-art)$$else$
+    <div class="draft-art-placeholder draft-cover-placeholder">Cover art omitted in fast draft</div>
+$endif$
+$endif$
+  </div>
+  <div class="cover-text">
+    <div class="cover-eyebrow">$cover-eyebrow$</div>
+    <h1 class="cover-title">$cover-title$</h1>
+    $if(cover-subtitle)$<div class="cover-subtitle">$cover-subtitle$</div>$endif$
+  </div>
+$if(cover-footer)$
+  <div class="cover-footer">$cover-footer$</div>
+$endif$
+</section>
+$endif$
+
+$if(toc)$
+<nav class="toc" role="doc-toc">
+  <h1 class="toc-title">Table of Contents</h1>
+  $table-of-contents$
+</nav>
+$endif$
+
+$if(chapter-opener)$
+<section class="chapter-opener">
+  <div class="chapter-art-wrap">
+$if(chapter-art)$
+    <img class="chapter-art" src="$chapter-art$" alt="" />
+$endif$
+$if(draft-placeholders)$
+$if(chapter-art)$$else$
+    <div class="draft-art-placeholder draft-chapter-placeholder">Chapter art omitted in fast draft</div>
+$endif$
+$endif$
+  </div>
+  <div class="chapter-title-wrap">
+    <div class="chapter-eyebrow">$if(chapter-eyebrow)$$chapter-eyebrow$$else$Chapter$endif$</div>
+    <h1 class="chapter-title">$chapter-title$</h1>
+  </div>
+</section>
+$endif$
+
+<main class="book-body docs-book-body">
+$body$
+</main>
+
+</body>
+</html>
