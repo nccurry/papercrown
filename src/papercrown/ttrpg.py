@@ -111,6 +111,15 @@ def prepare_book_markdown(
     )
 
 
+def add_generated_matter(
+    markdown: str,
+    recipe: Recipe,
+    registry: ObjectRegistry,
+) -> str:
+    """Wrap prepared book markdown with configured front and back matter."""
+    return _with_generated_matter(markdown, recipe, registry)
+
+
 def lint_ttrpg_markdown(markdown: str) -> list[Diagnostic]:
     """Return typed-block and cross-reference diagnostics for markdown."""
     normalized, registry, diagnostics = _normalize_ttrpg_blocks(markdown)

@@ -1754,6 +1754,11 @@ body.mode-web a.internal-ref {
   page-break-before: always;
 }
 
+.front-matter {
+  break-after: page;
+  page-break-after: always;
+}
+
 .generated-matter h1 {
   margin-top: 0;
 }

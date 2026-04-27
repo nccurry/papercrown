@@ -24,6 +24,27 @@ Paths are resolved relative to the recipe file. Vaults, art directories, theme
 directories, and output directories do not need to live inside the package or
 repository.
 
+## Legal front matter
+
+Use `metadata.license` with generated `front_matter` when a book needs a
+visible license, attribution, compatibility, or support notice near the
+beginning of the PDF and static web export:
+
+```yaml
+metadata:
+  license: |
+    This book is an independent product.
+
+    It is not official or endorsed by the original publisher.
+
+front_matter:
+  - type: license
+    title: Legal & Support
+```
+
+Generated front matter appears before the table of contents in combined book
+outputs. Generated back matter still appears after the assembled chapters.
+
 Common chapter shapes:
 
 - `file`: one Markdown source becomes one chapter.
