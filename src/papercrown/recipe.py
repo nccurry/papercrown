@@ -42,7 +42,8 @@ Recipe shape:
         individual_pdfs: true
         individual_pdf_subdir: classes
         art_per_class: true
-        class_spot_art_pattern: class-spots/spot-class-{slug}.png
+        class_art_pattern: classes/dividers/class-{slug}.png
+        class_spot_art_pattern: classes/spots/spot-class-{slug}.png
         replace_existing_opening_art: true
       - kind: sequence
         title: Combat
@@ -564,6 +565,8 @@ class ChapterSpec:
     individual_pdf_subdir: str | None = None
     # auto-pick recipe.art_dir/<slug>.png per child
     art_per_class: bool = False
+    # auto-pick divider art for classes-catalog children from a filename pattern
+    class_art_pattern: str | None = None
     # auto-pick an opening class spot for classes-catalog children
     class_spot_art_pattern: str | None = None
     # remove a leading hand-authored art spot when class spot art is injected
@@ -683,6 +686,7 @@ class ChapterSpec:
             individual_pdfs=bool(raw.get("individual_pdfs", False)),
             individual_pdf_subdir=_str_or_none(raw.get("individual_pdf_subdir")),
             art_per_class=bool(raw.get("art_per_class", False)),
+            class_art_pattern=_str_or_none(raw.get("class_art_pattern")),
             class_spot_art_pattern=_str_or_none(raw.get("class_spot_art_pattern")),
             replace_existing_opening_art=bool(
                 raw.get("replace_existing_opening_art", False)

@@ -30,6 +30,7 @@ from pathlib import Path
 from typing import Any, cast
 from urllib.parse import unquote, urlsplit
 
+from PIL import Image, UnidentifiedImageError
 from pypdf import PdfReader, PdfWriter
 
 from . import fillers, page_damage, pagination
@@ -37,6 +38,7 @@ from .manifest import FillerCatalog, PageDamageCatalog
 from .resources import TEXTURES_DIR
 
 _WINDOWS_ABSOLUTE_URL_RE = re.compile(r"^[A-Za-z]:[\\/]")
+PT_PER_IN = 72.0
 if os.name == "nt":
     # GLib's default Windows VFS enumerates UWP file-association handlers and
     # can emit unrelated GLib-GIO warnings. We only fetch local build assets.
@@ -960,8 +962,8 @@ def _stamp_bottom_bleed_fitz(
 ) -> None:
     """Stamp one bottom-bleed filler directly onto a PyMuPDF page."""
     asset = placement.asset
-    band_height = max(asset.height_in + 0.25, 1.0) * 72.0
-    image_height = asset.height_in * 72.0
+    band_height = max(asset.height_in + 0.25, 1.0) * PT_PER_IN
+    max_image_height = asset.height_in * PT_PER_IN
     page_rect = page.rect
     mask_rect = fitz.Rect(
         page_rect.x0,
@@ -969,19 +971,49 @@ def _stamp_bottom_bleed_fitz(
         page_rect.x1,
         page_rect.y1,
     )
+    image_width, image_height = _bottom_bleed_display_size_pt(
+        asset.art_path,
+        max_width_pt=page_rect.width,
+        max_height_pt=max_image_height,
+    )
+    image_x0 = page_rect.x0 + (page_rect.width - image_width) / 2.0
     image_rect = fitz.Rect(
-        page_rect.x0,
+        image_x0,
         page_rect.y1 - image_height,
-        page_rect.x1,
+        image_x0 + image_width,
         page_rect.y1,
     )
     page.draw_rect(mask_rect, color=None, fill=(0.984, 0.980, 0.973), overlay=True)
     page.insert_image(
         image_rect,
         filename=str(asset.art_path),
-        keep_proportion=False,
+        keep_proportion=True,
         overlay=True,
     )
+
+
+def _bottom_bleed_display_size_pt(
+    path: Path,
+    *,
+    max_width_pt: float,
+    max_height_pt: float,
+) -> tuple[float, float]:
+    """Return capped image dimensions without upscaling or distorting art."""
+    try:
+        with Image.open(path) as image:
+            width_px, height_px = image.size
+    except (OSError, UnidentifiedImageError):
+        return max_width_pt, max_height_pt
+    if width_px <= 0 or height_px <= 0:
+        return max_width_pt, max_height_pt
+    natural_width_pt = (width_px / fillers.PX_PER_IN) * PT_PER_IN
+    natural_height_pt = (height_px / fillers.PX_PER_IN) * PT_PER_IN
+    scale = min(
+        1.0,
+        max_width_pt / natural_width_pt,
+        max_height_pt / natural_height_pt,
+    )
+    return natural_width_pt * scale, natural_height_pt * scale
 
 
 def _save_fitz_pdf(document: Any, out_pdf: Path) -> None:
@@ -1114,11 +1146,13 @@ def _bottom_bleed_overlay_pdf(
       }}
       img {{
         position: absolute;
-        left: 0;
+        left: 50%;
         bottom: 0;
-        width: 8.5in;
-        height: {asset.height_in:.3f}in;
-        object-fit: cover;
+        max-width: 8.5in;
+        max-height: {asset.height_in:.3f}in;
+        width: auto;
+        height: auto;
+        transform: translateX(-50%);
         display: block;
       }}
     </style>

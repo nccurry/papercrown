@@ -9,6 +9,7 @@ from typing import Any
 
 from PIL import Image, UnidentifiedImageError
 
+from .art_audit import audit_recipe_art
 from .build import missing_fonts
 from .content_lint import lint_manifest_content
 from .dependencies import native_pdf_runtime_diagnostics
@@ -66,6 +67,7 @@ def run_doctor(
     if target is BuildTarget.PDF:
         report.extend(native_pdf_runtime_diagnostics())
     _add_recipe_art_diagnostics(report, recipe)
+    report.extend(audit_recipe_art(recipe, manifest).diagnostics.diagnostics)
     _add_manifest_image_diagnostics(report, manifest)
     _add_filler_asset_diagnostics(report, manifest)
     _add_page_wear_asset_diagnostics(report, manifest)

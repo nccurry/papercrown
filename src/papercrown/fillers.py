@@ -23,7 +23,10 @@ SKIP_PAGE_NAMES = {"cover-page", "divider-page", "digital-divider-page"}
 SKIP_PAGE_CLASSES = {"cover", "toc", "splash-page"}
 LARGE_GAP_IN = 2.0
 HUGE_GAP_IN = 3.0
+BOTTOM_BAND_GAP_IN = 3.25
+PAGE_FINISHER_GAP_IN = 5.25
 PAGE_FINISHER_IN = 4.0
+MIN_MEDIUM_GAP_ART_IN = 0.75
 SETTING_WIDE_CHAPTERS = {"setting-primer", "backgrounds", "for-gms"}
 EQUIPMENT_WIDE_CHAPTERS = {"combat"}
 FRAME_SLOT_NAMES = {"frame-family-end"}
@@ -367,7 +370,7 @@ def _select_filler_with_reason(
     fit_limit = measurement.available_in - TOP_SAFETY_IN - BOTTOM_SAFETY_IN
     if fit_limit <= 0:
         return None, "insufficient safety margin"
-    candidates = [
+    fitting_candidates = [
         asset
         for asset in catalog.assets
         if asset.shape in V1_SHAPES
@@ -377,7 +380,14 @@ def _select_filler_with_reason(
         and _asset_matches_context(asset, measurement)
         and _candidate_is_useful(asset, measurement)
     ]
+    candidates = [
+        asset
+        for asset in fitting_candidates
+        if _candidate_matches_gap_size(asset, fit_limit)
+    ]
     if not candidates:
+        if fitting_candidates:
+            return None, "no size-matched context asset"
         return None, "no fitting context-matched asset"
     unused_candidates = [
         asset
@@ -454,10 +464,28 @@ def _candidate_is_useful(
     return True
 
 
+def _candidate_matches_gap_size(asset: FillerAsset, usable_in: float) -> bool:
+    """Keep filler art in the gap size tier it was composed to occupy."""
+    group = _candidate_group(asset)
+    if usable_in >= PAGE_FINISHER_GAP_IN:
+        return group == "page-finish"
+    if usable_in >= BOTTOM_BAND_GAP_IN:
+        return group in {"bottom-band", "page-finish"}
+    if usable_in >= LARGE_GAP_IN:
+        return (
+            group in {"spot", "small-wide", "bottom-band", "page-finish"}
+            and asset.height_in >= MIN_MEDIUM_GAP_ART_IN
+        )
+    return group in {"tailpiece", "spot", "small-wide", "bottom-band", "page-finish"}
+
+
 def _is_missing_art_decision(decision: FillerDecision) -> bool:
     if decision.asset is not None:
         return False
-    return decision.reason == "no fitting context-matched asset"
+    return decision.reason in {
+        "no fitting context-matched asset",
+        "no size-matched context asset",
+    }
 
 
 def _missing_art_opportunity(
@@ -495,13 +523,13 @@ def _recommended_missing_shape(usable_in: float) -> tuple[str, str, str]:
             "filler-spot",
             "transparent background, soft edge falloff, no rectangular backing",
         )
-    if usable_in < 3.25:
+    if usable_in < BOTTOM_BAND_GAP_IN:
         return (
             "wide transparent filler",
             "filler-wide",
             "transparent background, low visual mass, no hard canvas edge",
         )
-    if usable_in < 5.25:
+    if usable_in < PAGE_FINISHER_GAP_IN:
         return (
             "bottom-band filler",
             "filler-bottom",
