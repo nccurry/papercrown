@@ -1,6 +1,6 @@
 # syntax=docker/dockerfile:1
 
-ARG UV_BASE_IMAGE=ghcr.io/astral-sh/uv:0.11.8-python3.12-bookworm-slim
+ARG UV_BASE_IMAGE=ghcr.io/astral-sh/uv:0.11.8-python3.12-trixie-slim
 ARG PYTHON_RUNTIME_IMAGE=python:3.12-slim-bookworm
 ARG OBSIDIAN_EXPORT_VERSION=25.3.0
 

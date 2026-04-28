@@ -15,7 +15,7 @@ fi
 args=(
   --file Dockerfile
   --pull
-  --build-arg "UV_BASE_IMAGE=${UV_BASE_IMAGE:-ghcr.io/astral-sh/uv:0.11.8-python3.12-bookworm-slim}"
+  --build-arg "UV_BASE_IMAGE=${UV_BASE_IMAGE:-ghcr.io/astral-sh/uv:0.11.8-python3.12-trixie-slim}"
   --build-arg "PYTHON_RUNTIME_IMAGE=${PYTHON_RUNTIME_IMAGE:-python:3.12-slim-bookworm}"
   --build-arg "OBSIDIAN_EXPORT_VERSION=${OBSIDIAN_EXPORT_VERSION:-25.3.0}"
 )
