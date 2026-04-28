@@ -1,11 +1,15 @@
 # CLI
 
-The installed `papercrown` command is the supported product interface. Install
-it once with uv:
+The installed `papercrown` command is the supported product interface. Releases
+are published as wheel assets on GitHub Releases, not PyPI. Install the desired
+release with uv:
 
 ```sh
-uv tool install papercrown
+uv tool install https://github.com/nccurry/papercrown/releases/download/v1.0.0/papercrown-1.0.0-py3-none-any.whl
 ```
+
+Replace `1.0.0` with the release version you want. For an unreleased build from
+the default branch, use `uv tool install git+https://github.com/nccurry/papercrown.git`.
 
 ```text
 papercrown build [RECIPE]

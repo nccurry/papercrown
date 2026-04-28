@@ -7,8 +7,10 @@ assemble.
 
 The project has two audiences:
 
-- Authors install Paper Crown with `uv tool install papercrown`, then use the
-  `papercrown` command to initialize projects, check recipes, and build books.
+- Authors install Paper Crown with
+  `uv tool install https://github.com/nccurry/papercrown/releases/download/v1.0.0/papercrown-1.0.0-py3-none-any.whl`,
+  then use the `papercrown` command to initialize projects, check recipes, and
+  build books. Release artifacts live on GitHub Releases, not PyPI.
 - Maintainers use `task` for every repository workflow, including bootstrap,
   dependency installation, tests, packaging, docs, and releases.
 
@@ -18,7 +20,8 @@ close to the product behavior.
 
 ## Core Flow
 
-1. Install once with `uv tool install papercrown`.
+1. Install once with
+   `uv tool install https://github.com/nccurry/papercrown/releases/download/v1.0.0/papercrown-1.0.0-py3-none-any.whl`.
 2. Write Markdown in a vault.
 3. Describe output in a recipe YAML file.
 4. Run `papercrown manifest` to inspect the resolved book.

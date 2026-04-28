@@ -3,8 +3,11 @@
 Install the CLI once:
 
 ```sh
-uv tool install papercrown
+uv tool install https://github.com/nccurry/papercrown/releases/download/v1.0.0/papercrown-1.0.0-py3-none-any.whl
 ```
+
+Replace `1.0.0` with the release version you want. Paper Crown release artifacts
+live on GitHub Releases, not PyPI.
 
 Create a new Paper Crown project:
 

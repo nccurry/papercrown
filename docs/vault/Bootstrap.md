@@ -2,12 +2,16 @@
 
 Install Paper Crown as a uv tool. This creates the `papercrown` command in uv's
 tool directory and keeps Paper Crown isolated from project virtual
-environments.
+environments. Releases are published as wheel assets on GitHub Releases, not
+PyPI. Install the desired release with uv:
 
 ```sh
-uv tool install papercrown
+uv tool install https://github.com/nccurry/papercrown/releases/download/v1.0.0/papercrown-1.0.0-py3-none-any.whl
 papercrown --help
 ```
+
+Replace `1.0.0` with the release version you want. For an unreleased build from
+the default branch, use `uv tool install git+https://github.com/nccurry/papercrown.git`.
 
 If your shell cannot find `papercrown` after installation, run:
 
@@ -17,9 +21,10 @@ uv tool update-shell
 
 Then open a new terminal.
 
-Run `papercrown doctor` inside a project before rendering. It checks the recipe,
-content, bundled resources, and local external tools such as Pandoc,
-`obsidian-export`, and the native PDF runtime used by WeasyPrint.
+uv installs Paper Crown's Python runtime dependencies into the tool
+environment. Run `papercrown doctor` inside a project before rendering. It
+checks the recipe, content, bundled resources, and local external tools such as
+Pandoc, `obsidian-export`, and the native PDF runtime used by WeasyPrint.
 
 ## Repository Bootstrap
 

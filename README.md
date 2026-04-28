@@ -13,21 +13,25 @@
   <img alt="License AGPL-3.0-or-later" src="https://img.shields.io/badge/license-AGPL--3.0--or--later-blue">
 </p>
 
+Start here: [Paper Crown documentation](https://nccurry.github.io/papercrown/)
+
 Paper Crown builds polished TTRPG PDFs and static web exports from Markdown
 content that lives anywhere on disk. A recipe points at one or more content
 vaults, chooses a theme, and declares the chapters to assemble.
 
-Documentation: [https://nccurry.github.io/papercrown/](https://nccurry.github.io/papercrown/)
-
 ## Install
 
-Paper Crown is distributed as an installed `papercrown` command. Install the
-released CLI with uv:
+Paper Crown is distributed as an installed `papercrown` command. Releases are
+published as wheel assets on GitHub Releases, not PyPI. Install the desired
+release with uv:
 
 ```sh
-uv tool install papercrown
+uv tool install https://github.com/nccurry/papercrown/releases/download/v1.0.0/papercrown-1.0.0-py3-none-any.whl
 papercrown --help
 ```
+
+Replace `1.0.0` with the release version you want. For an unreleased build from
+the default branch, use `uv tool install git+https://github.com/nccurry/papercrown.git`.
 
 If your shell cannot find `papercrown` after installation, run:
 
@@ -35,10 +39,11 @@ If your shell cannot find `papercrown` after installation, run:
 uv tool update-shell
 ```
 
-Then open a new terminal. Paper Crown installs its Python runtime dependencies
-into the uv tool environment. Builds also use external tools such as Pandoc and
-`obsidian-export`; run `papercrown doctor` inside a project to check the local
-machine before rendering.
+Then open a new terminal. uv installs Paper Crown's Python runtime dependencies
+into the tool environment, but document builds also need external tools such as
+Pandoc, `obsidian-export`, and the native PDF runtime used by WeasyPrint. Run
+`papercrown doctor` inside a project to check the local machine before
+rendering.
 
 ## Quick Start
 
