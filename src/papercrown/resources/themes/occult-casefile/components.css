@@ -1,0 +1,25 @@
+/* Occult Casefile component overrides lean into notes, evidence, and files. */
+h2,
+h3,
+.callout-title,
+.ttrpg-index-title {
+  font-family: var(--font-mono);
+}
+
+table th {
+  background: var(--ink);
+  color: var(--paper);
+}
+
+blockquote,
+.callout,
+.ttrpg-clue,
+.ttrpg-clock,
+.ttrpg-handout {
+  border-style: dashed;
+}
+
+.section-divider-text,
+.cover-text {
+  border-color: var(--accent-deep);
+}

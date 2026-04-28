@@ -25,6 +25,21 @@ class ThemePack:
     resource_paths: list[Path] = field(default_factory=list)
     fingerprint_paths: list[Path] = field(default_factory=list)
     inline_css: str | None = None
+    display_name: str = ""
+    description: str = ""
+    category: str = ""
+    tags: tuple[str, ...] = ()
+
+
+@dataclass(frozen=True)
+class ThemeSummary:
+    """Catalog metadata for one bundled theme."""
+
+    name: str
+    display_name: str
+    description: str
+    category: str
+    tags: tuple[str, ...]
 
 
 def load_theme(recipe: Recipe) -> ThemePack:
@@ -50,6 +65,10 @@ def load_theme(recipe: Recipe) -> ThemePack:
         )
     return ThemePack(
         name=name,
+        display_name=_metadata_string(metadata, "name", default=name),
+        description=_metadata_string(metadata, "description"),
+        category=_metadata_string(metadata, "category"),
+        tags=tuple(_string_or_string_list(metadata.get("tags", []), field_name="tags")),
         root=root,
         css_files=css_files,
         template=template,
@@ -66,13 +85,31 @@ def theme_option_css(options: dict[str, str]) -> str | None:
 
 def bundled_theme_names() -> list[str]:
     """Return bundled theme names available to recipes."""
+    return [summary.name for summary in bundled_theme_summaries()]
+
+
+def bundled_theme_summaries() -> list[ThemeSummary]:
+    """Return catalog metadata for bundled themes."""
     if not THEMES_DIR.is_dir():
         return []
-    return sorted(
-        path.name
-        for path in THEMES_DIR.iterdir()
-        if path.is_dir() and (path / "theme.yaml").is_file()
-    )
+    summaries: list[ThemeSummary] = []
+    for path in THEMES_DIR.iterdir():
+        theme_yaml = path / "theme.yaml"
+        if not path.is_dir() or not theme_yaml.is_file():
+            continue
+        metadata = _read_theme_yaml(theme_yaml)
+        summaries.append(
+            ThemeSummary(
+                name=path.name,
+                display_name=_metadata_string(metadata, "name", default=path.name),
+                description=_metadata_string(metadata, "description"),
+                category=_metadata_string(metadata, "category"),
+                tags=tuple(
+                    _string_or_string_list(metadata.get("tags", []), field_name="tags")
+                ),
+            )
+        )
+    return sorted(summaries, key=lambda summary: summary.name)
 
 
 def copy_bundled_theme(name: str, dest: Path, *, overwrite: bool = False) -> Path:
@@ -114,9 +151,24 @@ def _read_theme_yaml(path: Path) -> dict[str, Any]:
     return {str(key): value for key, value in raw.items()}
 
 
+def _metadata_string(
+    metadata: dict[str, Any],
+    key: str,
+    *,
+    default: str = "",
+) -> str:
+    value = metadata.get(key, default)
+    return value.strip() if isinstance(value, str) else default
+
+
 def _resolve_css_files(root: Path, metadata: dict[str, Any]) -> list[Path]:
-    css_raw = metadata.get("css", "book.css")
-    css_names = _string_or_string_list(css_raw, field_name="css")
+    if "css" not in metadata:
+        raise RecipeError(f"theme.yaml must declare css: {root / 'theme.yaml'}")
+    css_names = _string_or_string_list(metadata.get("css"), field_name="css")
+    if not css_names:
+        raise RecipeError(
+            f"theme.yaml css must list at least one CSS file: {root / 'theme.yaml'}"
+        )
     css_files: list[Path] = []
     for css_name in css_names:
         css_path = (root / css_name).resolve()

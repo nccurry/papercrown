@@ -1,0 +1,15 @@
+/* Pinlight Industrial: the default frontier-sci-fi color and surface treatment. */
+:root {
+  --paper: #fbfaf8;
+  --ink: #1b1814;
+  --ink-soft: #3b352e;
+  --muted: #6b6359;
+  --rule: #2a2620;
+  --rule-light: #8a8176;
+  --accent: #b36a2b;
+  --accent-deep: #7d3f12;
+  --warn: #8f2d2a;
+  --success: #3c6f58;
+  --tint-block: #f1eee8;
+  --tint-callout: #f5f1ea;
+}

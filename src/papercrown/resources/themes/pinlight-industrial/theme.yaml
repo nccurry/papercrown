@@ -1,2 +1,7 @@
 name: Pinlight Industrial
-css: book.css
+description: Rugged frontier sci-fi styling with technical headings and worn paper.
+category: science-fiction
+tags: [industrial, sci-fi, frontier]
+css:
+  - tokens.css
+  - components.css

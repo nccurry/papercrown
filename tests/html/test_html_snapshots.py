@@ -20,7 +20,7 @@ from papercrown import assembly, pipeline
 from papercrown.manifest import Chapter, ChapterFillerSlot
 from papercrown.resources import (
     ASSETS_DIR,
-    CSS_FILE,
+    CORE_CSS_FILES,
     FONTS_DIR,
     LUA_FILTERS,
     RESOURCE_DIR,
@@ -46,7 +46,7 @@ def _make_ctx_for_chapter(chapter, *, recipe) -> pipeline.RenderContext:
         pandoc=shutil.which("pandoc") or "pandoc",
         weasyprint="",  # unused for HTML-only
         template=TEMPLATE_FILE,
-        css=CSS_FILE,
+        css_files=list(CORE_CSS_FILES),
         lua_filters=list(LUA_FILTERS),
         resource_paths=[RESOURCE_DIR, ASSETS_DIR, FONTS_DIR],
         chapter_title=chapter.title,
@@ -144,10 +144,10 @@ class TestNormalization:
     def test_normalizes_papercrown_paths(self, tmp_path):
         # Use a real .as_uri() URI -- mirrors what Pandoc actually emits
         # (which percent-encodes spaces, etc).
-        css_uri = CSS_FILE.as_uri()
+        css_uri = CORE_CSS_FILES[0].as_uri()
         html = f'<link href="{css_uri}">'
         out = pipeline.normalize_for_snapshot(html, papercrown_root=RESOURCE_DIR)
-        assert "<<papercrown>>/styles/book.css" in out
+        assert "<<papercrown>>/styles/core/00-tokens.css" in out
         assert "file://" not in out
 
     def test_normalizes_fixture_paths(self, fixture_root):
@@ -245,7 +245,7 @@ def _make_ctx_for_book(
         pandoc=shutil.which("pandoc") or "pandoc",
         weasyprint="",
         template=TEMPLATE_FILE,
-        css=CSS_FILE,
+        css_files=list(CORE_CSS_FILES),
         lua_filters=list(LUA_FILTERS),
         resource_paths=[RESOURCE_DIR, ASSETS_DIR, FONTS_DIR],
         chapter_title=recipe_title,

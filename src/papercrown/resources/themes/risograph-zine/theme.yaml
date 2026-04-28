@@ -1,2 +1,7 @@
 name: Risograph Zine
-css: book.css
+description: High-contrast indie zine styling with punchy inks and print-shop energy.
+category: zine
+tags: [zine, risograph, indie]
+css:
+  - tokens.css
+  - components.css

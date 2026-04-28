@@ -1,0 +1,366 @@
+/* ==========================================================================
+   Static web mode
+   ========================================================================== */
+
+body.mode-web {
+  max-width: 980px;
+  margin: 0 auto;
+  padding: 2rem clamp(1rem, 4vw, 3rem);
+  font-size: 18px;
+  line-height: 1.55;
+}
+
+body.mode-web .book-title-stringset {
+  display: none;
+}
+
+body.mode-web .cover,
+body.mode-web .chapter-opener,
+body.mode-web .section-divider,
+body.mode-web .splash-page,
+body.mode-web .toc,
+body.mode-web h1 {
+  page-break-before: auto;
+  page-break-after: auto;
+  break-before: auto;
+  break-after: auto;
+}
+
+body.mode-web .cover,
+body.mode-web .splash-page,
+body.mode-web .section-divider {
+  min-height: min(80vh, 720px);
+  height: auto;
+  max-height: none;
+}
+
+body.mode-web .toc {
+  padding-top: 0;
+  margin: 2rem 0 3rem;
+  border-bottom: 0;
+  padding-bottom: 0;
+  letter-spacing: 0;
+  text-transform: none;
+}
+
+body.mode-web .toc li > a::after {
+  content: none;
+}
+
+body.mode-web .toc > h1.toc-title {
+  font-size: 1rem;
+  letter-spacing: 0;
+  margin: 0 0 0.8rem;
+  padding-bottom: 0.45rem;
+  border-bottom: 1px solid var(--rule-light);
+}
+
+body.mode-web .toc li {
+  font-size: 0.95rem;
+  line-height: 1.35;
+  margin: 0.22rem 0;
+}
+
+body.mode-web .toc li > a {
+  display: block;
+  border-bottom: 0;
+  padding: 0.12rem 0;
+}
+
+body.mode-web .toc li > ul {
+  padding-left: 1rem;
+}
+
+body.mode-web .toc ul ul li {
+  font-size: 0.86rem;
+}
+
+@media screen and (min-width: 1100px) {
+  body.mode-web {
+    max-width: none;
+  }
+
+  body.mode-web > .cover,
+  body.mode-web > .chapter-opener {
+    max-width: 980px;
+    margin-left: auto;
+    margin-right: auto;
+  }
+
+  body.mode-web > .cover {
+    min-height: calc(100vh - 2rem);
+  }
+
+  body.mode-web .book-body {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(13rem, 17rem);
+    column-gap: clamp(1.5rem, 3vw, 3rem);
+    row-gap: 2rem;
+    align-items: start;
+    max-width: 1280px;
+    margin: 0 auto;
+  }
+
+  body.mode-web .book-body > :not(.toc) {
+    grid-column: 1;
+    min-width: 0;
+  }
+
+  body.mode-web .book-body > .toc {
+    grid-column: 2;
+    grid-row: 1 / span 999;
+    position: sticky;
+    top: 1.25rem;
+    max-height: calc(100vh - 2.5rem);
+    overflow-y: auto;
+    scrollbar-gutter: stable;
+    align-self: start;
+    margin: 0;
+    padding: 0 0 1rem 1rem;
+    border-left: 1px solid var(--rule-light);
+  }
+}
+
+body.mode-web .chapter-wrap {
+  margin: 4.2rem 0;
+}
+
+body.mode-web .chapter-wrap:not(.section-quick-reference) h2:not(.section-divider-title) {
+  margin-top: 1.9em;
+  padding-top: 0.7em;
+}
+
+body.mode-web .chapter-wrap:not(.section-quick-reference) h3:not(.section-divider-title):not(.level-heading) {
+  margin-top: 1.45em;
+}
+
+body.mode-web .chapter-wrap:not(.section-quick-reference) .level-heading {
+  margin-top: 1.2em;
+}
+
+body.mode-web .section-divider-text {
+  padding: clamp(1.5rem, 5vw, 4rem);
+}
+
+body.mode-web .section-divider[data-chapter-name] {
+  padding-right: 0;
+  padding-left: 0;
+}
+
+body.mode-web .section-divider-art-wrap {
+  margin-bottom: clamp(2rem, 4vw, 3.5rem);
+}
+
+body.mode-web .section-divider-art {
+  width: 100%;
+  max-width: 100%;
+  max-height: min(62vh, 680px);
+  object-fit: contain;
+}
+
+body.mode-web .section-divider-frame-art {
+  max-height: min(58vh, 620px);
+}
+
+body.mode-web .ornament-headpiece {
+  width: 100%;
+  max-width: none;
+  margin: 1rem auto 2rem;
+}
+
+body.mode-web .ornament-headpiece img {
+  display: block;
+  height: auto;
+  max-height: none;
+}
+
+body.mode-web .ornament-break {
+  width: 100%;
+  max-width: none;
+  margin: 2.5rem auto;
+}
+
+body.mode-web .ornament-break img {
+  display: block;
+  height: auto;
+  max-height: none;
+}
+
+body.mode-web .ornament-tailpiece {
+  width: min(72%, 520px);
+  max-width: none;
+  margin: 3rem auto 0;
+}
+
+body.mode-web .ornament-tailpiece img {
+  display: block;
+  height: auto;
+  max-height: none;
+}
+
+body.mode-web .art-wide img {
+  max-height: 5.2in;
+}
+
+body.mode-web .art-medium {
+  width: min(100%, 92%);
+}
+
+body.mode-web .art-medium img {
+  max-height: 4.1in;
+}
+
+body.mode-web .art-large {
+  width: min(100%, 100%);
+}
+
+body.mode-web .art-large img {
+  max-height: 6.15in;
+}
+
+body.mode-web .art-feature img {
+  max-height: 7.35in;
+}
+
+body.mode-web .art-left,
+body.mode-web .art-right {
+  width: 52%;
+  max-width: 4.1in;
+}
+
+body.mode-web .art-spot,
+body.mode-web .class-opening-spot,
+body.mode-web .background-spot {
+  width: 45%;
+  max-width: 3.25in;
+}
+
+body.mode-web .class-opening-spot img,
+body.mode-web .background-spot img {
+  max-height: 2.2in;
+}
+
+body.mode-web .art-frame img {
+  max-height: 5.0in;
+}
+
+body.mode-web .art-card img {
+  max-height: 2.5in;
+}
+
+body.mode-web .background-section-plate.art-medium {
+  width: min(100%, 100%);
+  max-width: 6.6in;
+}
+
+body.mode-web .background-section-plate img {
+  max-height: 2.5in;
+}
+
+body.mode-web .section-divider-title {
+  font-size: 4.2rem;
+}
+
+body.mode-web .cover-title {
+  font-size: 4.5rem;
+}
+
+body.mode-web table {
+  display: block;
+  overflow-x: auto;
+}
+
+@media screen and (max-width: 720px) {
+  body.mode-web .section-divider-title {
+    font-size: 2.6rem;
+  }
+
+  body.mode-web .cover-title {
+    font-size: 2.8rem;
+  }
+}
+
+/* ==========================================================================
+   Source notes
+   ========================================================================== */
+
+.source-note {
+  margin: 0.75rem 0 1rem;
+  padding: 0.45rem 0.7rem;
+  border-left: 3px solid var(--accent);
+  background: color-mix(in srgb, var(--accent) 10%, transparent);
+  font-family: var(--font-ui);
+  font-size: 0.82rem;
+  line-height: 1.3;
+}
+.source-note p {
+  margin: 0;
+}
+
+/* ==========================================================================
+   Page-break utilities (markdown-friendly)
+   ==========================================================================
+   Drop these into a markdown file via Pandoc fenced divs to control where
+   page breaks happen.
+
+     ::: keep-together
+     ### Healing Potions
+     A bunch of one-line entries...
+     ### Torches & Lanterns
+     ...
+     :::
+
+   `keep-together`   -- never split this block across pages if it can fit
+                        on a single page (WeasyPrint pushes it to the next
+                        page if it doesn't fit where it would naturally
+                        land). This is the "conditional page break"
+                        behavior: a break appears ONLY if needed.
+
+   `page-break`      -- force a page break BEFORE this block. Use it as
+                        an empty div (`::: page-break\n:::`) to produce a
+                        clean page break at any position in the markdown.
+
+   `page-break-after` -- force a page break AFTER this block.
+
+   `avoid-break`     -- alias for `keep-together` (same behavior; shorter
+                        name when used as inline class on a single para).
+
+   You can also tag any element with `{.keep-together}` inline:
+
+     | Item   | Cost |
+     | ------ | ---- |
+     | Sword  | 50gp |
+     {.keep-together}
+
+   ...to mark just that one block. */
+
+.keep-together,
+.avoid-break {
+  break-inside: avoid;
+  page-break-inside: avoid;
+}
+
+.page-break {
+  break-before: page;
+  page-break-before: always;
+  /* Empty divs still need to participate in layout to trigger the break. */
+  display: block;
+  height: 0;
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+
+.page-break-after {
+  break-after: page;
+  page-break-after: always;
+}
+
+/* ==========================================================================
+   Print-specific fixes
+   ========================================================================== */
+
+/* Nothing should have backgrounds larger than the content box in print */
+@media print {
+  /* pass — we rely on PDF print flow */
+}

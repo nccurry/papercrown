@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import textwrap
+from pathlib import Path
 
 from PIL import Image
 from typer.main import get_command
@@ -51,6 +52,29 @@ def test_fonts_setup_is_removed():
     result = runner.invoke(cli.app, ["fonts", "setup", "--help"])
 
     assert result.exit_code != 0
+
+
+def test_themes_list_includes_catalog_metadata():
+    result = runner.invoke(cli.app, ["themes", "list"])
+
+    assert result.exit_code == 0, result.output
+    assert "clean-srd - Clean SRD: reference /" in result.output
+    assert (
+        "pinlight-industrial - Pinlight Industrial: science-fiction /" in result.output
+    )
+    assert "modern-minimal" not in result.output
+
+
+def test_themes_copy_uses_modular_source_files():
+    with runner.isolated_filesystem():
+        result = runner.invoke(cli.app, ["themes", "copy", "clean-srd", "my-theme"])
+
+        assert result.exit_code == 0, result.output
+        copied = Path("my-theme")
+        assert (copied / "tokens.css").is_file()
+        assert (copied / "components.css").is_file()
+        assert not (copied / "book.css").exists()
+        assert "tokens.css" in (copied / "theme.yaml").read_text(encoding="utf-8")
 
 
 def test_deps_check_is_a_subcommand(monkeypatch):
