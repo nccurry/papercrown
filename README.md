@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="docs/assets/papercrown-readme-hero.svg" alt="Folded paper crown above Markdown pages" width="760">
+  <img src="docs/assets/logos/logo-papercrown-readme.png" alt="Paper Crown mascot logo" width="420">
 </p>
 
 <h1 align="center">Paper Crown</h1>
@@ -93,6 +93,8 @@ papercrown build [RECIPE]
 papercrown manifest [RECIPE]
 papercrown doctor [RECIPE]
 papercrown verify [RECIPE]
+papercrown art audit [RECIPE]
+papercrown art contact-sheet [RECIPE]
 papercrown deps check
 papercrown init [PATH]
 papercrown themes list
@@ -109,6 +111,7 @@ papercrown build book.yaml --scope book --profile print
 papercrown build book.yaml --scope sections --jobs auto
 papercrown build book.yaml --chapter primer
 papercrown build book.yaml --target web
+papercrown build book.yaml --profile draft --filler-debug-overlay
 ```
 
 Generated files live under one caller-owned tree:

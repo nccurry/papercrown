@@ -11,6 +11,7 @@ uv tool install papercrown
 papercrown build [RECIPE]
 papercrown manifest [RECIPE]
 papercrown art audit [RECIPE]
+papercrown art contact-sheet [RECIPE]
 papercrown doctor [RECIPE]
 papercrown verify [RECIPE]
 papercrown deps check
@@ -33,6 +34,7 @@ papercrown build book.yaml --scope book --profile print
 papercrown build book.yaml --scope sections --jobs auto
 papercrown build book.yaml --chapter primer
 papercrown build book.yaml --target web
+papercrown build book.yaml --profile draft --filler-debug-overlay
 ```
 
 Use `doctor` before rendering when setting up a new project or moving content
@@ -49,6 +51,14 @@ coverage:
 ```sh
 papercrown art audit book.yaml --strict
 papercrown art audit book.yaml --format markdown
+```
+
+Use `art contact-sheet` when reviewing a whole library visually. It writes a
+grouped HTML inventory with thumbnails, dimensions, roles, and per-asset
+warnings:
+
+```sh
+papercrown art contact-sheet book.yaml --output art-contact-sheet.html
 ```
 
 Use `verify` after rendering PDFs:
@@ -68,3 +78,4 @@ papercrown verify book.yaml --scope book --profile print --strict
 | `--jobs auto` | Parallelize independent PDF work |
 | `--draft-mode fast` or `visual` | Decide whether draft builds skip or keep art |
 | `--page-damage auto`, `off`, `fast`, `full`, or `proof` | Control PDF page-wear overlays |
+| `--filler-debug-overlay` | Write a sibling `*.filler-debug.pdf` with measured filler slots and placement decisions |

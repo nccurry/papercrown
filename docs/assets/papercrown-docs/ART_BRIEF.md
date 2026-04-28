@@ -7,8 +7,8 @@ localization, accessibility, and headings remain controlled by Markdown and CSS.
 
 ## Shared Direction
 
-- Format: PNG or WebP for raster art; transparent PNG for ornaments and page
-  wear.
+- Format: PNG or WebP for raster art; transparent PNG for ornaments, filler
+  art, and page wear.
 - Tone: premium tabletop RPG book, not software marketing.
 - Line quality: print-friendly, readable at letter-page sizes, with clean
   silhouettes.
@@ -23,6 +23,7 @@ localization, accessibility, and headings remain controlled by Markdown and CSS.
 | --- | --- | --- | --- |
 | `covers/cover-front-genre-anthology.png` | Cover | 1650x2134 | A paper crown above four open books: fantasy codex, starship manual, occult dossier, pulp field guide |
 | `dividers/divider-overview-fantasy-codex.png` | Overview divider | 1800x280 | Extra-wide illuminated manuscript table with vellum pages, brass tools, and a subtle crown motif |
+| `dividers/divider-quick-start-launch-checklist.png` | Quick Start divider | 1800x280 | Extra-wide launch checklist console, status cards, and command-panel lights without readable text |
 | `dividers/divider-setup-launch-manual.png` | Setup divider | 1800x280 | Extra-wide starship launch console, checklist cards, and command-panel lights without readable text |
 | `dividers/divider-authoring-occult-casefile.png` | Authoring divider | 1800x280 | Extra-wide recipe cards, marked strings, candles, ink, and abstract casefile talismans |
 | `dividers/divider-maintaining-industrial-guide.png` | Maintaining divider | 1800x280 | Extra-wide pulp workbench with gauges, stamps, folders, and press-room tools |
@@ -60,12 +61,17 @@ into recipe-level systems.
 
 | Pattern | Use |
 | --- | --- |
-| `filler-spot-*.png` | Small conditional filler art |
-| `filler-wide-*.png` | Narrow horizontal filler art |
-| `filler-bottom-*.png` | Bottom-band filler art |
+| `fillers/spot/filler-spot-*.png` | Small transparent conditional filler art |
+| `fillers/wide/filler-wide-*.png` | Narrow horizontal in-flow filler art |
+| `fillers/plate/filler-plate-*.png` | Medium/large non-bleed page-ending art |
+| `fillers/page-finish/page-finish-*.png` | Large in-flow `page-finish` art |
+| `fillers/bottom/filler-bottom-*.png` | True bottom-band art for the bottom-bleed placement path |
 | `page-wear/wear-nick-scratch-*.png` | Transparent scratch and scuff marks |
 | `page-wear/wear-smudge-grime-*.png` | Transparent smudges |
 | `page-wear/wear-printer-misfeed-*.png` | Transparent dragged smear bands |
+| `logos/logo-*.png` | Crisp documentation or publisher logos |
+| `content/diagrams/diagram-*.png` | Crisp diagrams without illustration filters |
+| `content/screenshots/screenshot-*.png` | Crisp screenshots without illustration filters |
 
 ## Integration Notes
 

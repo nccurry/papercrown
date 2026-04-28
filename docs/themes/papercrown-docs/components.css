@@ -183,6 +183,7 @@ body.paper-anthology {
     linear-gradient(135deg, #fff2bf 0%, #efd58d 54%, #d2ad56 100%);
 }
 
+#div-quick-start,
 #div-setup {
   color: #51d2c4;
   background:
@@ -214,6 +215,7 @@ body.paper-anthology {
     repeating-linear-gradient(90deg, currentColor 0 1px, transparent 1px 0.85rem);
 }
 
+#div-quick-start::after,
 #div-setup::after {
   background:
     linear-gradient(90deg, transparent, currentColor),
@@ -232,6 +234,7 @@ body.paper-anthology {
     repeating-linear-gradient(115deg, currentColor 0 0.38rem, transparent 0.38rem 1rem);
 }
 
+#div-quick-start .section-divider-title,
 #div-setup .section-divider-title,
 #div-authoring .section-divider-title {
   color: #201914;
@@ -413,15 +416,15 @@ body.mode-web.paper-anthology .book-body {
   width: min(100% - (var(--docs-reader-margin) * 2), var(--docs-page-width));
   max-width: var(--docs-page-width);
   margin: 0 auto;
-  padding: 0 0 4rem;
+  padding: 0 0 2.5rem;
 }
 
 body.mode-web.paper-anthology .section-divider {
   isolation: isolate;
   box-sizing: border-box;
   width: 100%;
-  min-height: clamp(5.35rem, 11vw, 7rem);
-  aspect-ratio: 6.4 / 1;
+  min-height: clamp(5.25rem, 10.8vw, 6.8rem);
+  aspect-ratio: 45 / 7;
   margin: 3rem 0 1.25rem;
   padding: 0.72rem;
   align-items: flex-start;
@@ -530,7 +533,7 @@ body.mode-web.paper-anthology .section-divider-art {
   object-fit: cover;
   mix-blend-mode: normal;
   opacity: 1;
-  filter: saturate(1.12) contrast(1.05) brightness(1.24);
+  filter: saturate(1.06) contrast(1.08) brightness(0.94);
 }
 
 body.mode-web.paper-anthology #div-overview {
@@ -539,9 +542,9 @@ body.mode-web.paper-anthology #div-overview {
 }
 
 body.mode-web.paper-anthology #div-overview .section-divider-art {
-  object-position: 50% 52%;
+  object-position: center;
   opacity: 1;
-  filter: saturate(1.25) contrast(1.04) brightness(1.38);
+  filter: saturate(1.08) contrast(1.08) brightness(0.96);
 }
 
 body.mode-web.paper-anthology #div-overview .section-divider-text {
@@ -550,14 +553,16 @@ body.mode-web.paper-anthology #div-overview .section-divider-text {
     var(--docs-reader-grain);
 }
 
+body.mode-web.paper-anthology #div-quick-start,
 body.mode-web.paper-anthology #div-setup {
   color: #51d2c4;
   background: #0c1a22;
 }
 
+body.mode-web.paper-anthology #div-quick-start .section-divider-art,
 body.mode-web.paper-anthology #div-setup .section-divider-art {
-  object-position: 58% 53%;
-  filter: grayscale(0.9) saturate(0.84) contrast(1.12) brightness(1.52);
+  object-position: center;
+  filter: saturate(1) contrast(1.12) brightness(0.88);
 }
 
 body.mode-web.paper-anthology #div-authoring {
@@ -566,8 +571,8 @@ body.mode-web.paper-anthology #div-authoring {
 }
 
 body.mode-web.paper-anthology #div-authoring .section-divider-art {
-  object-position: 50% 51%;
-  filter: saturate(1.18) contrast(1.05) brightness(1.3);
+  object-position: center;
+  filter: saturate(1.06) contrast(1.1) brightness(0.92);
 }
 
 body.mode-web.paper-anthology #div-maintaining-paper-crown {
@@ -576,10 +581,11 @@ body.mode-web.paper-anthology #div-maintaining-paper-crown {
 }
 
 body.mode-web.paper-anthology #div-maintaining-paper-crown .section-divider-art {
-  object-position: 51% 54%;
-  filter: saturate(1.16) contrast(1.06) brightness(1.3);
+  object-position: center;
+  filter: saturate(1.05) contrast(1.1) brightness(0.9);
 }
 
+body.mode-web.paper-anthology #div-quick-start .section-divider-title,
 body.mode-web.paper-anthology #div-setup .section-divider-title,
 body.mode-web.paper-anthology #div-authoring .section-divider-title {
   color: #fff7de;
@@ -688,6 +694,7 @@ body.mode-web.paper-anthology .generated-matter > * {
 }
 
 body.mode-web.paper-anthology .ornament-headpiece {
+  clear: none;
   display: block;
   width: min(100%, 38rem);
   aspect-ratio: 1600 / 260;
@@ -695,12 +702,13 @@ body.mode-web.paper-anthology .ornament-headpiece {
   overflow: hidden;
   opacity: 0.9;
   mix-blend-mode: normal;
-  border: 1px solid color-mix(in srgb, var(--rule-light) 72%, transparent);
-  background: color-mix(in srgb, var(--paper) 84%, white);
-  box-shadow: 0 0.5rem 1.2rem rgba(32, 25, 20, 0.08);
+  border: 0;
+  background: transparent;
+  box-shadow: none;
 }
 
 body.mode-web.paper-anthology .ornament-tailpiece {
+  clear: none;
   display: block;
   width: min(76%, 30rem);
   aspect-ratio: 1600 / 260;
@@ -708,9 +716,9 @@ body.mode-web.paper-anthology .ornament-tailpiece {
   overflow: hidden;
   opacity: 0.82;
   mix-blend-mode: normal;
-  border: 1px solid color-mix(in srgb, var(--rule-light) 62%, transparent);
-  background: color-mix(in srgb, var(--paper) 86%, white);
-  box-shadow: 0 0.45rem 1rem rgba(32, 25, 20, 0.07);
+  border: 0;
+  background: transparent;
+  box-shadow: none;
 }
 
 body.mode-web.paper-anthology .ornament-headpiece p,
@@ -782,7 +790,7 @@ body.mode-web.paper-anthology .generated-matter {
   box-sizing: border-box;
   width: 100%;
   max-width: none;
-  margin: 4.5rem 0;
+  margin: 2.5rem 0 1.25rem;
   padding: 1.5rem;
   background: color-mix(in srgb, var(--paper) 88%, white);
   border: 1px solid var(--rule-light);
@@ -799,34 +807,30 @@ body.mode-web.paper-anthology .generated-matter {
   }
 
   body.mode-web.paper-anthology .book-body {
-    display: grid;
-    grid-template-columns:
-      minmax(0, var(--docs-page-width))
-      var(--docs-page-gap)
-      minmax(13rem, var(--docs-rail-width));
+    display: block;
+    box-sizing: border-box;
+    position: relative;
     width: min(100% - 4rem, calc(var(--docs-page-width) + var(--docs-page-gap) + var(--docs-rail-width)));
     max-width: calc(var(--docs-page-width) + var(--docs-page-gap) + var(--docs-rail-width));
-    column-gap: 0;
-    row-gap: 2rem;
-    align-items: start;
+    padding-right: calc(var(--docs-rail-width) + var(--docs-page-gap));
   }
 
   body.mode-web.paper-anthology .book-body > :not(.toc) {
-    grid-column: 1;
+    width: min(100%, var(--docs-page-width));
     min-width: 0;
   }
 
   body.mode-web.paper-anthology .book-body > .toc {
-    grid-column: 3;
-    grid-row: 1 / span 999;
+    float: right;
     position: sticky;
     top: 1.25rem;
-    max-width: none;
+    width: var(--docs-rail-width);
+    max-width: var(--docs-rail-width);
     max-height: calc(100vh - 2.5rem);
     overflow-y: auto;
     scrollbar-gutter: stable;
     align-self: start;
-    margin: 0;
+    margin: 0 calc(-1 * (var(--docs-rail-width) + var(--docs-page-gap))) 1.5rem var(--docs-page-gap);
     padding: 0.95rem 0.9rem 1rem;
     border: 1px solid rgba(88, 67, 41, 0.3);
     background: #f7eed8;
@@ -919,6 +923,6 @@ body.mode-web.paper-anthology .matter-title-page h1 {
 
   body.mode-web.paper-anthology .section-divider {
     min-height: 5.8rem;
-    aspect-ratio: 6 / 1;
+    aspect-ratio: 45 / 7;
   }
 }

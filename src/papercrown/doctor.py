@@ -26,8 +26,8 @@ _EXPECTED_FILLER_CATEGORIES = {
     "spot": {"filler-spot"},
     "small-wide": {"filler-wide"},
     "plate": {"filler-plate"},
-    "bottom-band": {"filler-bottom", "filler-page"},
-    "page-finish": {"filler-page"},
+    "bottom-band": {"filler-bottom"},
+    "page-finish": {"page-finish"},
     "tailpiece": {"tailpiece"},
 }
 _OPAQUE_ALPHA = 245
@@ -201,7 +201,7 @@ def _add_filler_asset_diagnostics(
                     path=asset.art_path,
                     hint=(
                         "use filler-spot-*, filler-wide-*, filler-plate-*, "
-                        "filler-bottom-*, filler-page-*, or ornament-tailpiece-*"
+                        "filler-bottom-*, page-finish-*, or ornament-tailpiece-*"
                     ),
                 )
             )

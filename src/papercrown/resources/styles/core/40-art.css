@@ -265,37 +265,37 @@ figcaption {
   filter: contrast(1.04);
 }
 
-.filler-tailpiece {
+.filler-shape-tailpiece {
   width: 42%;
   max-width: 2.1in;
 }
 
-.filler-spot {
+.filler-shape-spot {
   width: 52%;
   max-width: 3.0in;
 }
 
-.filler-small-wide {
+.filler-shape-small-wide {
   width: 72%;
   max-width: 4.6in;
 }
 
-.filler-plate {
+.filler-shape-plate {
   width: 88%;
   max-width: 5.5in;
 }
 
-.filler-bottom-band {
+.filler-shape-bottom-band {
   width: 100%;
 }
 
-.filler-bottom-band .filler-img {
+.filler-shape-bottom-band .filler-img {
   width: auto;
   height: auto;
   object-fit: contain;
 }
 
-.filler-page-finish {
+.filler-shape-page-finish {
   width: 100%;
 }
 

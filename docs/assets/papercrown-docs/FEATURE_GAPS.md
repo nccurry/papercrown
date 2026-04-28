@@ -21,14 +21,17 @@ Paper Crown showcase. They are not required for the docs theme pass.
 - `ornaments.corner_bracket` is parsed and passed through, but the base CSS has
   no meaningful visible corner-bracket treatment yet.
 
-## Art-System Discoverability
+## Art-System Follow-Ups
 
-- There is no first-class art inventory command. A future `papercrown art audit`
-  or `papercrown manifest --art` mode could list referenced, missing,
-  auto-discovered, unused, filler, splash, ornament, and page-wear assets.
-- Missing art currently appears as manifest warnings for resolved recipe fields.
-  A dedicated art brief or missing-art report for recipes could make placeholder
-  planning easier before final assets exist.
+- `papercrown art audit` and `papercrown art contact-sheet` now cover the
+  first-pass inventory workflow: role counts, missing references, automatic
+  filler coverage, image metadata, grouped thumbnails, and missing-art
+  suggestions. The remaining opportunity is richer docs-site examples that show
+  a before/after inventory pass and how to turn warnings into an art production
+  brief.
+- Missing-art briefs now accompany draft filler reports. A future generated
+  gallery page could collect those briefs, contact sheets, and debug overlays
+  into one review packet for art directors.
 
 ## Web Demonstrations of PDF-Only Systems
 

@@ -11,4 +11,5 @@
   --success: #2f6b5d;
   --tint-block: #f1e6d1;
   --tint-callout: #fff0d5;
+  --paper-grain: url("assets/reader-grain.png");
 }

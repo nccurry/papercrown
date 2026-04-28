@@ -80,6 +80,7 @@ Generated output is always caller-owned and goes under:
 
 ## Reading Path
 
-Start with Setup if you want a working command quickly. Jump to Authoring when
-you are ready to shape a book. Use Maintaining Paper Crown when you are working
-from the repository or publishing the docs site.
+Start with Quick Start if you want a working command quickly. Use Setup for
+installation and repository bootstrap details. Jump to Authoring when you are
+ready to shape a book. Use Maintaining Paper Crown when you are working from
+the repository or publishing the docs site.

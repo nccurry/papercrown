@@ -21,14 +21,10 @@ metadata:
   credits:
     design:
       - Paper Crown maintainers
-    art:
-      - Current cover uses the Paper Crown README hero; final anthology art is scoped in docs/assets/papercrown-docs/ART_BRIEF.md
 
 back_matter:
   - type: appendix-index
     title: Feature Index
-  - art-credits
-  - license
 
 cover:
   enabled: true
@@ -161,6 +157,16 @@ chapters:
     tailpiece: papercrown-docs/ornaments/tailpieces/ornament-tailpiece-codex.png
     toc_depth: 3
     source: docs:Overview.md
+  - kind: file
+    style: launch
+    title: Quick Start
+    slug: quick-start
+    eyebrow: Launch Checklist
+    art: papercrown-docs/dividers/divider-quick-start-launch-checklist.png
+    headpiece: papercrown-docs/ornaments/headpieces/ornament-headpiece-launch.png
+    tailpiece: papercrown-docs/ornaments/tailpieces/ornament-tailpiece-launch.png
+    toc_depth: 3
+    source: docs:Quick Start.md
   - kind: sequence
     style: launch
     title: Setup
@@ -172,7 +178,6 @@ chapters:
     toc_depth: 3
     sources:
       - docs:Bootstrap.md
-      - docs:Quick Start.md
   - kind: sequence
     style: casefile
     title: Authoring
@@ -184,6 +189,7 @@ chapters:
     toc_depth: 3
     sources:
       - docs:Recipes.md
+      - docs:Art.md
       - docs:Themes.md
       - docs:CLI.md
   - kind: sequence
