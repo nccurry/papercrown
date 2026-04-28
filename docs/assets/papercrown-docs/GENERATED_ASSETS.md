@@ -7,10 +7,11 @@ This folder contains generated art for the Paper Crown documentation anthology.
   genre.
 - `splashes/`: in-chapter showcase splash art for selected reference sections.
 - `ornaments/`: transparent illustrated headpieces and tailpieces.
-- `fillers/spot/`, `fillers/wide/`, and `fillers/bottom/`: transparent
-  auto-placeable conditional filler art for PDF builds. Future large-gap art
-  should use `fillers/plate/` for medium in-flow plates or `fillers/page-finish/` for
-  large `page-finish` art.
+- `fillers/spot/` and `fillers/wide/`: transparent auto-placeable conditional
+  filler art for PDF builds. Large gaps should use `fillers/plate/` for medium
+  in-flow plates or `fillers/page-finish/` for large `page-finish` art. Use
+  `fillers/bottom/` only for dedicated bottom-bleed strips with soft or empty
+  top edges.
 - `page-wear/`: transparent scratch, smudge, and smear overlays using Paper
   Crown naming conventions.
 - `logos/`: crisp README or publisher logos.

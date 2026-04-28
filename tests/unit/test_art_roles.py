@@ -146,6 +146,55 @@ def test_art_audit_warns_about_duplicates_sparse_art_and_backgrounds(
     assert "art.background-mismatch" in warning_codes
 
 
+def test_art_audit_warns_about_bottom_band_slot_and_top_safety(
+    tmp_path: Path,
+):
+    vault = tmp_path / "vault"
+    art = tmp_path / "art"
+    vault.mkdir()
+    (art / "fillers" / "bottom").mkdir(parents=True)
+    (vault / "Foo.md").write_text("# Foo\n", encoding="utf-8")
+
+    bottom_band = Image.new("RGBA", (1800, 620), (0, 0, 0, 0))
+    draw = ImageDraw.Draw(bottom_band)
+    draw.rectangle((0, 0, 1800, 500), fill=(40, 35, 30, 255))
+    bottom_band.save(
+        art / "fillers" / "bottom" / "filler-bottom-general-dock-01.png"
+    )
+
+    recipe_path = tmp_path / "recipe.yaml"
+    recipe_path.write_text(
+        textwrap.dedent(
+            """
+            title: Bottom Band Audit Book
+            art_dir: art
+            vaults:
+              v: vault
+            fillers:
+              enabled: true
+              slots:
+                chapter-end:
+                  min_space: 0.65in
+                  max_space: 5.0in
+                  shapes: [spot, bottom-band]
+            chapters:
+              - kind: file
+                title: Foo
+                source: v:Foo.md
+            """
+        ).lstrip(),
+        encoding="utf-8",
+    )
+    recipe = load_recipe(recipe_path)
+    manifest = build_manifest(recipe)
+
+    result = audit_recipe_art(recipe, manifest)
+    warning_codes = {diagnostic.code for diagnostic in result.diagnostics.warnings}
+
+    assert "art.filler-slot-mixed-placement" in warning_codes
+    assert "art.bottom-band-top-crowded" in warning_codes
+
+
 def test_art_audit_allows_cross_role_ornament_reuse(tmp_path: Path):
     vault = tmp_path / "vault"
     art = tmp_path / "art"

@@ -65,7 +65,7 @@ into recipe-level systems.
 | `fillers/wide/filler-wide-*.png` | Narrow horizontal in-flow filler art |
 | `fillers/plate/filler-plate-*.png` | Medium/large non-bleed page-ending art |
 | `fillers/page-finish/page-finish-*.png` | Large in-flow `page-finish` art |
-| `fillers/bottom/filler-bottom-*.png` | True bottom-band art for the bottom-bleed placement path |
+| `fillers/bottom/filler-bottom-*.png` | True bottom-band art for a dedicated bottom-bleed slot; transparent or soft at the top edge |
 | `page-wear/wear-nick-scratch-*.png` | Transparent scratch and scuff marks |
 | `page-wear/wear-smudge-grime-*.png` | Transparent smudges |
 | `page-wear/wear-printer-misfeed-*.png` | Transparent dragged smear bands |

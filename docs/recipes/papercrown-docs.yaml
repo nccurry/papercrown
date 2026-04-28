@@ -79,7 +79,8 @@ fillers:
         - tailpiece
         - spot
         - small-wide
-        - bottom-band
+        - plate
+        - page-finish
   assets:
     - id: ornament-tailpiece-codex
       art: ornaments/tailpieces/ornament-tailpiece-codex.png
@@ -125,11 +126,6 @@ fillers:
       art: fillers/wide/filler-wide-casefile-ritual-01.png
       shape: small-wide
       height: 0.72in
-    - id: filler-bottom-field-guide-press
-      art: fillers/bottom/filler-bottom-field-guide-press-01.png
-      shape: bottom-band
-      height: 1.18in
-
 page_damage:
   enabled: true
   art_dir: papercrown-docs/page-wear

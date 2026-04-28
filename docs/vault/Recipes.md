@@ -69,7 +69,7 @@ fillers:
     chapter-end:
       min_space: 0.75in
       max_space: 6.00in
-      shapes: [tailpiece, spot, small-wide, plate, bottom-band, page-finish]
+      shapes: [tailpiece, spot, small-wide, plate, page-finish]
   assets:
     - id: bridge-plate
       art: fillers/plate/filler-plate-general-bridge-01.png

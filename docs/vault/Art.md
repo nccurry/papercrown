@@ -89,7 +89,13 @@ The supported automatic filler shapes are:
 physical bottom edge. `filler-bottom` assets remain bottom-bleed art and are
 stamped with a small bottom safety inset. Slots must explicitly allow
 `page-finish` when large page-ending art is desired; `bottom-band` is only for
-true bottom-band art.
+true bottom-band art in a dedicated bottom-bleed slot.
+
+Do not mix `bottom-band` with in-flow shapes such as `spot`, `small-wide`,
+`plate`, or `page-finish` in ordinary chapter/section-end slots. Bottom-band art
+should be a wide transparent strip with most visual weight near the lower page
+edge and a soft or empty top edge. Generic horizontal illustrations belong in
+`fillers/wide/`, `fillers/plate/`, or `fillers/page-finish/`.
 
 The filler size tiers are:
 
@@ -147,7 +153,7 @@ fillers:
     chapter-end:
       min_space: 0.65in
       max_space: 6.0in
-      shapes: [tailpiece, spot, small-wide, plate, bottom-band, page-finish]
+      shapes: [tailpiece, spot, small-wide, plate, page-finish]
   markers:
     terminal:
       chapter_slot: chapter-end
