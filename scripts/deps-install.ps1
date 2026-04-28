@@ -15,7 +15,6 @@ function Refresh-Path {
     $processPath = [Environment]::GetEnvironmentVariable("Path", "Process")
     $extra = @(
         (Join-Path $HOME ".local\bin"),
-        (Join-Path $HOME ".cargo\bin"),
         (Join-Path $env:LOCALAPPDATA "Microsoft\WinGet\Links"),
         (Join-Path $env:LOCALAPPDATA "Microsoft\WindowsApps"),
         "C:\msys64\mingw64\bin"
@@ -23,6 +22,26 @@ function Refresh-Path {
     $env:Path = (@($processPath, $userPath, $machinePath) + $extra |
         Where-Object { $_ } |
         ForEach-Object { $_.TrimEnd(";") }) -join ";"
+}
+
+function Get-VersionValue {
+    param([string] $Name)
+
+    $versionsPath = Join-Path $repoRoot "versions.env"
+    if (-not (Test-Path $versionsPath)) {
+        throw "versions.env is required but was not found."
+    }
+    foreach ($line in Get-Content -LiteralPath $versionsPath) {
+        $trimmed = $line.Trim()
+        if (-not $trimmed -or $trimmed.StartsWith("#")) {
+            continue
+        }
+        $parts = $trimmed -split "=", 2
+        if ($parts.Count -eq 2 -and $parts[0].Trim() -eq $Name) {
+            return $parts[1].Trim().Trim('"').Trim("'")
+        }
+    }
+    throw "$Name is required in versions.env."
 }
 
 function Add-UserPathEntry {
@@ -88,25 +107,60 @@ function Ensure-Pandoc {
     Get-RequiredCommand "pandoc" | Out-Null
 }
 
-function Ensure-Rust {
-    if (Get-Command cargo -ErrorAction SilentlyContinue) {
-        return
+function Ensure-ObsidianExport {
+    $version = Get-VersionValue -Name "OBSIDIAN_EXPORT_VERSION"
+    $expected = "obsidian-export $version"
+    $existing = Get-Command obsidian-export -ErrorAction SilentlyContinue
+    if ($existing) {
+        $actual = (& $existing.Source --version 2>$null | Select-Object -First 1)
+        $source = $existing.Source.Replace("\", "/")
+        if ($actual -eq $expected -and $source -notlike "*/.cargo/*") {
+            return
+        }
     }
-    Install-WingetPackage -Id "Rustlang.Rustup" -Name "Rustup"
+
+    $binDir = Join-Path $HOME ".local\bin"
+    New-Item -ItemType Directory -Force -Path $binDir | Out-Null
+    $asset = "obsidian-export-x86_64-pc-windows-msvc.zip"
+    $baseUrl = "https://github.com/zoni/obsidian-export/releases/download/v$version"
+    $zip = Join-Path $env:TEMP $asset
+    $sha = "$zip.sha256"
+    $extract = Join-Path $env:TEMP "obsidian-export-$version"
+    if (Test-Path $extract) {
+        Remove-Item -LiteralPath $extract -Recurse -Force
+    }
+    New-Item -ItemType Directory -Force -Path $extract | Out-Null
+
+    Write-Step "Installing obsidian-export $version"
+    Invoke-WebRequest -Uri "$baseUrl/$asset" -OutFile $zip
+    Invoke-WebRequest -Uri "$baseUrl/$asset.sha256" -OutFile $sha
+    $expectedHash = ((Get-Content -LiteralPath $sha | Select-Object -First 1) -split "\s+")[0]
+    $actualHash = (Get-FileHash -Algorithm SHA256 -LiteralPath $zip).Hash.ToLowerInvariant()
+    if ($actualHash -ne $expectedHash.ToLowerInvariant()) {
+        throw "obsidian-export checksum mismatch."
+    }
+
+    Expand-Archive -LiteralPath $zip -DestinationPath $extract -Force
+    $binary = Get-ChildItem -LiteralPath $extract -Recurse -Filter "obsidian-export.exe" |
+        Select-Object -First 1
+    if (-not $binary) {
+        throw "obsidian-export.exe was not found in the release archive."
+    }
+    Copy-Item -LiteralPath $binary.FullName -Destination (Join-Path $binDir "obsidian-export.exe") -Force
+    Add-UserPathEntry -Entry $binDir
     Refresh-Path
-    Get-RequiredCommand "cargo" | Out-Null
+    $installed = Get-RequiredCommand "obsidian-export"
+    $installedVersion = (& $installed --version 2>$null | Select-Object -First 1)
+    if ($installedVersion -ne $expected) {
+        throw "obsidian-export install produced '$installedVersion', expected '$expected'."
+    }
 }
 
-function Ensure-ObsidianExport {
-    if (Get-Command obsidian-export -ErrorAction SilentlyContinue) {
+function Ensure-NoRustInstallPath {
+    if (Get-Command cargo -ErrorAction SilentlyContinue) {
+        Write-Verbose "Cargo is installed locally, but Paper Crown does not require it."
         return
     }
-    Ensure-Rust
-    Write-Step "Installing obsidian-export"
-    $cargo = Get-RequiredCommand "cargo"
-    & $cargo install obsidian-export --locked
-    Refresh-Path
-    Get-RequiredCommand "obsidian-export" | Out-Null
 }
 
 function Ensure-WindowsPdfRuntime {
@@ -138,7 +192,7 @@ Refresh-Path
 
 Ensure-Uv
 Ensure-Pandoc
-Ensure-Rust
+Ensure-NoRustInstallPath
 Ensure-ObsidianExport
 Ensure-WindowsPdfRuntime
 

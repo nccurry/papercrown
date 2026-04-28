@@ -57,6 +57,16 @@ class ImageOptimizationSettings:
         }
 
 
+@dataclass
+class ImageOptimizationSession:
+    """Per-build memoization for optimized image paths."""
+
+    optimized_paths: dict[tuple[Path, str, int | None], Path]
+
+    def __init__(self) -> None:
+        self.optimized_paths = {}
+
+
 IMAGE_OPTIMIZATION_VERSION = "image-optimization-v2"
 LETTER_LONG_EDGE_IN = 11.0
 
@@ -162,6 +172,7 @@ def optimize_image(
     profile: OutputProfile | str,
     cache_root: Path | None = None,
     max_long_edge: int | None = None,
+    session: ImageOptimizationSession | None = None,
 ) -> Path:
     """Return a cached optimized raster image for the requested profile.
 
@@ -176,6 +187,10 @@ def optimize_image(
     if source.suffix.lower() in PASSTHROUGH_SUFFIXES or not source.is_file():
         return source
 
+    session_key = (source, profile_name, settings.max_long_edge)
+    if session is not None and session_key in session.optimized_paths:
+        return session.optimized_paths[session_key]
+
     digest = _image_cache_key(source, profile_name, settings)
     output_dir = (cache_root or _default_image_cache_root()) / profile_name
     output_dir.mkdir(parents=True, exist_ok=True)
@@ -188,7 +203,10 @@ def optimize_image(
             extension = ".png" if has_alpha else ".jpg"
             dest = output_dir / f"{source.stem}-{digest[:12]}{extension}"
             if dest.is_file():
-                return dest.resolve()
+                resolved = dest.resolve()
+                if session is not None:
+                    session.optimized_paths[session_key] = resolved
+                return resolved
 
             optimized = _resized_image(image, settings.max_long_edge)
             temp = _temp_output_path(dest)
@@ -207,7 +225,10 @@ def optimize_image(
                     progressive=True,
                 )
             temp.replace(dest)
-            return dest.resolve()
+            resolved = dest.resolve()
+            if session is not None:
+                session.optimized_paths[session_key] = resolved
+            return resolved
     except (OSError, UnidentifiedImageError):
         return source
     finally:
@@ -223,6 +244,7 @@ def optimize_image_for_box(
     max_height_in: float | None = None,
     scale_margin: float = 1.15,
     cache_root: Path | None = None,
+    session: ImageOptimizationSession | None = None,
 ) -> Path:
     """Return a cached image capped to its largest rendered size."""
     settings = image_profile_settings(profile)
@@ -237,6 +259,7 @@ def optimize_image_for_box(
         profile=profile,
         cache_root=cache_root,
         max_long_edge=max_long_edge,
+        session=session,
     )
 
 
@@ -262,6 +285,7 @@ def rewrite_markdown_image_refs(
     search_roots: list[Path],
     profile: OutputProfile | str,
     cache_root: Path | None = None,
+    session: ImageOptimizationSession | None = None,
 ) -> str:
     """Rewrite local markdown image references to cached optimized images."""
 
@@ -270,7 +294,12 @@ def rewrite_markdown_image_refs(
         source = resolve_local_image(target, search_roots=search_roots)
         if source is None:
             return match.group(0)
-        optimized = optimize_image(source, profile=profile, cache_root=cache_root)
+        optimized = optimize_image(
+            source,
+            profile=profile,
+            cache_root=cache_root,
+            session=session,
+        )
         attrs = match.group("attrs") or ""
         return f"![{match.group('alt')}](<{optimized.as_posix()}>){attrs}"
 

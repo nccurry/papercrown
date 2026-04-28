@@ -6,29 +6,96 @@ on:
     branches:
       - main
 
+permissions:
+  contents: read
+  packages: read
+
 jobs:
+  toolchain:
+    runs-on: ubuntu-latest
+    outputs:
+      changed: ${{ steps.changed.outputs.changed }}
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+      - id: changed
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [[ "${{ github.event_name }}" == "pull_request" ]]; then
+            base="${{ github.event.pull_request.base.sha }}"
+          else
+            base="${{ github.event.before }}"
+          fi
+          if [[ -z "$base" || "$base" =~ ^0+$ ]]; then
+            echo "changed=true" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          files="$(git diff --name-only "$base" "${{ github.sha }}")"
+          if grep -Eq '^(versions.env|Dockerfile\.ci|dependencies\.yaml|scripts/(deps-install\.sh|deps-install\.ps1|bootstrap\.sh|bootstrap\.ps1)|tools/sync_dependencies\.py|\.github/workflows/(ci|ci-image)\.yml)$' <<< "$files"; then
+            echo "changed=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "changed=false" >> "$GITHUB_OUTPUT"
+          fi
+
   check:
+    needs: toolchain
+    if: needs.toolchain.outputs.changed != 'true'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v6
-      - uses: actions/setup-python@v6
+      - uses: actions/cache@v4
         with:
-          python-version: '3.12'
-      - name: Install uv
-        uses: astral-sh/setup-uv@v8.1.0
-      - name: Install system tools
+          path: .uv-cache
+          key: uv-${{ runner.os }}-${{ hashFiles('uv.lock') }}
+          restore-keys: |
+            uv-${{ runner.os }}-
+      - name: Run checks in published CI image
+        shell: bash
         run: |
-          sudo apt-get update
-          sudo apt-get install -y pandoc libpango-1.0-0 libpangoft2-1.0-0 libharfbuzz-subset0
-      - name: Install Rust
-        uses: dtolnay/rust-toolchain@stable
-      - name: Install obsidian-export
-        run: cargo install obsidian-export --locked
-      - name: Install task
+          set -euo pipefail
+          source versions.env
+          image="${CI_IMAGE}:main"
+          docker pull "$image"
+          docker run --rm \
+            -e UV_CACHE_DIR=/workspace/.uv-cache \
+            -v "${{ github.workspace }}:/workspace" \
+            -w /workspace \
+            "$image" \
+            bash -lc 'git config --global --add safe.directory /workspace && uv sync --locked --all-groups && task check'
+
+  check-candidate:
+    needs: toolchain
+    if: needs.toolchain.outputs.changed == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/cache@v4
+        with:
+          path: .uv-cache
+          key: uv-${{ runner.os }}-${{ hashFiles('uv.lock') }}
+          restore-keys: |
+            uv-${{ runner.os }}-
+      - name: Build candidate CI image
+        shell: bash
         run: |
-          curl -sL https://taskfile.dev/install.sh | sh -s -- -d -b "$HOME/.local/bin"
-          echo "$HOME/.local/bin" >> "$GITHUB_PATH"
-      - name: Install dependencies
-        run: task setup
-      - name: Check
-        run: task check
+          set -euo pipefail
+          source versions.env
+          docker build \
+            --file Dockerfile.ci \
+            --build-arg "UV_BASE_IMAGE=${UV_BASE_IMAGE}" \
+            --build-arg "TASK_VERSION=${TASK_VERSION}" \
+            --build-arg "OBSIDIAN_EXPORT_VERSION=${OBSIDIAN_EXPORT_VERSION}" \
+            --tag papercrown-ci:candidate \
+            .
+      - name: Run checks in candidate CI image
+        shell: bash
+        run: |
+          set -euo pipefail
+          docker run --rm \
+            -e UV_CACHE_DIR=/workspace/.uv-cache \
+            -v "${{ github.workspace }}:/workspace" \
+            -w /workspace \
+            papercrown-ci:candidate \
+            bash -lc 'git config --global --add safe.directory /workspace && uv sync --locked --all-groups && task check'

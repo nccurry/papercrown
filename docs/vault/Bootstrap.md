@@ -43,7 +43,8 @@ task deps:install
 ```
 
 `task deps:install` installs or verifies uv, Python dependencies, Pandoc,
-Rust, obsidian-export, and the MSYS2 Pango/GLib runtime used by WeasyPrint.
+the pinned `obsidian-export` release binary, and the MSYS2 Pango/GLib runtime
+used by WeasyPrint. Rust is not required for the normal repository setup.
 
 ## Linux, macOS, WSL, And Git Bash
 

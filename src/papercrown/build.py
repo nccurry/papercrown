@@ -191,6 +191,7 @@ def make_base_context(
     pagination_mode: PaginationMode = PaginationMode.REPORT,
     page_damage_mode: PageDamageMode = PageDamageMode.AUTO,
     clean_pdf: bool = True,
+    image_session: images.ImageOptimizationSession | None = None,
 ) -> pipeline.RenderContext:
     """Create a render context shared by chapter and combined-book builds."""
     image_profile = _image_profile_for(profile, draft_mode)
@@ -244,6 +245,7 @@ def make_base_context(
             max_width_in=0.64,
             max_height_in=0.64,
             cache_root=cache_dir / "images",
+            image_session=image_session,
         )
         ctx.ornament_corner_bracket = _optimized_box_image(
             _recipe_ornament_path(recipe, "corner_bracket"),
@@ -251,6 +253,7 @@ def make_base_context(
             max_width_in=1.0,
             max_height_in=1.0,
             cache_root=cache_dir / "images",
+            image_session=image_session,
         )
     return ctx
 
@@ -279,6 +282,7 @@ def context_for_chapter(
     pagination_mode: PaginationMode = PaginationMode.REPORT,
     page_damage_mode: PageDamageMode = PageDamageMode.AUTO,
     clean_pdf: bool = True,
+    image_session: images.ImageOptimizationSession | None = None,
 ) -> pipeline.RenderContext:
     """Create a render context for a standalone chapter PDF."""
     ctx = make_base_context(
@@ -290,6 +294,7 @@ def context_for_chapter(
         pagination_mode=pagination_mode,
         page_damage_mode=page_damage_mode,
         clean_pdf=clean_pdf,
+        image_session=image_session,
     )
     ctx.chapter_title = chapter.title
     ctx.chapter_eyebrow = chapter.eyebrow or "Chapter"
@@ -298,6 +303,7 @@ def context_for_chapter(
             chapter.art_path,
             profile=_image_profile_for(profile, draft_mode),
             cache_root=_image_cache_root(recipe),
+            image_session=image_session,
         )
     ctx.section_kind = chapter.style or "default"
     if chapter.style == "quick-reference":
@@ -318,6 +324,7 @@ def context_for_book(
     pagination_mode: PaginationMode = PaginationMode.REPORT,
     page_damage_mode: PageDamageMode = PageDamageMode.AUTO,
     clean_pdf: bool = True,
+    image_session: images.ImageOptimizationSession | None = None,
 ) -> pipeline.RenderContext:
     """Create a render context for a combined book PDF."""
     ctx = make_base_context(
@@ -329,6 +336,7 @@ def context_for_book(
         pagination_mode=pagination_mode,
         page_damage_mode=page_damage_mode,
         clean_pdf=clean_pdf,
+        image_session=image_session,
     )
     _populate_book_context(
         ctx,
@@ -337,6 +345,7 @@ def context_for_book(
         include_cover_art=include_art,
         profile=profile,
         draft_mode=draft_mode,
+        image_session=image_session,
     )
     return ctx
 
@@ -347,6 +356,7 @@ def context_for_web(
     manifest: Manifest,
     *,
     include_art: bool = True,
+    image_session: images.ImageOptimizationSession | None = None,
 ) -> pipeline.RenderContext:
     """Create a render context for the combined static web export."""
     ctx = make_base_context(
@@ -354,6 +364,7 @@ def context_for_web(
         recipe,
         profile=OutputProfile.PRINT,
         include_art=include_art,
+        image_session=image_session,
     )
     ctx.output_profile = "web"
     ctx.css = Path("styles/book.css")
@@ -364,7 +375,13 @@ def context_for_web(
     ]
     ctx.ornament_folio_frame = None
     ctx.ornament_corner_bracket = None
-    _populate_book_context(ctx, recipe, manifest, include_cover_art=include_art)
+    _populate_book_context(
+        ctx,
+        recipe,
+        manifest,
+        include_cover_art=include_art,
+        image_session=image_session,
+    )
     return ctx
 
 
@@ -376,6 +393,7 @@ def _populate_book_context(
     include_cover_art: bool,
     profile: OutputProfile = OutputProfile.PRINT,
     draft_mode: DraftMode = DraftMode.FAST,
+    image_session: images.ImageOptimizationSession | None = None,
 ) -> None:
     """Populate combined-book metadata on a render context in place."""
     ctx.chapter_title = recipe.title
@@ -412,6 +430,7 @@ def _populate_book_context(
                     cover_art,
                     profile=_image_profile_for(profile, draft_mode),
                     cache_root=_image_cache_root(recipe),
+                    image_session=image_session,
                 )
         front_splash = _splash_for_target(manifest, "front-cover")
         if (
@@ -424,6 +443,7 @@ def _populate_book_context(
                 front_splash.art_path,
                 profile=_image_profile_for(profile, draft_mode),
                 cache_root=_image_cache_root(recipe),
+                image_session=image_session,
             )
 
 
@@ -527,6 +547,7 @@ def _prepare_chapter_pdf_job(
     pagination_mode: PaginationMode = PaginationMode.REPORT,
     page_damage_mode: PageDamageMode = PageDamageMode.AUTO,
     clean_pdf: bool = True,
+    image_session: images.ImageOptimizationSession | None = None,
 ) -> PdfRenderJob:
     """Prepare one chapter render without writing the PDF."""
     render_art = include_art and not _is_fast_draft(profile, draft_mode)
@@ -554,6 +575,7 @@ def _prepare_chapter_pdf_job(
         manifest,
         profile=profile,
         draft_mode=draft_mode,
+        image_session=image_session,
     )
     out = paths.chapter_pdf_path(recipe, chapter, profile=profile)
     ctx = context_for_chapter(
@@ -566,6 +588,7 @@ def _prepare_chapter_pdf_job(
         pagination_mode=pagination_mode,
         page_damage_mode=page_damage_mode,
         clean_pdf=clean_pdf,
+        image_session=image_session,
     )
     ctx.pagination_report_path = _pagination_report_path(out, pagination_mode)
     return PdfRenderJob(
@@ -578,6 +601,7 @@ def _prepare_chapter_pdf_job(
             manifest.fillers if manifest is not None and render_art else None,
             profile=_image_profile_for(profile, draft_mode),
             cache_root=_image_cache_root(recipe),
+            image_session=image_session,
         ),
         page_damage_catalog=_render_page_damage_catalog(
             (
@@ -589,6 +613,7 @@ def _prepare_chapter_pdf_job(
             ),
             profile=_image_profile_for(profile, draft_mode),
             cache_root=_image_cache_root(recipe),
+            image_session=image_session,
             proof=page_damage_mode is PageDamageMode.PROOF,
             visual_draft=(
                 profile is OutputProfile.DRAFT and draft_mode is DraftMode.VISUAL
@@ -616,6 +641,7 @@ def build_chapter_pdf(
     page_damage_mode: PageDamageMode = PageDamageMode.AUTO,
     clean_pdf: bool = True,
     timings: bool = False,
+    image_session: images.ImageOptimizationSession | None = None,
 ) -> Path:
     """Render one chapter to a PDF and return the output path."""
     job = _prepare_chapter_pdf_job(
@@ -630,6 +656,7 @@ def build_chapter_pdf(
         pagination_mode=pagination_mode,
         page_damage_mode=page_damage_mode,
         clean_pdf=clean_pdf,
+        image_session=image_session,
     )
     _configure_job_timings([job], enabled=timings, log=log)
     did_skip = _run_render_job_cached(job, cache=cache, force=force, log=log)
@@ -650,6 +677,7 @@ def _prepare_combined_book_job(
     pagination_mode: PaginationMode = PaginationMode.REPORT,
     page_damage_mode: PageDamageMode = PageDamageMode.AUTO,
     clean_pdf: bool = True,
+    image_session: images.ImageOptimizationSession | None = None,
 ) -> PdfRenderJob:
     """Prepare the combined book render without writing the PDF."""
     render_art = include_art and not _is_fast_draft(profile, draft_mode)
@@ -674,6 +702,7 @@ def _prepare_combined_book_job(
         manifest,
         profile=profile,
         draft_mode=draft_mode,
+        image_session=image_session,
     )
     out = paths.combined_book_path(recipe, profile=profile)
     ctx = context_for_book(
@@ -686,6 +715,7 @@ def _prepare_combined_book_job(
         pagination_mode=pagination_mode,
         page_damage_mode=page_damage_mode,
         clean_pdf=clean_pdf,
+        image_session=image_session,
     )
     ctx.pagination_report_path = _pagination_report_path(out, pagination_mode)
     return PdfRenderJob(
@@ -698,6 +728,7 @@ def _prepare_combined_book_job(
             manifest.fillers if render_art else None,
             profile=_image_profile_for(profile, draft_mode),
             cache_root=_image_cache_root(recipe),
+            image_session=image_session,
         ),
         page_damage_catalog=_render_page_damage_catalog(
             (
@@ -707,6 +738,7 @@ def _prepare_combined_book_job(
             ),
             profile=_image_profile_for(profile, draft_mode),
             cache_root=_image_cache_root(recipe),
+            image_session=image_session,
             proof=page_damage_mode is PageDamageMode.PROOF,
             visual_draft=(
                 profile is OutputProfile.DRAFT and draft_mode is DraftMode.VISUAL
@@ -733,6 +765,7 @@ def build_combined_book(
     page_damage_mode: PageDamageMode = PageDamageMode.AUTO,
     clean_pdf: bool = True,
     timings: bool = False,
+    image_session: images.ImageOptimizationSession | None = None,
 ) -> Path:
     """Render the full manifest chapter tree to one combined book PDF."""
     job = _prepare_combined_book_job(
@@ -746,6 +779,7 @@ def build_combined_book(
         pagination_mode=pagination_mode,
         page_damage_mode=page_damage_mode,
         clean_pdf=clean_pdf,
+        image_session=image_session,
     )
     _configure_job_timings([job], enabled=timings, log=log)
     did_skip = _run_render_job_cached(job, cache=cache, force=force, log=log)
@@ -762,6 +796,7 @@ def build_web_book(
     *,
     include_art: bool = True,
     log: LogFn | None = None,
+    image_session: images.ImageOptimizationSession | None = None,
 ) -> Path:
     """Render a single-file static HTML book with local CSS, fonts, and images."""
     if log is not None:
@@ -788,8 +823,20 @@ def build_web_book(
         manifest.chapters,
         toc_max_depth=2,
     )
-    markdown = _rewrite_render_images(markdown, recipe, manifest, profile="web")
-    ctx = context_for_web(tools, recipe, manifest, include_art=include_art)
+    markdown = _rewrite_render_images(
+        markdown,
+        recipe,
+        manifest,
+        profile="web",
+        image_session=image_session,
+    )
+    ctx = context_for_web(
+        tools,
+        recipe,
+        manifest,
+        include_art=include_art,
+        image_session=image_session,
+    )
     html = pipeline.render_markdown_to_html(markdown, ctx)
     html = _rewrite_web_asset_refs(
         html,
@@ -810,6 +857,7 @@ def _append_single_chapter(
     cache: ArtifactCache | None,
     force: bool,
     skipped: list[Path],
+    image_session: images.ImageOptimizationSession | None,
 ) -> bool:
     """Build a requested single chapter and return whether it was found."""
     if request.single_chapter is None:
@@ -837,6 +885,7 @@ def _append_single_chapter(
             page_damage_mode=_effective_page_damage_mode(request),
             clean_pdf=request.clean_pdf,
             timings=request.timings,
+            image_session=image_session,
         )
     )
     return True
@@ -898,6 +947,7 @@ def build_outputs(
 ) -> BuildResult:
     """Run the export step and render the artifacts requested by ``request``."""
     timer = _BuildTimer(enabled=request.timings, log=log)
+    image_session = images.ImageOptimizationSession()
     if log is not None:
         log("Exporting vaults (obsidian-export)...")
     export_map = ensure_exports_fresh(
@@ -919,6 +969,7 @@ def build_outputs(
                 export_map,
                 log=log,
                 include_art=request.include_art,
+                image_session=image_session,
             )
         )
         timer.mark("web render")
@@ -942,6 +993,7 @@ def build_outputs(
             cache=render_cache,
             force=request.force,
             skipped=skipped,
+            image_session=image_session,
         )
         if not found:
             render_cache.save()
@@ -971,6 +1023,7 @@ def build_outputs(
                     pagination_mode=request.pagination_mode,
                     page_damage_mode=effective_page_damage_mode,
                     clean_pdf=request.clean_pdf,
+                    image_session=image_session,
                 )
             )
 
@@ -1002,8 +1055,28 @@ def build_outputs(
                     pagination_mode=request.pagination_mode,
                     page_damage_mode=effective_page_damage_mode,
                     clean_pdf=request.clean_pdf,
+                    image_session=image_session,
                 )
             )
+
+    if request.scope in {BuildScope.ALL, BuildScope.BOOK}:
+        if log is not None:
+            log("Building combined book...")
+        jobs.append(
+            _prepare_combined_book_job(
+                tools,
+                request.recipe,
+                request.manifest,
+                export_map,
+                profile=request.profile,
+                include_art=request.include_art,
+                draft_mode=request.draft_mode,
+                pagination_mode=request.pagination_mode,
+                page_damage_mode=effective_page_damage_mode,
+                clean_pdf=request.clean_pdf,
+                image_session=image_session,
+            )
+        )
 
     if jobs:
         _configure_job_timings(jobs, enabled=request.timings, log=log)
@@ -1019,27 +1092,6 @@ def build_outputs(
         timer.mark(f"parallel render jobs ({len(jobs)})")
 
     if request.scope in {BuildScope.ALL, BuildScope.BOOK}:
-        if log is not None:
-            log("Building combined book...")
-        produced.append(
-            build_combined_book(
-                tools,
-                request.recipe,
-                request.manifest,
-                export_map,
-                profile=request.profile,
-                cache=render_cache,
-                force=request.force,
-                skipped=skipped,
-                log=log,
-                include_art=request.include_art,
-                draft_mode=request.draft_mode,
-                pagination_mode=request.pagination_mode,
-                page_damage_mode=effective_page_damage_mode,
-                clean_pdf=request.clean_pdf,
-                timings=request.timings,
-            )
-        )
         timer.mark("book render")
 
     render_cache.save()
@@ -1063,11 +1115,17 @@ def _optimized_optional_image(
     *,
     profile: OutputProfile | str,
     cache_root: Path,
+    image_session: images.ImageOptimizationSession | None = None,
 ) -> Path | None:
     """Return an optimized image path when ``path`` is present."""
     if path is None:
         return None
-    return images.optimize_image(path, profile=profile, cache_root=cache_root)
+    return images.optimize_image(
+        path,
+        profile=profile,
+        cache_root=cache_root,
+        session=image_session,
+    )
 
 
 def _optimized_box_image(
@@ -1077,6 +1135,7 @@ def _optimized_box_image(
     max_width_in: float,
     max_height_in: float | None = None,
     cache_root: Path,
+    image_session: images.ImageOptimizationSession | None = None,
 ) -> Path | None:
     """Return an optimized image capped to a known rendered box."""
     if path is None:
@@ -1087,6 +1146,7 @@ def _optimized_box_image(
         max_width_in=max_width_in,
         max_height_in=max_height_in,
         cache_root=cache_root,
+        session=image_session,
     )
 
 
@@ -1095,6 +1155,7 @@ def _render_filler_catalog(
     *,
     profile: OutputProfile | str,
     cache_root: Path,
+    image_session: images.ImageOptimizationSession | None = None,
 ) -> FillerCatalog | None:
     """Return a filler catalog whose asset paths match the render profile."""
     if catalog is None:
@@ -1109,6 +1170,7 @@ def _render_filler_catalog(
                     asset,
                     profile=profile,
                     cache_root=cache_root,
+                    image_session=image_session,
                 ),
                 shape=asset.shape,
                 height_in=asset.height_in,
@@ -1125,6 +1187,7 @@ def _render_page_damage_catalog(
     cache_root: Path,
     proof: bool = False,
     visual_draft: bool = False,
+    image_session: images.ImageOptimizationSession | None = None,
 ) -> PageDamageCatalog | None:
     """Return page-damage assets optimized for the render profile."""
     if catalog is None:
@@ -1155,6 +1218,7 @@ def _render_page_damage_catalog(
                     asset,
                     profile=profile,
                     cache_root=cache_root,
+                    image_session=image_session,
                 ),
                 family=asset.family,
                 size=asset.size,
@@ -1171,6 +1235,7 @@ def _rewrite_render_images(
     *,
     profile: OutputProfile | str,
     draft_mode: DraftMode = DraftMode.FAST,
+    image_session: images.ImageOptimizationSession | None = None,
 ) -> str:
     """Rewrite inline images for cached optimized assets when appropriate."""
     search_roots = _render_image_search_roots(recipe, manifest)
@@ -1189,6 +1254,7 @@ def _rewrite_render_images(
         search_roots=search_roots,
         profile=image_profile,
         cache_root=_image_cache_root(recipe),
+        session=image_session,
     )
 
 
@@ -1205,6 +1271,7 @@ def _optimized_filler_image(
     *,
     profile: OutputProfile | str,
     cache_root: Path,
+    image_session: images.ImageOptimizationSession | None = None,
 ) -> Path:
     """Return a filler asset optimized to its largest CSS placement."""
     max_width_in = _FILLER_MAX_WIDTH_IN.get(asset.shape, 8.5)
@@ -1214,6 +1281,7 @@ def _optimized_filler_image(
         max_width_in=max_width_in,
         max_height_in=asset.height_in,
         cache_root=cache_root,
+        session=image_session,
     )
 
 
@@ -1222,6 +1290,7 @@ def _optimized_page_damage_image(
     *,
     profile: OutputProfile | str,
     cache_root: Path,
+    image_session: images.ImageOptimizationSession | None = None,
 ) -> Path:
     """Return a page-wear asset optimized to its placement size family."""
     _min_width, max_width_in = page_damage_module.SIZE_WIDTHS_IN.get(
@@ -1240,6 +1309,7 @@ def _optimized_page_damage_image(
         max_width_in=max_width_in,
         max_height_in=max_width_in,
         cache_root=cache_root,
+        session=image_session,
     )
 
 

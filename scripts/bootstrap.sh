@@ -36,7 +36,12 @@ if is_windows_shell; then
   exit 1
 fi
 
-export PATH="$HOME/.local/bin:$HOME/.cargo/bin:$PATH"
+export PATH="$HOME/.local/bin:$PATH"
+
+task_version=""
+if [ -f versions.env ]; then
+  task_version=$(sed -n 's/^TASK_VERSION=//p' versions.env | tr -d "\"' " | head -n 1)
+fi
 
 if ! command -v task >/dev/null 2>&1; then
   if ! command -v curl >/dev/null 2>&1; then
@@ -46,7 +51,12 @@ if ! command -v task >/dev/null 2>&1; then
 
   log "Installing Task"
   mkdir -p "$HOME/.local/bin"
-  curl -sL https://taskfile.dev/install.sh | sh -s -- -d -b "$HOME/.local/bin"
+  if [ -n "$task_version" ]; then
+    curl -sL https://taskfile.dev/install.sh |
+      sh -s -- -d -b "$HOME/.local/bin" "v$task_version"
+  else
+    curl -sL https://taskfile.dev/install.sh | sh -s -- -d -b "$HOME/.local/bin"
+  fi
 fi
 
 if ! command -v task >/dev/null 2>&1; then

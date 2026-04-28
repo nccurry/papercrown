@@ -21,9 +21,15 @@ tasks:
       - task deps:check
 
   deps:check:
-    desc: Report project dependency status.
+    desc: Report project dependency status and metadata drift.
     cmds:
       - uv run --locked papercrown deps check
+      - task deps:sync
+
+  deps:sync:
+    desc: Verify repo dependency metadata is synchronized with versions.env.
+    cmds:
+      - uv run --locked python tools/sync_dependencies.py --check
 
   deps:install:
     desc: Install platform and Python dependencies, then verify them.
@@ -66,9 +72,13 @@ tasks:
     cmds:
       - uv build
 
+  package:wheel:
+    desc: Build the wheel distribution used by PR checks.
+    cmds:
+      - uv build --wheel
+
   package:verify:
     desc: Verify built distributions include runtime resources and CLI metadata.
-    deps: [package]
     cmds:
       - uv run python tools/verify_package.py
 
@@ -83,7 +93,7 @@ tasks:
       - task deps
       - task lint
       - task test
-      - task package
+      - task package:wheel
       - task package:verify
       - task audit:public
 

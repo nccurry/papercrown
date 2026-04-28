@@ -5,6 +5,7 @@ from __future__ import annotations
 from pathlib import Path
 
 from papercrown import dependencies
+from tools import sync_dependencies
 
 
 def test_manifest_tracks_python_sources_without_transitive_packages(papercrown_root):
@@ -19,6 +20,13 @@ def test_manifest_tracks_python_sources_without_transitive_packages(papercrown_r
     ]
     assert "dependencies" not in manifest["python_groups"]["runtime"]
     assert "dependencies" not in manifest["python_groups"]["dev"]
+
+
+def test_versions_env_tracks_repo_managed_tool_versions(papercrown_root):
+    versions = dependencies.load_versions_file(papercrown_root / "versions.env")
+
+    assert versions["OBSIDIAN_EXPORT_VERSION"] == "25.3.0"
+    assert versions["PYTHON_VERSION"] == "3.12"
 
 
 def test_dependency_report_format_includes_owner_and_commands(tmp_path):
@@ -76,6 +84,86 @@ def test_external_tool_commands_fall_back_to_posix(monkeypatch):
         )
         == "curl install task"
     )
+
+
+def test_external_tool_exact_version_policy_errors_on_drift(monkeypatch, tmp_path):
+    tool = tmp_path / "obsidian-export"
+    tool.write_text("", encoding="utf-8")
+    monkeypatch.setattr(dependencies.shutil, "which", lambda _command: str(tool))
+    monkeypatch.setattr(
+        dependencies,
+        "_run_version_command",
+        lambda *_args: "obsidian-export 24.11.0",
+    )
+    manifest = {
+        "external_tools": {
+            "obsidian-export": {
+                "command": "obsidian-export",
+                "version_command": ["obsidian-export", "--version"],
+                "version_policy": {"exact_env": "OBSIDIAN_EXPORT_VERSION"},
+            }
+        }
+    }
+
+    checks = dependencies._check_external_tools(
+        manifest,
+        versions={"OBSIDIAN_EXPORT_VERSION": "25.3.0"},
+    )
+
+    assert checks[0].status is dependencies.DependencyStatus.ERROR
+    assert "must be 25.3.0" in checks[0].message
+
+
+def test_external_tool_warns_for_cargo_installed_obsidian_export(monkeypatch):
+    monkeypatch.setattr(
+        dependencies.shutil,
+        "which",
+        lambda _command: r"C:\Users\dev\.cargo\bin\obsidian-export.exe",
+    )
+    monkeypatch.setattr(
+        dependencies,
+        "_run_version_command",
+        lambda *_args: "obsidian-export 25.3.0",
+    )
+    manifest = {
+        "external_tools": {
+            "obsidian-export": {
+                "command": "obsidian-export",
+                "version_command": ["obsidian-export", "--version"],
+                "version_policy": {
+                    "exact_env": "OBSIDIAN_EXPORT_VERSION",
+                    "warn_path_contains": [".cargo"],
+                },
+            }
+        }
+    }
+
+    checks = dependencies._check_external_tools(
+        manifest,
+        versions={"OBSIDIAN_EXPORT_VERSION": "25.3.0"},
+    )
+
+    assert checks[0].status is dependencies.DependencyStatus.WARN
+    assert "non-preferred source" in checks[0].message
+
+
+def test_dependency_metadata_audit_is_clean():
+    assert sync_dependencies.audit() == []
+
+
+def test_ci_uses_published_or_candidate_builder_image(papercrown_root):
+    ci = (papercrown_root / ".github" / "workflows" / "ci.yml").read_text(
+        encoding="utf-8"
+    )
+    ci_image = (papercrown_root / ".github" / "workflows" / "ci-image.yml").read_text(
+        encoding="utf-8"
+    )
+
+    assert "Run checks in published CI image" in ci
+    assert "Build candidate CI image" in ci
+    assert "Run checks in candidate CI image" in ci
+    assert "source versions.env" in ci
+    assert "workflow_dispatch" in ci_image
 
 
 def test_python_group_checks_read_pyproject_and_uv_lock(papercrown_root):

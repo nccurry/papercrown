@@ -39,6 +39,8 @@ external_tools:
   pandoc:
     command: pandoc
     version_command: ["pandoc", "--version"]
+    version_policy:
+      minimum_env: PANDOC_MIN_VERSION
     managed_by: system package manager
     install:
       windows: "winget install JohnMacFarlane.Pandoc"
@@ -53,12 +55,22 @@ external_tools:
   obsidian-export:
     command: obsidian-export
     version_command: ["obsidian-export", "--version"]
-    managed_by: cargo
-    install: "cargo install obsidian-export"
-    update: "cargo install obsidian-export --force"
+    version_policy:
+      exact_env: OBSIDIAN_EXPORT_VERSION
+      warn_path_contains:
+        - ".cargo"
+        - ".cargo/bin"
+    managed_by: pinned GitHub release binary
+    install:
+      windows: "task deps:install"
+      posix: "task deps:install"
+      default: "task deps:install"
+    update: "edit versions.env and run task deps:install"
   uv:
     command: uv
     version_command: ["uv", "--version"]
+    version_policy:
+      exact_env: UV_VERSION
     managed_by: uv installer
     install:
       windows: "powershell -ExecutionPolicy ByPass -c \"irm https://astral.sh/uv/install.ps1 | iex\""
@@ -67,6 +79,8 @@ external_tools:
   task:
     command: task
     version_command: ["task", "--version"]
+    version_policy:
+      exact_env: TASK_VERSION
     managed_by: system package manager or Task installer
     install:
       windows: "winget install Task.Task"

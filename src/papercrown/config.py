@@ -40,6 +40,7 @@ _BUILD_KEYS = {
     "timings",
 }
 _PROJECT_KEYS = {"default_recipe", "build"}
+AUTO_JOBS_CAP = 4
 
 
 @dataclass(frozen=True)
@@ -285,7 +286,7 @@ def parse_jobs(value: object) -> int:
     if isinstance(value, str):
         stripped = value.strip().lower()
         if stripped == "auto":
-            return max(1, min(4, os.cpu_count() or 1))
+            return max(1, min(AUTO_JOBS_CAP, os.cpu_count() or 1))
         if stripped.isdigit():
             return parse_jobs(int(stripped))
     if isinstance(value, bool) or not isinstance(value, int):

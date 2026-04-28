@@ -243,17 +243,19 @@ Release from `dist/`.
 
 ## Dependency Tracking
 
-`dependencies.yaml` is the repo-owned index for non-content dependencies. It
-does not duplicate lockfiles: Python runtime and dev packages stay in
-`pyproject.toml` and `uv.lock`, external CLIs stay with their package managers,
-Windows WeasyPrint native libraries are managed through MSYS2, and bundled
-fonts are package resources.
+`dependencies.yaml` is the repo-owned index for non-content dependencies.
+External tool versions and container image tags live in `versions.env`; Python
+runtime and dev packages stay in `pyproject.toml` and `uv.lock`. Windows
+WeasyPrint native libraries are managed through MSYS2, and bundled fonts are
+package resources.
 
 For users, `papercrown doctor` is the normal preflight check for a project. In a
 repository checkout, maintainers can run `task deps` to see the current path,
 version, managing file/tool, status, and exact install/update command for each
-dependency. Run `task deps:install` to install or synchronize the supported
-development dependency set.
+dependency. Run `task deps:sync` to audit metadata drift and `task deps:install`
+to install or synchronize the supported development dependency set. Rust is not
+required for the normal repository setup; `obsidian-export` is installed from a
+pinned release binary.
 
 ## Windows PDF Runtime
 

@@ -2,11 +2,15 @@ name: Container Image
 
 on:
   pull_request:
+    paths-ignore:
+      - 'docs/**'
   push:
     branches:
       - main
     tags:
       - 'v*'
+    paths-ignore:
+      - 'docs/**'
   workflow_dispatch:
 
 permissions:
@@ -47,4 +51,6 @@ jobs:
           CONTAINER_TAGS: ${{ steps.meta.outputs.tags }}
           CONTAINER_LABELS: ${{ steps.meta.outputs.labels }}
           CONTAINER_PUSH: ${{ github.event_name != 'pull_request' }}
+          DOCKER_CACHE_FROM: type=gha,scope=runtime-image
+          DOCKER_CACHE_TO: type=gha,mode=max,scope=runtime-image
         run: task docker:image:publish

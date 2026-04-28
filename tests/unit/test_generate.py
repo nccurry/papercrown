@@ -22,7 +22,7 @@ from papercrown.manifest import (
     Splash,
     build_manifest,
 )
-from papercrown.options import DraftMode, OutputProfile, PageDamageMode
+from papercrown.options import BuildScope, DraftMode, OutputProfile, PageDamageMode
 from papercrown.recipe import load_recipe
 
 # ---------------------------------------------------------------------------
@@ -676,6 +676,67 @@ def test_build_chapter_pdf_skips_when_render_cache_matches(tmp_path, monkeypatch
     assert first == second
     assert render_calls == 1
     assert skipped == [second]
+
+
+def test_build_outputs_scope_all_runs_book_in_prepared_job_pool(tmp_path, monkeypatch):
+    rp = _write_recipe(
+        tmp_path,
+        """
+        title: B
+        vaults:
+          v: vault
+        chapters:
+          - kind: file
+            title: Foo
+            source: v:Foo.md
+    """,
+    )
+    recipe = load_recipe(rp)
+    manifest = build_manifest(recipe)
+    tools = export_mod.Tools(
+        pandoc="pandoc",
+        obsidian_export="obsidian-export",
+        weasyprint="weasyprint",
+    )
+    seen_labels: list[str] = []
+
+    monkeypatch.setattr(build, "ensure_exports_fresh", lambda *_args, **_kwargs: {})
+    monkeypatch.setattr(build, "clean_stale_pdf_outputs", lambda *_args, **_kwargs: [])
+    monkeypatch.setattr(
+        build,
+        "_prepare_chapter_pdf_job",
+        lambda *_args, **_kwargs: SimpleNamespace(
+            label="section: Foo",
+            out=tmp_path / "Foo.pdf",
+        ),
+    )
+    monkeypatch.setattr(
+        build,
+        "_prepare_combined_book_job",
+        lambda *_args, **_kwargs: SimpleNamespace(
+            label="book: B",
+            out=tmp_path / "B.pdf",
+        ),
+    )
+
+    def fake_run_prepared_jobs(jobs, **_kwargs):
+        seen_labels.extend(job.label for job in jobs)
+        return [job.out for job in jobs], []
+
+    monkeypatch.setattr(build, "_run_prepared_jobs", fake_run_prepared_jobs)
+
+    result = build.build_outputs(
+        tools,
+        build.BuildRequest(
+            recipe=recipe,
+            manifest=manifest,
+            scope=BuildScope.ALL,
+            jobs=4,
+        ),
+    )
+
+    assert seen_labels == ["section: Foo", "book: B"]
+    assert [path.name for path in result.produced] == ["Foo.pdf", "B.pdf"]
 
 
 def test_build_chapter_pdf_passes_page_damage_catalog(tmp_path, monkeypatch):
