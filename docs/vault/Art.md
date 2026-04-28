@@ -11,7 +11,8 @@ Use `papercrown art audit book.yaml` when adding or moving art.
 
 Keep art under the recipe's `art_dir`, use role-shaped filenames, and reserve
 transparent PNGs for assets that should float on paper instead of carrying
-their own rectangular background.
+their own rectangular background. Art can either live in the canonical role
+folders below or directly in `art_dir` when filenames are globally unique.
 ::::
 
 ## Canonical Roles
@@ -52,13 +53,15 @@ their own rectangular background.
 | `npc` | `content/npcs/` | `npc-{slug}.png` | No |
 | `location` | `content/locations/` | `location-{slug}.png` | No |
 | `handout` | `content/handouts/` | `handout-{slug}.png` | No |
+| `scene` | project root or campaign art folders | `scene-{slug}.png` | No |
 
 Front and back covers are cover plates, not splashes or torn-picture interior
 art. Opaque/full-bleed backgrounds are allowed when the image is composed for
 the cover. Interior cinematic art belongs in `splashes/`.
 
-`unused/`, `campaign/`, contact sheets, and non-image files are ignored by
-automatic discovery.
+`unused/`, contact sheets, and non-image files are ignored by automatic
+discovery. Legacy campaign art folders are ignored by automatic discovery, but
+flat `scene-*` filenames can be referenced explicitly by campaign recipes.
 
 ## Automatic Placement
 
