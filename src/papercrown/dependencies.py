@@ -35,25 +35,25 @@ _FALLBACK_NATIVE_RUNTIME_MANIFEST: dict[str, Any] = {
             "managed_by": "MSYS2 pacman + WEASYPRINT_DLL_DIRECTORIES",
             "check": "uv run papercrown deps check",
             "preferred": {
-                "dll_dir": r"C:\msys64\mingw64\bin",
+                "dll_dir": r"C:\msys64\ucrt64\bin",
                 "install_commands": [
                     "winget install --id MSYS2.MSYS2 -e",
                     r'C:\msys64\usr\bin\bash.exe -lc "pacman -Syu --noconfirm"',
                     (
                         r'C:\msys64\usr\bin\bash.exe -lc "pacman -S --needed '
-                        r'--noconfirm mingw-w64-x86_64-pango"'
+                        r'--noconfirm mingw-w64-ucrt-x86_64-pango"'
                     ),
-                    r'setx WEASYPRINT_DLL_DIRECTORIES "C:\msys64\mingw64\bin"',
-                    r"add C:\msys64\mingw64\bin to User PATH",
+                    r'setx WEASYPRINT_DLL_DIRECTORIES "C:\msys64\ucrt64\bin"',
+                    r"add C:\msys64\ucrt64\bin to User PATH",
                 ],
                 "update_commands": [
                     r'C:\msys64\usr\bin\bash.exe -lc "pacman -Syu --noconfirm"',
                     (
                         r'C:\msys64\usr\bin\bash.exe -lc "pacman -S --needed '
-                        r'--noconfirm mingw-w64-x86_64-pango"'
+                        r'--noconfirm mingw-w64-ucrt-x86_64-pango"'
                     ),
-                    r'setx WEASYPRINT_DLL_DIRECTORIES "C:\msys64\mingw64\bin"',
-                    r"add C:\msys64\mingw64\bin to User PATH",
+                    r'setx WEASYPRINT_DLL_DIRECTORIES "C:\msys64\ucrt64\bin"',
+                    r"add C:\msys64\ucrt64\bin to User PATH",
                 ],
             },
             "stale_unsupported": [
@@ -691,7 +691,7 @@ def _classify_windows_native_runtime(
             category="native_pdf_runtime",
             name="windows",
             status=DependencyStatus.OK,
-            message="MSYS2 Pango/GLib is configured for WeasyPrint",
+            message="MSYS2 UCRT64 Pango/GLib is configured for WeasyPrint",
             path=active_path,
             version=glib_version,
             managed_by=managed_by,
@@ -705,7 +705,10 @@ def _classify_windows_native_runtime(
             category="native_pdf_runtime",
             name="windows",
             status=DependencyStatus.WARN,
-            message=("MSYS2 Pango/GLib is installed but not configured for WeasyPrint"),
+            message=(
+                "MSYS2 UCRT64 Pango/GLib is installed but not configured "
+                "for WeasyPrint"
+            ),
             path=preferred_dir,
             version=glib_version,
             managed_by=managed_by,
@@ -735,7 +738,7 @@ def _classify_windows_native_runtime(
             category="native_pdf_runtime",
             name="windows",
             status=DependencyStatus.OK,
-            message="MSYS2 Pango/GLib is configured for WeasyPrint",
+            message="MSYS2 UCRT64 Pango/GLib is configured for WeasyPrint",
             path=active_path,
             version=glib_version,
             managed_by=managed_by,

@@ -259,7 +259,7 @@ pinned release binary.
 
 ## Windows PDF Runtime
 
-Paper Crown uses MSYS2 Pango/GLib for WeasyPrint on Windows. Installed users
+Paper Crown uses MSYS2 UCRT64 Pango/GLib for WeasyPrint on Windows. Installed users
 should run `papercrown doctor` in a project to detect missing or stale native
 PDF runtime libraries. In a repository checkout, the maintainer setup path is:
 
