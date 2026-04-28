@@ -133,9 +133,34 @@ was available for a large gap.
 art should float over the page, but opacity is not a naming-contract error for
 illustrations that already include their own background.
 
-Diagrams, screenshots, maps, logos, and icons are crisp-rendering roles. Wrap
-them in their matching Markdown class, such as `.art-diagram` or
-`.art-screenshot`, so they do not inherit illustration blend/filter treatment.
+Paper Crown renders image pixels as authored by default. Recipe
+`image_treatments` can opt specific roles into a named visual treatment when an
+asset set is intentionally designed for it:
+
+```yaml
+image_treatments:
+  ornament: ink-blend
+  filler: raw
+  cover: raw
+```
+
+Supported treatments are:
+
+- `raw`: no blend, filter, or opacity adjustment.
+- `ink-blend`: multiply blending plus a mild contrast lift for simple ink art
+  that needs to sit on the paper color.
+- `print-punch`, `subtle-punch`, and `strong-punch`: contrast-only boosts.
+- `soft-print`: a gentler multiply treatment for intentionally soft art.
+
+Supported role keys include `default`, `inline`, `cover`, `cover-back`,
+`chapter`, `divider`, `filler`, `ornament`, `tailpiece`, `headpiece`, `break`,
+`splash`, `splash-inline`, `splash-page`, `spot`, `diagram`, `screenshot`,
+`map`, `logo`, and `icon`.
+
+Use treatments sparingly. Fix finished illustrations in the source asset when
+possible; treatments are best for reusable decorative ink systems. Diagrams,
+screenshots, maps, logos, and icons are crisp-rendering roles, so they should
+usually remain `raw`.
 
 ## Filler Marker Policy
 

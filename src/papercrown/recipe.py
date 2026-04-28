@@ -64,6 +64,8 @@ from pathlib import Path
 
 import yaml
 
+from .image_treatments import IMAGE_TREATMENT_PRESETS, IMAGE_TREATMENT_ROLE_SELECTORS
+
 # ---------------------------------------------------------------------------
 # Errors
 # ---------------------------------------------------------------------------
@@ -1007,6 +1009,7 @@ class Recipe:
     theme: str = DEFAULT_THEME
     theme_dir_override: Path | None = None
     theme_options: dict[str, str] = field(default_factory=dict)
+    image_treatments: dict[str, str] = field(default_factory=dict)
     metadata: BookMetadataSpec = field(default_factory=BookMetadataSpec)
     front_matter: list[MatterSpec] = field(default_factory=list)
     back_matter: list[MatterSpec] = field(default_factory=list)
@@ -1162,6 +1165,7 @@ def load_recipe(path: str | Path) -> Recipe:
     if metadata_raw is not None and not isinstance(metadata_raw, Mapping):
         raise RecipeError("metadata must be a mapping when provided")
     theme_options = _theme_options_mapping(raw.get("theme_options"))
+    image_treatments = _image_treatments_mapping(raw.get("image_treatments"))
     front_matter = _matter_list(raw.get("front_matter"), field_name="front_matter")
     back_matter = _matter_list(raw.get("back_matter"), field_name="back_matter")
 
@@ -1239,6 +1243,7 @@ def load_recipe(path: str | Path) -> Recipe:
         theme=theme,
         theme_dir_override=theme_dir_override,
         theme_options=theme_options,
+        image_treatments=image_treatments,
         metadata=BookMetadataSpec.from_dict(metadata_raw),
         front_matter=front_matter,
         back_matter=back_matter,
@@ -1571,6 +1576,38 @@ def _theme_options_mapping(value: object) -> dict[str, str]:
             continue
         options[key] = str(raw_value).strip()
     return options
+
+
+def _image_treatments_mapping(value: object) -> dict[str, str]:
+    """Validate recipe image role -> treatment preset overrides."""
+    if value is None:
+        return {}
+    if not isinstance(value, Mapping):
+        raise RecipeError("image_treatments must be a mapping")
+    treatments: dict[str, str] = {}
+    for raw_role, raw_treatment in value.items():
+        role = str(raw_role).strip()
+        if not role:
+            raise RecipeError("image_treatments keys must be non-empty")
+        if role not in IMAGE_TREATMENT_ROLE_SELECTORS:
+            choices = ", ".join(sorted(IMAGE_TREATMENT_ROLE_SELECTORS))
+            raise RecipeError(
+                f"image_treatments role {role!r} is not supported; "
+                f"choose one of: {choices}"
+            )
+        treatment = str(raw_treatment).strip()
+        if not treatment:
+            raise RecipeError(f"image_treatments.{role} must be non-empty")
+        if treatment == "none":
+            treatment = "raw"
+        if treatment not in IMAGE_TREATMENT_PRESETS:
+            choices = ", ".join(sorted(IMAGE_TREATMENT_PRESETS))
+            raise RecipeError(
+                f"image_treatments.{role} preset {treatment!r} is not supported; "
+                f"choose one of: {choices}"
+            )
+        treatments[role] = treatment
+    return treatments
 
 
 def _matter_list(value: object, *, field_name: str) -> list[MatterSpec]:

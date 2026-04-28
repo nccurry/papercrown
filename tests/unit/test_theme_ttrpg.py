@@ -100,6 +100,10 @@ def test_bundled_theme_resolves_css_template_and_options(tmp_path):
         theme: pulp-adventure
         theme_options:
           accent: "#775511"
+        image_treatments:
+          default: raw
+          ornament: ink-blend
+          filler: raw
         vaults:
           v: vault
         chapters:
@@ -122,6 +126,11 @@ def test_bundled_theme_resolves_css_template_and_options(tmp_path):
     assert theme.template == TEMPLATE_FILE
     assert theme.inline_css is not None
     assert "--accent: #775511;" in theme.inline_css
+    assert "Paper Crown image treatments" in theme.inline_css
+    assert ".ornament-tailpiece img" in theme.inline_css
+    assert "mix-blend-mode: multiply;" in theme.inline_css
+    assert ".filler-img" in theme.inline_css
+    assert "filter: none;" in theme.inline_css
     assert theme.fingerprint_paths
 
 

@@ -18,6 +18,8 @@ title: Starfall Field Guide
 output_dir: ../output
 output_name: starfall-field-guide
 theme: clean-srd
+image_treatments:
+  ornament: ink-blend
 
 vaults:
   rules: ../vault
@@ -56,6 +58,11 @@ outputs. Generated back matter still appears after the assembled chapters.
 Art lives under `art_dir` and follows the [art contract](Art.md). The contract
 defines canonical folders, filename shapes, automatic filler roles, and the
 checks performed by `papercrown art audit`.
+
+Images render without filters or blend modes by default. Use
+`image_treatments` only when a role needs an intentional treatment such as
+`ink-blend` for decorative line art. See the [art contract](Art.md) for
+supported roles and presets.
 
 Automatic filler policy also lives in the recipe. Source Markdown may opt out
 of a local marker, but the recipe decides which marker families exist, which
@@ -118,7 +125,7 @@ resolves before rendering.
 | `title`, `subtitle`, `metadata` | Book identity, PDF metadata, and generated matter inputs |
 | `output_dir`, `output_name`, `cache_dir` | Caller-owned output and cache locations |
 | `vaults`, `vault_overlay` | Named Markdown roots and fallback search order |
-| `theme_dir`, `theme`, `theme_options` | Bundled or local visual system |
+| `theme_dir`, `theme`, `theme_options`, `image_treatments` | Bundled/local visual system and opt-in image role treatments |
 | `cover`, `front_matter`, `back_matter` | Book-level pages and generated appendix content |
 | `chapters` | Ordered book structure using `file`, `sequence`, `folder`, `catalog`, `classes-catalog`, or `group` |
 | `splashes`, `fillers`, `page_damage`, `ornaments` | Optional art and page-furniture systems |

@@ -149,6 +149,10 @@ class TestLoadRecipeHappy:
               glaze_opacity: 0.45
               glaze_texture: surface-dust-speckle.png
               skip: [cover, divider]
+            image_treatments:
+              ornament: ink-blend
+              filler: raw
+              cover: print-punch
             cover:
               enabled: true
               art: cover.png
@@ -216,6 +220,11 @@ class TestLoadRecipeHappy:
         assert r.page_damage.glaze_opacity == 0.45
         assert r.page_damage.glaze_texture == "surface-dust-speckle.png"
         assert r.page_damage.skip == ["cover", "divider"]
+        assert r.image_treatments == {
+            "ornament": "ink-blend",
+            "filler": "raw",
+            "cover": "print-punch",
+        }
         assert r.vault_overlay == ["base", "over"]
         assert r.chapters[0].slug == "custom-setting"
         assert r.chapters[0].headpiece == "ornaments/head.png"
@@ -516,6 +525,59 @@ class TestLoadRecipeErrors:
         """,
         )
         with pytest.raises(RecipeError, match="splashes"):
+            load_recipe(p)
+
+    def test_image_treatments_validate_roles_and_presets(self, tmp_path):
+        p = _write_recipe(
+            tmp_path,
+            """
+            title: X
+            vaults:
+              custom: vault
+            image_treatments:
+              filler: none
+              ornament: ink-blend
+            chapters:
+              - kind: file
+                source: custom:Foo.md
+        """,
+        )
+        recipe = load_recipe(p)
+        assert recipe.image_treatments == {
+            "filler": "raw",
+            "ornament": "ink-blend",
+        }
+
+        p = _write_recipe(
+            tmp_path,
+            """
+            title: X
+            vaults:
+              custom: vault
+            image_treatments:
+              portraits: raw
+            chapters:
+              - kind: file
+                source: custom:Foo.md
+        """,
+        )
+        with pytest.raises(RecipeError, match="role"):
+            load_recipe(p)
+
+        p = _write_recipe(
+            tmp_path,
+            """
+            title: X
+            vaults:
+              custom: vault
+            image_treatments:
+              filler: sharpen
+            chapters:
+              - kind: file
+                source: custom:Foo.md
+        """,
+        )
+        with pytest.raises(RecipeError, match="preset"):
             load_recipe(p)
 
     def test_splash_target_and_placement_are_validated(self, tmp_path):

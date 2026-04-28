@@ -10,6 +10,7 @@ from typing import Any
 
 import yaml
 
+from .image_treatments import image_treatment_css
 from .recipe import DEFAULT_THEME, Recipe, RecipeError
 from .resources import TEMPLATE_FILE, THEMES_DIR
 
@@ -53,7 +54,10 @@ def load_theme(recipe: Recipe) -> ThemePack:
     css_files = _resolve_css_files(root, metadata)
     template = _resolve_template(root, metadata)
     asset_roots = _resolve_asset_roots(root, metadata)
-    inline_css = _theme_options_css(getattr(recipe, "theme_options", {}))
+    inline_css = _join_css_blocks(
+        _theme_options_css(getattr(recipe, "theme_options", {})),
+        image_treatment_css(getattr(recipe, "image_treatments", {})),
+    )
     fingerprint_paths = [theme_yaml, *css_files]
     if template != TEMPLATE_FILE:
         fingerprint_paths.append(template)
@@ -222,3 +226,8 @@ def _theme_options_css(options: dict[str, str]) -> str | None:
     if not declarations:
         return None
     return ":root {\n" + "\n".join(declarations) + "\n}\n"
+
+
+def _join_css_blocks(*blocks: str | None) -> str | None:
+    css = "\n".join(block.strip() for block in blocks if block and block.strip())
+    return f"{css}\n" if css else None

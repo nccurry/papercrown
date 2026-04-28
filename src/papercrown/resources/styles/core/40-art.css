@@ -5,12 +5,9 @@ img {
   height: auto;
   page-break-inside: avoid;
   break-inside: avoid;
-  /* Generated ink-lineart images often have an off-white border that
-     doesn't quite match the paper tone. `mix-blend-mode: multiply` makes
-     the image's white pixels become whatever the paper underneath is,
-     blending the image into the page seamlessly. WeasyPrint supports
-     mix-blend-mode since 53. */
-  mix-blend-mode: multiply;
+  mix-blend-mode: normal;
+  filter: none;
+  opacity: 1;
 }
 
 figure {
@@ -205,7 +202,6 @@ figcaption {
   width: 100%;
   max-height: 0.8in;
   object-fit: contain;
-  filter: contrast(1.05);
 }
 
 .filler-slot {
@@ -261,8 +257,6 @@ figcaption {
   width: auto;
   height: auto;
   object-fit: contain;
-  mix-blend-mode: multiply;
-  filter: contrast(1.04);
 }
 
 .filler-shape-tailpiece {
@@ -331,7 +325,6 @@ figcaption {
   width: 100%;
   max-height: 0.52in;
   object-fit: contain;
-  filter: contrast(1.04);
 }
 
 .ornament-break {
@@ -348,7 +341,6 @@ figcaption {
   width: 100%;
   max-height: 0.34in;
   object-fit: contain;
-  filter: contrast(1.02);
 }
 
 .splash-art {
@@ -365,7 +357,6 @@ figcaption {
   width: 100%;
   height: auto;
   object-fit: contain;
-  filter: contrast(1.03);
 }
 
 .splash-bottom-half {
@@ -388,12 +379,6 @@ figcaption {
   max-width: 5.35in;
   margin-top: -0.02in;
   margin-bottom: 0.24in;
-  opacity: 0.96;
-}
-
-.splash-corner-left .splash-img,
-.splash-corner-right .splash-img {
-  filter: contrast(1.08);
 }
 
 .splash-corner-left {
