@@ -505,11 +505,14 @@ def test_pagination_report_and_fix_mode_render(tmp_path):
 def test_build_outputs_supports_parallel_fast_draft(
     mini_recipe_path,
     has_external_tools,
+    tmp_path,
 ):
     if not has_external_tools["obsidian-export"]:
         pytest.skip("obsidian-export not installed")
 
     recipe = load_recipe(mini_recipe_path)
+    recipe.output_dir_override = tmp_path / "output"
+    recipe.cache_dir_override = tmp_path / "cache"
     manifest = build_manifest(recipe)
     tools = export.discover_tools()
     request = build.BuildRequest(
@@ -527,3 +530,4 @@ def test_build_outputs_supports_parallel_fast_draft(
 
     assert result.produced
     assert all(path.is_file() for path in result.produced)
+    assert all(recipe.generated_root in path.parents for path in result.produced)
