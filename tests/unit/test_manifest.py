@@ -453,7 +453,7 @@ class TestKindFile:
             art_root=root,
         )
         page = classify_filler_art_path(
-            root / "filler-page-frame-vault-01.png",
+            root / "page-finish-frame-vault-01.png",
             art_root=root,
         )
         cover = classify_filler_art_path(
@@ -486,7 +486,7 @@ class TestKindFile:
         assert spot.category == "filler-spot"
         assert spot.shape == "spot"
         assert spot.auto_selectable is True
-        assert page.category == "filler-page"
+        assert page.category == "page-finish"
         assert page.shape == "page-finish"
         assert page.height_in == 5.25
         assert page.auto_selectable is True
@@ -544,7 +544,7 @@ class TestKindFile:
             "filler-spot-future.png",
             "filler-wide-future.png",
             "filler-bottom-future.png",
-            "filler-page-future.png",
+            "page-finish-future.png",
             "cover-front-future.png",
             "cover-back-future.png",
             "splash-chapter-future.png",
@@ -597,7 +597,7 @@ class TestKindFile:
         assert assets["auto-filler-spot-future"].shape == "spot"
         assert assets["auto-filler-wide-future"].shape == "small-wide"
         assert assets["auto-filler-bottom-future"].shape == "bottom-band"
-        assert assets["auto-filler-page-future"].height_in == 5.25
+        assert assets["auto-page-finish-future"].height_in == 5.25
         assert "auto-faction-corp-sec" not in assets
         assert "auto-gear-ranged-loadout" not in assets
         assert "auto-vista-dockyard" not in assets

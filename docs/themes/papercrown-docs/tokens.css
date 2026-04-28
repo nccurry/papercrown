@@ -1,0 +1,15 @@
+:root {
+  --paper: #fbf6e9;
+  --ink: #201914;
+  --ink-soft: #45372b;
+  --muted: #77634d;
+  --rule: #33261c;
+  --rule-light: #b89d72;
+  --accent: #9a3f2b;
+  --accent-deep: #5f2b68;
+  --warn: #9d2e35;
+  --success: #2f6b5d;
+  --tint-block: #f1e6d1;
+  --tint-callout: #fff0d5;
+  --paper-grain: url("assets/reader-grain.png");
+}

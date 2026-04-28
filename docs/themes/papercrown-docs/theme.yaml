@@ -1,0 +1,6 @@
+name: Paper Crown Docs Anthology
+css:
+  - tokens.css
+  - components.css
+  - polish.css
+template: book.html

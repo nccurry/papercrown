@@ -55,11 +55,13 @@ class ArtAssetClassification:
 
 
 ROLE_REGISTRY: dict[str, ArtRoleSpec] = {
-    "cover-front": ArtRoleSpec("cover-front", "covers", 8.5, 5.75, transparent=False),
-    "cover-back": ArtRoleSpec("cover-back", "covers", 8.5, 5.75, transparent=False),
-    "cover": ArtRoleSpec("cover", "covers", 8.5, 5.75, transparent=False),
+    "cover-front": ArtRoleSpec(
+        "cover-front", "covers", 5.5, 7.113, transparent=False
+    ),
+    "cover-back": ArtRoleSpec("cover-back", "covers", 5.5, 7.113, transparent=False),
+    "cover": ArtRoleSpec("cover", "covers", 5.5, 7.113, transparent=False),
     "chapter-divider": ArtRoleSpec(
-        "chapter-divider", "dividers", 6.0, 4.0, transparent=False
+        "chapter-divider", "dividers", 6.0, 0.933, transparent=False
     ),
     "chapter-header": ArtRoleSpec(
         "chapter-header", "headers", 6.0, 2.0, transparent=False
@@ -69,17 +71,17 @@ ROLE_REGISTRY: dict[str, ArtRoleSpec] = {
     ),
     "class-opening-spot": ArtRoleSpec("class-opening-spot", "classes/spots", 2.0, 2.0),
     "frame-divider": ArtRoleSpec("frame-divider", "frames/dividers", 6.0, 3.0),
-    "splash": ArtRoleSpec("splash", "splashes", 6.0, 3.0, transparent=False),
+    "splash": ArtRoleSpec("splash", "splashes", 6.0, 1.8, transparent=False),
     "spread": ArtRoleSpec("spread", "spreads", 12.0, 9.0, transparent=False),
     "ornament-headpiece": ArtRoleSpec(
-        "ornament-headpiece", "ornaments/headpieces", 4.0, 0.8
+        "ornament-headpiece", "ornaments/headpieces", 5.333, 0.867
     ),
     "ornament-break": ArtRoleSpec("ornament-break", "ornaments/breaks", 2.0, 0.4),
     "ornament-tailpiece": ArtRoleSpec(
         "ornament-tailpiece",
         "ornaments/tailpieces",
-        2.0,
-        0.65,
+        5.333,
+        0.867,
         shape="tailpiece",
     ),
     "ornament-corner": ArtRoleSpec(
@@ -116,13 +118,13 @@ ROLE_REGISTRY: dict[str, ArtRoleSpec] = {
         "filler-bottom",
         "fillers/bottom",
         6.0,
-        2.4,
+        2.067,
         shape="bottom-band",
         auto_placeable=True,
     ),
-    "filler-page": ArtRoleSpec(
-        "filler-page",
-        "fillers/page",
+    "page-finish": ArtRoleSpec(
+        "page-finish",
+        "fillers/page-finish",
         6.0,
         5.25,
         shape="page-finish",
@@ -281,7 +283,7 @@ def classify_art_path(
                     "filler-wide",
                     "filler-plate",
                     "filler-bottom",
-                    "filler-page",
+                    "page-finish",
                 ),
             ),
         )
@@ -351,7 +353,11 @@ def _is_excluded(parts: list[str], stem: str) -> bool:
         return True
     if "corner" in stem and not stem.startswith("ornament-corner"):
         return True
-    return stem in {"manifest", "contact-sheet"} or stem.endswith("-contact-sheet")
+    return (
+        stem in {"manifest", "contact-sheet"}
+        or stem.startswith("contact-sheet-")
+        or stem.endswith("-contact-sheet")
+    )
 
 
 def _in_folder(dirs: list[str], folder: str) -> bool:
@@ -407,7 +413,7 @@ def _classify_filler(dirs: list[str], stem: str) -> tuple[str, str] | None:
         "wide": "filler-wide",
         "plate": "filler-plate",
         "bottom": "filler-bottom",
-        "page": "filler-page",
+        "page-finish": "page-finish",
     }
     if "fillers" in dirs:
         for folder, role in folder_roles.items():
@@ -418,7 +424,7 @@ def _classify_filler(dirs: list[str], stem: str) -> tuple[str, str] | None:
         "filler-wide",
         "filler-plate",
         "filler-bottom",
-        "filler-page",
+        "page-finish",
     ):
         if stem.startswith(f"{role}-"):
             return (role, "legacy" if "fillers" in dirs else "canonical")

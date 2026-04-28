@@ -914,11 +914,11 @@ def test_bottom_bleed_display_size_caps_large_art_without_distortion(tmp_path):
 
 
 def test_bottom_bleed_stamp_uses_placement_render_height(tmp_path, monkeypatch):
-    asset_path = tmp_path / "large-page.png"
+    asset_path = tmp_path / "large-bottom-band.png"
     Image.new("RGB", (2550, 1575), color="red").save(asset_path)
     placement = FillerPlacement(
-        "slot-page",
-        FillerAsset("page", asset_path, "bottom-band", 5.25),
+        "slot-bottom",
+        FillerAsset("bottom", asset_path, "bottom-band", 5.25),
         page_number=7,
         slot_name="chapter-end",
         render_height_in=4.0,

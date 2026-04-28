@@ -61,10 +61,46 @@ def test_selection_chooses_largest_fitting_asset(tmp_path):
     assert chosen.id == "large"
 
 
-def test_page_finish_uses_flow_mode_and_legacy_bottom_band_slots(tmp_path):
+def test_page_finish_uses_flow_mode_and_requires_page_finish_slot(tmp_path):
     asset = FillerAsset(
         id="page",
-        art_path=tmp_path / "filler-page-general-finale-01.png",
+        art_path=tmp_path / "page-finish-general-finale-01.png",
+        shape="page-finish",
+        height_in=5.25,
+    )
+    catalog = FillerCatalog(
+        enabled=True,
+        slots={
+            "chapter-end": FillerSlot(
+                name="chapter-end",
+                min_space_in=0.65,
+                max_space_in=6.0,
+                shapes=["page-finish"],
+            )
+        },
+        assets=[asset],
+    )
+
+    chosen = select_filler(
+        catalog,
+        FillerMeasurement(
+            slot_id="slot-a",
+            slot_name="chapter-end",
+            chapter_slug="setting-primer",
+            page_number=3,
+            available_in=5.8,
+        ),
+        recipe_title="Book",
+    )
+
+    assert chosen is asset
+    assert fillers_mod._placement_mode(asset) == "flow"
+
+
+def test_bottom_band_slots_do_not_accept_page_finish_assets(tmp_path):
+    asset = FillerAsset(
+        id="page",
+        art_path=tmp_path / "page-finish-general-finale-01.png",
         shape="page-finish",
         height_in=5.25,
     )
@@ -93,8 +129,7 @@ def test_page_finish_uses_flow_mode_and_legacy_bottom_band_slots(tmp_path):
         recipe_title="Book",
     )
 
-    assert chosen is asset
-    assert fillers_mod._placement_mode(asset) == "flow"
+    assert chosen is None
 
 
 def test_plate_is_preferred_for_medium_large_gap(tmp_path):
@@ -399,26 +434,26 @@ def test_explicit_filler_context_selects_reference_assets_for_original_slots(
                 name="chapter-end",
                 min_space_in=1.2,
                 max_space_in=8.5,
-                shapes=["bottom-band"],
+                shapes=["page-finish"],
             )
         },
         assets=[
             FillerAsset(
                 "reference",
-                tmp_path / "filler-page-reference-archive-terminal-01.png",
-                "bottom-band",
+                tmp_path / "page-finish-reference-archive-terminal-01.png",
+                "page-finish",
                 5.25,
             ),
             FillerAsset(
                 "combat",
-                tmp_path / "filler-page-combat-airlock-aftermath-01.png",
-                "bottom-band",
+                tmp_path / "page-finish-combat-airlock-aftermath-01.png",
+                "page-finish",
                 5.25,
             ),
             FillerAsset(
                 "general",
-                tmp_path / "filler-page-general-observation-deck-01.png",
-                "bottom-band",
+                tmp_path / "page-finish-general-observation-deck-01.png",
+                "page-finish",
                 5.25,
             ),
         ],
@@ -449,26 +484,26 @@ def test_explicit_filler_context_distinguishes_equipment_from_combat(tmp_path):
                 name="section-end",
                 min_space_in=1.2,
                 max_space_in=8.5,
-                shapes=["bottom-band"],
+                shapes=["page-finish"],
             )
         },
         assets=[
             FillerAsset(
                 "combat",
-                tmp_path / "filler-page-combat-airlock-aftermath-01.png",
-                "bottom-band",
+                tmp_path / "page-finish-combat-airlock-aftermath-01.png",
+                "page-finish",
                 5.25,
             ),
             FillerAsset(
                 "equipment",
-                tmp_path / "filler-page-equipment-cargo-lockers-01.png",
-                "bottom-band",
+                tmp_path / "page-finish-equipment-cargo-lockers-01.png",
+                "page-finish",
                 5.25,
             ),
             FillerAsset(
                 "general",
-                tmp_path / "filler-page-general-service-corridor-01.png",
-                "bottom-band",
+                tmp_path / "page-finish-general-service-corridor-01.png",
+                "page-finish",
                 5.25,
             ),
         ],
@@ -777,7 +812,7 @@ def test_huge_gap_requires_page_finisher_art(tmp_path):
     assert reason == "no size-matched context asset"
 
 
-def test_page_filler_is_rejected_when_it_would_render_too_small(tmp_path):
+def test_page_finish_is_rejected_when_it_would_render_too_small(tmp_path):
     catalog = FillerCatalog(
         enabled=True,
         slots={
@@ -785,14 +820,14 @@ def test_page_filler_is_rejected_when_it_would_render_too_small(tmp_path):
                 name="chapter-end",
                 min_space_in=1.2,
                 max_space_in=8.5,
-                shapes=["bottom-band"],
+                shapes=["page-finish"],
             )
         },
         assets=[
             FillerAsset(
                 "page",
-                tmp_path / "filler-page-reference-terminal.png",
-                "bottom-band",
+                tmp_path / "page-finish-reference-terminal.png",
+                "page-finish",
                 5.25,
             )
         ],
@@ -815,7 +850,7 @@ def test_page_filler_is_rejected_when_it_would_render_too_small(tmp_path):
     assert reason == "no size-matched context asset"
 
 
-def test_page_filler_context_and_height_can_win_for_huge_gap(tmp_path):
+def test_page_finish_context_and_height_can_win_for_huge_gap(tmp_path):
     catalog = FillerCatalog(
         enabled=True,
         slots={
@@ -823,20 +858,20 @@ def test_page_filler_context_and_height_can_win_for_huge_gap(tmp_path):
                 name="frame-family-end",
                 min_space_in=1.2,
                 max_space_in=8.5,
-                shapes=["small-wide", "bottom-band"],
+                shapes=["small-wide", "page-finish"],
             ),
             "class-end": FillerSlot(
                 name="class-end",
                 min_space_in=1.2,
                 max_space_in=8.5,
-                shapes=["small-wide", "bottom-band"],
+                shapes=["small-wide", "page-finish"],
             ),
         },
         assets=[
             FillerAsset(
                 "page",
-                tmp_path / "filler-page-frame-vault.png",
-                "bottom-band",
+                tmp_path / "page-finish-frame-vault.png",
+                "page-finish",
                 5.25,
             ),
             FillerAsset(
@@ -878,7 +913,7 @@ def test_page_filler_context_and_height_can_win_for_huge_gap(tmp_path):
     )
 
 
-def test_page_gap_uses_page_filler_and_downscales_to_usable_height(
+def test_page_gap_uses_page_finish_and_downscales_to_usable_height(
     tmp_path,
     monkeypatch,
 ):
@@ -889,7 +924,7 @@ def test_page_gap_uses_page_filler_and_downscales_to_usable_height(
                 name="frame-family-end",
                 min_space_in=1.2,
                 max_space_in=8.5,
-                shapes=["small-wide", "bottom-band"],
+                shapes=["small-wide", "page-finish"],
             )
         },
         assets=[
@@ -907,8 +942,8 @@ def test_page_gap_uses_page_filler_and_downscales_to_usable_height(
             ),
             FillerAsset(
                 "page",
-                tmp_path / "filler-page-frame-vault.png",
-                "bottom-band",
+                tmp_path / "page-finish-frame-vault.png",
+                "page-finish",
                 5.25,
             ),
         ],
@@ -1100,13 +1135,13 @@ def test_source_boundary_page_finishers_are_skipped_for_short_sections(tmp_path)
                 name="section-end",
                 min_space_in=1.2,
                 max_space_in=8.5,
-                shapes=["bottom-band"],
+                shapes=["page-finish"],
             )
         },
         assets=[
             FillerAsset(
                 "page",
-                tmp_path / "filler-page-powers-chaos-table-01.png",
+                tmp_path / "page-finish-powers-chaos-table-01.png",
                 "page-finish",
                 5.25,
             )
@@ -1240,8 +1275,8 @@ def test_filler_report_lists_reuse_and_undersized_opportunities(
     assert "reused reused on p50 slot-b" in text
     assert "render=2.40in, fill=77%" in text
     assert "## Undersized Opportunities" in text
-    assert "recommended=page-finisher filler" in text
-    assert "`filler-page-languages-languages-01.png`" in text
+    assert "recommended=page-finish art" in text
+    assert "`page-finish-languages-languages-01.png`" in text
 
 
 def test_inject_fillers_replaces_marker_with_fixed_block(tmp_path):
@@ -1253,6 +1288,6 @@ def test_inject_fillers_replaces_marker_with_fixed_block(tmp_path):
 
     out = inject_fillers(html, [FillerPlacement("slot-a", asset)])
 
-    assert "filler-art filler-tailpiece" in out
+    assert "filler-art filler-shape-tailpiece" in out
     assert "height: 0.650in" in out
     assert "filler-slot" not in out

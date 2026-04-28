@@ -1,17 +1,30 @@
+# A recipe describes one book or site: its identity, where outputs go, which
+# vault content to read, and the order those files appear in the final build.
 title: Starfall Field Guide
 subtitle: A public sample for Paper Crown
+
+# Output paths are resolved relative to this recipe file. Paper Crown writes
+# generated files under `<output_dir>/Paper Crown/<output_name>/`.
 output_dir: ../output
 output_name: starfall-field-guide
+
+# Themes are bundled style packs unless `theme_dir` points at custom themes.
 theme: clean-srd
 
+# Vault aliases keep chapter sources short and portable. Here, `rules:` means
+# `examples/starfall/vault/` from this recipe's point of view.
 vaults:
   rules: ../vault
 
+# Chapters define the generated book order. Each source uses `vault:path`
+# notation, so content can move as long as the vault alias stays stable.
 chapters:
+  # A `file` chapter renders one Markdown file as one chapter.
   - kind: file
     title: Primer
     slug: primer
     source: rules:Primer.md
+  # A `sequence` chapter stitches several Markdown files together in order.
   - kind: sequence
     title: Running the Game
     slug: running-the-game

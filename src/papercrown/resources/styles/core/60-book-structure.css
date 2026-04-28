@@ -319,12 +319,34 @@ body.section-ancestries hr,
   margin: 0.68em 0;
 }
 
+body.section-powers hr,
+.chapter-wrap.section-powers hr {
+  display: none;
+}
+
 .frame-summary-table table {
   break-inside: auto;
   page-break-inside: auto;
 }
 
 .frame-summary-table tr {
+  break-inside: avoid;
+  page-break-inside: avoid;
+}
+
+/* Equipment chapters contain long price/stat tables. Let those sections and
+   tables fragment naturally so a heading or lead image does not strand an
+   otherwise usable page while the table waits for a fresh sheet. */
+body.section-equipment .minor-section,
+.chapter-wrap.section-equipment .minor-section,
+body.section-equipment table,
+.chapter-wrap.section-equipment table {
+  break-inside: auto;
+  page-break-inside: auto;
+}
+
+body.section-equipment tr,
+.chapter-wrap.section-equipment tr {
   break-inside: avoid;
   page-break-inside: avoid;
 }

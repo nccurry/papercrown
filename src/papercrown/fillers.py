@@ -642,7 +642,7 @@ def inject_fillers(html: str, placements: list[FillerPlacement]) -> str:
 
 def _render_filler_block(placement: FillerPlacement) -> str:
     asset = placement.asset
-    shape_class = f"filler-{asset.shape}"
+    shape_class = f"filler-shape-{asset.shape}"
     return (
         f'<div class="filler-art {shape_class}" '
         f'id="{placement.slot_id}-art" '
@@ -679,10 +679,8 @@ def _slot_has_enough_intervening_content(
 
 
 def _slot_accepts_shape(slot_shapes: list[str], asset_shape: str) -> bool:
-    """Return whether a slot allows a shape, including legacy compatibility."""
-    if asset_shape in slot_shapes:
-        return True
-    return asset_shape == "page-finish" and "bottom-band" in slot_shapes
+    """Return whether a slot explicitly allows a shape."""
+    return asset_shape in slot_shapes
 
 
 def _placement_use_map(
@@ -875,8 +873,8 @@ def _recommended_missing_shape(usable_in: float) -> tuple[str, str, str]:
             "transparent or softly feathered edges, composed for a half-page gap",
         )
     return (
-        "page-finisher filler",
-        "filler-page",
+        "page-finish art",
+        "page-finish",
         "transparent/feathered top edge, composed for mostly empty trailing pages",
     )
 
@@ -922,7 +920,7 @@ def _asset_matches_context(
         or stem.startswith("filler-wide-")
         or stem.startswith("filler-plate-")
         or stem.startswith("filler-bottom-")
-        or stem.startswith("filler-page-")
+        or stem.startswith("page-finish-")
     ):
         return _named_filler_matches_context(stem, measurement)
     if stem.startswith("faction-"):
@@ -969,7 +967,7 @@ def _named_filler_context(stem: str) -> str | None:
         "filler-wide-",
         "filler-plate-",
         "filler-bottom-",
-        "filler-page-",
+        "page-finish-",
     ):
         if stem.startswith(prefix):
             remainder = stem.removeprefix(prefix)
@@ -1043,8 +1041,6 @@ def _candidate_group(asset: FillerAsset) -> str:
     if asset.shape == "plate":
         return "plate"
     if asset.shape == "page-finish":
-        return "page-finish"
-    if asset.shape == "bottom-band" and asset.height_in >= PAGE_FINISHER_IN:
         return "page-finish"
     return "bottom-band"
 

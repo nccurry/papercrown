@@ -23,11 +23,13 @@ OPAQUE_ALPHA_THRESHOLD = 180
 BACKGROUND_EDGE_DISTANCE_THRESHOLD = 30.0
 BACKGROUND_EDGE_FRACTION_THRESHOLD = 0.25
 PRINT_DPI = 300
+BOTTOM_BAND_TOP_SAFETY_FRACTION = 0.12
+FLOW_FILLER_SLOT_SHAPES = {"tailpiece", "spot", "small-wide", "plate", "page-finish"}
 SPARSE_ROLE_THRESHOLDS: dict[str, tuple[float, float, float]] = {
     "filler-wide": (0.62, 0.30, 0.10),
     "filler-plate": (0.58, 0.34, 0.14),
     "filler-bottom": (0.48, 0.25, 0.10),
-    "filler-page": (0.58, 0.38, 0.18),
+    "page-finish": (0.58, 0.38, 0.18),
 }
 SAFE_ZONE_ROLES = {
     "cover",
@@ -35,14 +37,14 @@ SAFE_ZONE_ROLES = {
     "cover-back",
     "spread",
     "splash",
-    "filler-page",
+    "page-finish",
 }
 CRISP_RENDERING_ROLES = {"diagram", "screenshot", "map", "logo", "icon"}
 PAGE_BLEND_ROLES = {
     "class-opening-spot",
     "filler-bottom",
     "filler-plate",
-    "filler-page",
+    "page-finish",
     "filler-spot",
     "filler-wide",
     "gear",
@@ -81,6 +83,8 @@ class ArtMetadata:
     edge_distance: float = 0.0
     opaque_edge_fraction: float = 0.0
     visible_edge_margin_fraction: float = 1.0
+    visible_top_margin_fraction: float = 1.0
+    visible_bottom_margin_fraction: float = 1.0
 
 
 @dataclass(frozen=True)
@@ -133,6 +137,7 @@ def audit_recipe_art(
     result = ArtAuditResult(art_root=art_root)
     result.references.extend(_recipe_art_references(recipe))
     result.references.extend(_manifest_art_references(manifest))
+    _add_filler_slot_policy_diagnostics(result, recipe)
     _add_reference_diagnostics(result)
     if art_root.is_dir():
         result.assets.extend(_discover_art_assets(art_root))
@@ -383,16 +388,12 @@ def _add_metadata_diagnostics(result: ArtAuditResult, asset: AuditedArtAsset) ->
     _add_print_size_diagnostic(result, asset)
     aspect = metadata.width / max(1, metadata.height)
     role = classification.role
-    if (
-        role
-        in {
-            "filler-wide",
-            "filler-plate",
-            "filler-bottom",
-            "filler-page",
-        }
-        and aspect < 1.15
-    ):
+    if role in {
+        "filler-wide",
+        "filler-plate",
+        "filler-bottom",
+        "page-finish",
+    } and aspect < 1.15:
         result.diagnostics.add(
             Diagnostic(
                 code="art.aspect-mismatch",
@@ -412,6 +413,7 @@ def _add_metadata_diagnostics(result: ArtAuditResult, asset: AuditedArtAsset) ->
         )
     _add_role_aspect_diagnostic(result, asset)
     _add_safe_zone_diagnostic(result, asset)
+    _add_bottom_band_safety_diagnostic(result, asset)
     _add_crisp_rendering_diagnostic(result, asset)
     _add_visible_content_diagnostic(result, asset)
     _add_background_diagnostic(result, asset)
@@ -466,7 +468,7 @@ def _add_role_aspect_diagnostic(
         "filler-wide",
         "filler-plate",
         "filler-bottom",
-        "filler-page",
+        "page-finish",
     }:
         return
     target = classification.nominal_width_in / classification.nominal_height_in
@@ -495,10 +497,33 @@ def _add_safe_zone_diagnostic(result: ArtAuditResult, asset: AuditedArtAsset) ->
     result.diagnostics.add(
         Diagnostic(
             code="art.safe-zone-crowded",
-            severity=DiagnosticSeverity.WARNING,
+            severity=DiagnosticSeverity.INFO,
             message=f"{role} art has visible content close to trim or gutter edges",
             path=asset.path,
             hint="keep important faces, text, and symbols inside the safe zone",
+        )
+    )
+
+
+def _add_bottom_band_safety_diagnostic(
+    result: ArtAuditResult,
+    asset: AuditedArtAsset,
+) -> None:
+    metadata = asset.metadata
+    if metadata is None or asset.classification.role != "filler-bottom":
+        return
+    if metadata.visible_top_margin_fraction >= BOTTOM_BAND_TOP_SAFETY_FRACTION:
+        return
+    result.diagnostics.add(
+        Diagnostic(
+            code="art.bottom-band-top-crowded",
+            severity=DiagnosticSeverity.WARNING,
+            message="filler-bottom art has visible content too close to the top edge",
+            path=asset.path,
+            hint=(
+                "bottom-band art is stamped from the physical page bottom; keep "
+                "the top edge transparent or softly faded so it does not crowd text"
+            ),
         )
     )
 
@@ -590,14 +615,15 @@ def _add_background_diagnostic(
 
 
 def _add_duplicate_diagnostics(result: ArtAuditResult) -> None:
-    by_hash: dict[str, list[AuditedArtAsset]] = {}
+    by_hash_and_role: dict[tuple[str, str], list[AuditedArtAsset]] = {}
     for asset in result.assets:
         if asset.metadata is None:
             continue
         if asset.classification.role in {"excluded", "unclassified"}:
             continue
-        by_hash.setdefault(asset.metadata.sha256, []).append(asset)
-    for duplicate_group in by_hash.values():
+        key = (asset.metadata.sha256, asset.classification.role)
+        by_hash_and_role.setdefault(key, []).append(asset)
+    for duplicate_group in by_hash_and_role.values():
         if len(duplicate_group) < 2:
             continue
         kept = duplicate_group[0]
@@ -614,6 +640,36 @@ def _add_duplicate_diagnostics(result: ArtAuditResult) -> None:
                     ),
                 )
             )
+
+
+def _add_filler_slot_policy_diagnostics(
+    result: ArtAuditResult,
+    recipe: Recipe,
+) -> None:
+    if not recipe.fillers.enabled:
+        return
+    for slot in recipe.fillers.slots.values():
+        shapes = set(slot.shapes)
+        if "bottom-band" not in shapes:
+            continue
+        flow_shapes = sorted(shapes & FLOW_FILLER_SLOT_SHAPES)
+        if not flow_shapes:
+            continue
+        result.diagnostics.add(
+            Diagnostic(
+                code="art.filler-slot-mixed-placement",
+                severity=DiagnosticSeverity.WARNING,
+                message=(
+                    f"filler slot {slot.name!r} mixes bottom-band with flow "
+                    f"shape(s): {', '.join(flow_shapes)}"
+                ),
+                path=recipe.recipe_path,
+                hint=(
+                    "use bottom-band only in a dedicated bottom-bleed slot; use "
+                    "spot, small-wide, plate, or page-finish for ordinary gaps"
+                ),
+            )
+        )
 
 
 def _add_reference_diagnostics(result: ArtAuditResult) -> None:
@@ -680,7 +736,7 @@ def _recipe_art_references(recipe: Recipe) -> list[ArtReference]:
     for asset in recipe.fillers.assets:
         expected = _expected_filler_roles(asset.shape)
         refs.append(
-            _reference(
+            _filler_reference(
                 recipe,
                 f"filler {asset.id}",
                 asset.art,
@@ -833,6 +889,23 @@ def _reference(
     )
 
 
+def _filler_reference(
+    recipe: Recipe,
+    label: str,
+    art: str,
+    *,
+    expected_roles: set[str] | None = None,
+) -> ArtReference:
+    root = recipe.art_dir
+    if recipe.fillers.art_dir:
+        root = root / recipe.fillers.art_dir
+    return ArtReference(
+        label=label,
+        path=(root / art).resolve(),
+        expected_roles=frozenset(expected_roles or set()),
+    )
+
+
 def _walk_specs(chapters: list[ChapterSpec]) -> list[ChapterSpec]:
     specs: list[ChapterSpec] = []
     for spec in chapters:
@@ -843,15 +916,15 @@ def _walk_specs(chapters: list[ChapterSpec]) -> list[ChapterSpec]:
 
 def _expected_filler_roles(shape: str) -> set[str]:
     if shape == "spot":
-        return {"filler-spot", "spot", "class-opening-spot"}
+        return {"filler-spot"}
     if shape == "small-wide":
         return {"filler-wide"}
     if shape == "plate":
         return {"filler-plate"}
     if shape == "bottom-band":
-        return {"filler-bottom", "filler-page", "faction", "gear", "vista"}
+        return {"filler-bottom"}
     if shape == "page-finish":
-        return {"filler-page"}
+        return {"page-finish"}
     if shape == "tailpiece":
         return {"ornament-tailpiece"}
     return set()
@@ -862,9 +935,14 @@ def _read_metadata(path: Path) -> ArtMetadata | None:
         digest = hashlib.sha256(path.read_bytes()).hexdigest()
         with Image.open(path) as image:
             rgba = image.convert("RGBA")
-            visible_width, visible_height, visible_area, edge_margin = (
-                _visible_content_metrics(rgba)
-            )
+            (
+                visible_width,
+                visible_height,
+                visible_area,
+                edge_margin,
+                top_margin,
+                bottom_margin,
+            ) = _visible_content_metrics(rgba)
             edge_distance, opaque_edge_fraction = _edge_background_metrics(rgba)
             return ArtMetadata(
                 width=int(image.size[0]),
@@ -877,6 +955,8 @@ def _read_metadata(path: Path) -> ArtMetadata | None:
                 edge_distance=edge_distance,
                 opaque_edge_fraction=opaque_edge_fraction,
                 visible_edge_margin_fraction=edge_margin,
+                visible_top_margin_fraction=top_margin,
+                visible_bottom_margin_fraction=bottom_margin,
             )
     except (OSError, UnidentifiedImageError):
         return None
@@ -884,7 +964,7 @@ def _read_metadata(path: Path) -> ArtMetadata | None:
 
 def _visible_content_metrics(
     image: Image.Image,
-) -> tuple[float, float, float, float]:
+) -> tuple[float, float, float, float, float, float]:
     width, height = image.size
     rgb = image.convert("RGB")
     paper = Image.new("RGB", image.size, PAPER_RGB)
@@ -899,16 +979,20 @@ def _visible_content_metrics(
     visible = ImageChops.multiply(diff, alpha_mask)
     bbox = visible.getbbox()
     if bbox is None:
-        return (0.0, 0.0, 0.0, 1.0)
+        return (0.0, 0.0, 0.0, 1.0, 1.0, 1.0)
     x0, y0, x1, y1 = bbox
     visible_width = x1 - x0
     visible_height = y1 - y0
     edge_margin = min(x0, y0, width - x1, height - y1) / max(1, min(width, height))
+    top_margin = y0 / max(1, height)
+    bottom_margin = (height - y1) / max(1, height)
     return (
         visible_width / max(1, width),
         visible_height / max(1, height),
         (visible_width * visible_height) / max(1, width * height),
         edge_margin,
+        top_margin,
+        bottom_margin,
     )
 
 
@@ -944,9 +1028,21 @@ def _folder_mismatch(asset: AuditedArtAsset) -> bool:
     expected = asset.classification.expected_folder
     if expected is None:
         return False
-    normalized = asset.relative_path.replace("\\", "/").lower()
-    expected_prefix = expected.lower().strip("/")
-    return not normalized.startswith(f"{expected_prefix}/")
+    parts = asset.relative_path.replace("\\", "/").lower().split("/")
+    dirs = parts[:-1]
+    expected_parts = expected.lower().strip("/").split("/")
+    return not _contains_part_sequence(dirs, expected_parts)
+
+
+def _contains_part_sequence(parts: list[str], sequence: list[str]) -> bool:
+    if not sequence:
+        return True
+    if len(parts) < len(sequence):
+        return False
+    return any(
+        parts[index : index + len(sequence)] == sequence
+        for index in range(len(parts) - len(sequence) + 1)
+    )
 
 
 def _relative_display(path: Path, root: Path) -> str:
@@ -983,6 +1079,6 @@ def _missing_filler_suggestions(counts: Counter[str]) -> list[str]:
         suggestions.append("fillers/plate/filler-plate-general-01.png")
     if counts["filler-bottom"] == 0:
         suggestions.append("fillers/bottom/filler-bottom-general-01.png")
-    if counts["filler-page"] == 0:
-        suggestions.append("fillers/page/filler-page-general-01.png")
+    if counts["page-finish"] == 0:
+        suggestions.append("fillers/page-finish/page-finish-general-01.png")
     return suggestions

@@ -6,6 +6,14 @@ art from roles that are explicitly safe for automatic layout.
 
 Use `papercrown art audit book.yaml` when adding or moving art.
 
+:::: {.sidebar #art-library title="Art Library Contract" tags="docs,art,authoring"}
+### Art Library Contract
+
+Keep art under the recipe's `art_dir`, use role-shaped filenames, and reserve
+transparent PNGs for assets that should float on paper instead of carrying
+their own rectangular background.
+::::
+
 ## Canonical Roles
 
 | Role | Folder | Filename shape | Automatic |
@@ -28,7 +36,7 @@ Use `papercrown art audit book.yaml` when adding or moving art.
 | `filler-wide` | `fillers/wide/` | `filler-wide-{context}-{subject}-{variant}.png` | Yes |
 | `filler-plate` | `fillers/plate/` | `filler-plate-{context}-{subject}-{variant}.png` | Yes |
 | `filler-bottom` | `fillers/bottom/` | `filler-bottom-{context}-{subject}-{variant}.png` | Yes |
-| `filler-page` | `fillers/page/` | `filler-page-{context}-{subject}-{variant}.png` | Yes |
+| `page-finish` | `fillers/page-finish/` | `page-finish-{context}-{subject}-{variant}.png` | Yes |
 | `page-wear` | `page-wear/` | `wear-{family}-{size}-{variant}.png` | Yes |
 | `faction` | `content/factions/` | `faction-{slug}.png` | No |
 | `gear` | `content/gear/` | `gear-{slug}.png` | No |
@@ -55,13 +63,18 @@ automatic discovery.
 ## Automatic Placement
 
 The automatic filler pass discovers only roles marked auto-placeable by the
-registry: `filler-spot`, `filler-wide`, `filler-bottom`, and `filler-page`.
-It also discovers `filler-plate` for medium/large in-flow gaps. The page-wear
-pass discovers `page-wear` assets separately. Explicit recipe filler assets can
-still use `tailpiece`. Filler selection matches the available blank space to the
-nominal role size, and renderers do not upscale small art to fill large spaces.
-When a gap is large enough, Paper Crown prefers larger dedicated art and may
-downscale it to the measured space instead of reusing a smaller role.
+registry: `filler-spot`, `filler-wide`, `filler-plate`, `filler-bottom`, and
+`page-finish`. The page-wear pass discovers `page-wear` assets separately.
+Explicit recipe filler assets can still use `tailpiece`. Filler selection
+matches the available blank space to the nominal role size, and renderers do not
+upscale small art to fill large spaces. When a gap is large enough, Paper Crown
+prefers larger dedicated art and may downscale it to the measured space instead
+of reusing a smaller role.
+
+Recipe `art_dir` is the root for the whole art library. If `fillers.art_dir` is
+set, recipe filler asset paths are resolved under `art_dir / fillers.art_dir`;
+auto-discovery and audit still report roles according to the canonical folders
+inside that library.
 
 The supported automatic filler shapes are:
 
@@ -72,11 +85,17 @@ The supported automatic filler shapes are:
 - `bottom-band`: true bottom-anchored strip art.
 - `page-finish`: large in-flow page-ending art.
 
-`filler-page` assets are `page-finish` art. They are placed in normal flow, not
-stamped against the physical bottom edge. Older recipes that allow
-`bottom-band` still accept `page-finish` assets so existing books keep working.
-`filler-bottom` assets remain bottom-bleed art and are stamped with a small
-bottom safety inset.
+`page-finish` assets are placed in normal flow, not stamped against the
+physical bottom edge. `filler-bottom` assets remain bottom-bleed art and are
+stamped with a small bottom safety inset. Slots must explicitly allow
+`page-finish` when large page-ending art is desired; `bottom-band` is only for
+true bottom-band art in a dedicated bottom-bleed slot.
+
+Do not mix `bottom-band` with in-flow shapes such as `spot`, `small-wide`,
+`plate`, or `page-finish` in ordinary chapter/section-end slots. Bottom-band art
+should be a wide transparent strip with most visual weight near the lower page
+edge and a soft or empty top edge. Generic horizontal illustrations belong in
+`fillers/wide/`, `fillers/plate/`, or `fillers/page-finish/`.
 
 The filler size tiers are:
 
@@ -85,7 +104,7 @@ The filler size tiers are:
   least 45% of the usable gap.
 - `3.25in` to `4.75in`: plate art is preferred, and art should fill at least
   50% of the usable gap.
-- `4.75in` and larger: page-filler art is preferred, and art should fill at
+- `4.75in` and larger: page-finish art is preferred, and art should fill at
   least 60% of the usable gap.
 
 Slot context is semantic, not just positional. Terminal chapter slots and
@@ -101,7 +120,7 @@ Use larger art in larger roles:
 - Short landscape art goes in `fillers/wide/`.
 - Medium and large in-flow art goes in `fillers/plate/`.
 - Bottom band art goes in `fillers/bottom/`.
-- Large blank-page art goes in `fillers/page/`.
+- Large blank-page art goes in `fillers/page-finish/`.
 - Transparent paper wear goes in `page-wear/`.
 
 The planner avoids reusing the same filler asset while unused matching art is
@@ -121,6 +140,8 @@ them in their matching Markdown class, such as `.art-diagram` or
 ## Filler Marker Policy
 
 The recipe controls where invisible filler measurement markers are inserted.
+Markdown headings provide the measured anchor points, but source Markdown is not
+the primary control surface for automatic filler policy.
 If `fillers.markers` is omitted, Paper Crown synthesizes the historical default
 policy: terminal chapter/class markers, sequence source-boundary markers,
 subclass markers, frame-family markers, and background-section markers.
@@ -132,7 +153,7 @@ fillers:
     chapter-end:
       min_space: 0.65in
       max_space: 6.0in
-      shapes: [tailpiece, spot, small-wide, plate, bottom-band, page-finish]
+      shapes: [tailpiece, spot, small-wide, plate, page-finish]
   markers:
     terminal:
       chapter_slot: chapter-end
@@ -170,6 +191,9 @@ sources:
   - source: rules:Combat.md
     filler: false
 ```
+
+Use @sidebar.art-library when deciding whether a new asset should be a framed
+illustration, a transparent ornament, or an automatically placed filler.
 
 ## Class Catalog Art
 

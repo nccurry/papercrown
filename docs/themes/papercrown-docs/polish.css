@@ -1,0 +1,317 @@
+/* Late web-only polish layer. Keeping this separate gives the dev browser a
+   fresh CSS URL when iterating on the anthology look. */
+
+body.mode-web.paper-anthology {
+  --docs-reader-grain: url("assets/reader-grain.png");
+  --docs-page-glaze: url("assets/page-glaze-web.png");
+  --docs-page-damage: url("assets/page-damage-web.png");
+  background:
+    var(--docs-reader-grain),
+    linear-gradient(90deg, rgba(28, 24, 20, 0.14), transparent 18%, transparent 82%, rgba(28, 24, 20, 0.14)),
+    linear-gradient(180deg, #e2d9c9 0, #eee6d8 22rem, #dfd4c1 100%);
+  background-size: 256px 256px, auto, auto;
+  background-blend-mode: multiply, normal, normal;
+}
+
+body.mode-web.paper-anthology .section-divider {
+  isolation: isolate;
+  min-height: clamp(5.25rem, 10.8vw, 6.8rem);
+  aspect-ratio: 45 / 7;
+  padding: 0.72rem;
+  align-items: flex-start;
+  justify-content: flex-start;
+  background: #211914;
+  border: 1px solid rgba(255, 239, 196, 0.3);
+  box-shadow:
+    0 0.9rem 2rem rgba(32, 25, 20, 0.16),
+    inset 0 0 0 1px rgba(0, 0, 0, 0.28);
+}
+
+body.mode-web.paper-anthology .section-divider::before {
+  inset: 0.38rem;
+  z-index: 2;
+  border-width: 1px;
+  border-color: rgba(255, 244, 209, 0.42);
+  opacity: 1;
+}
+
+body.mode-web.paper-anthology .section-divider::after {
+  inset: 0.45rem;
+  z-index: 1;
+  width: auto;
+  background: var(--docs-reader-grain);
+  background-size: 256px 256px;
+  mix-blend-mode: multiply;
+  opacity: 0.08;
+}
+
+body.mode-web.paper-anthology .section-divider-art-wrap {
+  position: absolute;
+  inset: 0.45rem;
+  width: auto;
+  height: auto;
+  margin: 0;
+  overflow: hidden;
+  background: #160f0b;
+  z-index: 0;
+}
+
+body.mode-web.paper-anthology .section-divider-art-wrap p {
+  position: absolute;
+  inset: 0;
+  display: block;
+  width: 100%;
+  height: 100%;
+  margin: 0;
+}
+
+body.mode-web.paper-anthology .section-divider-text {
+  position: relative;
+  z-index: 3;
+  color: #f7eed8;
+  width: fit-content;
+  min-width: min(12.5rem, 58%);
+  max-width: min(68%, 23rem);
+  margin: 0;
+  background:
+    linear-gradient(90deg, rgba(18, 14, 10, 0.6), rgba(18, 14, 10, 0.36)),
+    var(--docs-reader-grain);
+  background-size: auto, 256px 256px;
+  box-shadow:
+    0 0.8rem 2rem rgba(0, 0, 0, 0.26),
+    inset 0 0 0 1px rgba(255, 247, 218, 0.11);
+}
+
+body.mode-web.paper-anthology .section-divider-title {
+  color: #fff7de;
+  text-shadow: 0 1px 0 rgba(0, 0, 0, 0.45);
+}
+
+body.mode-web.paper-anthology .section-divider-art {
+  position: absolute;
+  inset: 0;
+  display: block;
+  width: 100%;
+  height: 100%;
+  max-width: none;
+  max-height: none;
+  object-fit: cover;
+  mix-blend-mode: normal;
+  opacity: 1;
+  filter: saturate(1.06) contrast(1.08) brightness(0.94);
+}
+
+body.mode-web.paper-anthology #div-overview {
+  color: #f0bd4f;
+  background: #2a1b12;
+}
+
+body.mode-web.paper-anthology #div-overview .section-divider-art {
+  object-position: center;
+  opacity: 1;
+  filter: saturate(1.08) contrast(1.08) brightness(0.96);
+}
+
+body.mode-web.paper-anthology #div-overview .section-divider-text {
+  background:
+    linear-gradient(90deg, rgba(55, 31, 15, 0.6), rgba(55, 31, 15, 0.36)),
+    var(--docs-reader-grain);
+}
+
+body.mode-web.paper-anthology #div-quick-start,
+body.mode-web.paper-anthology #div-setup {
+  color: #51d2c4;
+  background: #0c1a22;
+}
+
+body.mode-web.paper-anthology #div-quick-start .section-divider-art,
+body.mode-web.paper-anthology #div-setup .section-divider-art {
+  object-position: center;
+  filter: saturate(1) contrast(1.12) brightness(0.88);
+}
+
+body.mode-web.paper-anthology #div-authoring {
+  color: #d7b35e;
+  background: #241622;
+}
+
+body.mode-web.paper-anthology #div-authoring .section-divider-art {
+  object-position: center;
+  filter: saturate(1.06) contrast(1.1) brightness(0.92);
+}
+
+body.mode-web.paper-anthology #div-maintaining-paper-crown {
+  color: #ffc15e;
+  background: #321a12;
+}
+
+body.mode-web.paper-anthology #div-maintaining-paper-crown .section-divider-art {
+  object-position: center;
+  filter: saturate(1.05) contrast(1.1) brightness(0.9);
+}
+
+body.mode-web.paper-anthology #div-quick-start .section-divider-title,
+body.mode-web.paper-anthology #div-setup .section-divider-title,
+body.mode-web.paper-anthology #div-authoring .section-divider-title {
+  color: #fff7de;
+}
+
+body.mode-web.paper-anthology .chapter-wrap,
+body.mode-web.paper-anthology .toc,
+body.mode-web.paper-anthology .generated-matter {
+  position: relative;
+  isolation: isolate;
+}
+
+body.mode-web.paper-anthology .toc {
+  color: #2b2118;
+  background: #f7eed8;
+  border: 1px solid rgba(88, 67, 41, 0.28);
+  box-shadow:
+    0 0.8rem 2rem rgba(32, 25, 20, 0.1),
+    inset 0 0 0 1px rgba(255, 252, 239, 0.62);
+}
+
+body.mode-web.paper-anthology .toc a {
+  color: #3a2718;
+}
+
+body.mode-web.paper-anthology .chapter-wrap {
+  background:
+    linear-gradient(180deg, color-mix(in srgb, var(--paper) 94%, white), var(--paper)),
+    var(--docs-reader-grain),
+    var(--paper-grain);
+  background-size: auto, 256px 256px, auto;
+  background-blend-mode: normal, multiply, normal;
+}
+
+body.mode-web.paper-anthology .chapter-wrap::before {
+  position: relative;
+  z-index: 2;
+}
+
+body.mode-web.paper-anthology .chapter-wrap::after,
+body.mode-web.paper-anthology .toc::after,
+body.mode-web.paper-anthology .generated-matter::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  pointer-events: none;
+  mix-blend-mode: multiply;
+}
+
+body.mode-web.paper-anthology .chapter-wrap::after,
+body.mode-web.paper-anthology .generated-matter::after {
+  background-image:
+    var(--docs-page-glaze),
+    linear-gradient(102deg, transparent 0 42%, rgba(76, 50, 32, 0.16) 43%, rgba(76, 50, 32, 0.05) 44%, transparent 47% 100%),
+    linear-gradient(7deg, transparent 0 18%, rgba(91, 60, 36, 0.1) 19%, rgba(91, 60, 36, 0.03) 24%, transparent 31% 100%),
+    linear-gradient(174deg, transparent 0 44%, rgba(69, 44, 26, 0.11) 45%, transparent 48% 100%),
+    linear-gradient(91deg, transparent 0 8%, rgba(82, 54, 34, 0.08) 12%, rgba(82, 54, 34, 0.03) 58%, transparent 78% 100%),
+    linear-gradient(178deg, transparent 0 39%, rgba(75, 49, 30, 0.12) 40%, transparent 42% 100%);
+  background-position:
+    center,
+    left 1.15rem top 5.2rem,
+    right 0.9rem top 24%,
+    right 1.35rem bottom 8rem,
+    left 0.6rem top 61%,
+    left 1.15rem bottom 10.5rem;
+  background-repeat: no-repeat;
+  background-size:
+    100% 100%,
+    8.5rem 0.48rem,
+    10rem 1.35rem,
+    5.8rem 0.42rem,
+    12rem 1.1rem,
+    4.8rem 0.38rem;
+  opacity: 0.74;
+}
+
+body.mode-web.paper-anthology .chapter-wrap.section-launch::after {
+  background-position:
+    center,
+    right 1rem top 6rem,
+    left 0.8rem top 34%,
+    left 1.2rem bottom 12rem,
+    right 0.6rem top 58%,
+    right 1.4rem bottom 7rem;
+}
+
+body.mode-web.paper-anthology .chapter-wrap.section-casefile::after {
+  background-position:
+    center,
+    left 1.1rem bottom 6.2rem,
+    right 1rem top 44%,
+    right 1.2rem bottom 14rem,
+    left 0.6rem top 62%,
+    left 1rem top 18rem;
+}
+
+body.mode-web.paper-anthology .chapter-wrap.section-field-guide::after {
+  background-position:
+    center,
+    right 1.2rem bottom 6.6rem,
+    left 0.9rem top 30%,
+    right 1.4rem top 9rem,
+    right 0.5rem top 72%,
+    left 1.1rem bottom 16rem;
+}
+
+body.mode-web.paper-anthology .toc::after {
+  background-image: var(--docs-page-glaze);
+  background-position: center;
+  background-repeat: no-repeat;
+  background-size: 100% 100%;
+  opacity: 0.07;
+}
+
+body.mode-web.paper-anthology .chapter-wrap > *,
+body.mode-web.paper-anthology .toc > *,
+body.mode-web.paper-anthology .generated-matter > * {
+  position: relative;
+  z-index: 2;
+}
+
+body.mode-web.paper-anthology .ornament-headpiece {
+  clear: none;
+  display: block;
+  width: min(100%, 38rem);
+  aspect-ratio: 1600 / 260;
+  margin: 0 auto 1.35rem;
+  overflow: hidden;
+  opacity: 0.9;
+  mix-blend-mode: normal;
+  border: 0;
+  background: transparent;
+  box-shadow: none;
+}
+
+body.mode-web.paper-anthology .ornament-tailpiece {
+  clear: none;
+  display: block;
+  width: min(76%, 30rem);
+  aspect-ratio: 1600 / 260;
+  margin: 2.35rem auto 0.15rem;
+  overflow: hidden;
+  opacity: 0.82;
+  mix-blend-mode: normal;
+  border: 0;
+  background: transparent;
+  box-shadow: none;
+}
+
+body.mode-web.paper-anthology .ornament-headpiece p,
+body.mode-web.paper-anthology .ornament-tailpiece p {
+  margin: 0;
+  height: 100%;
+}
+
+body.mode-web.paper-anthology .ornament-headpiece img,
+body.mode-web.paper-anthology .ornament-tailpiece img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  max-width: none;
+  object-fit: cover;
+}

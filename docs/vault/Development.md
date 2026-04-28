@@ -31,6 +31,14 @@ task check
 state, linting, formatting, type checking, tests, packaging, package contents,
 and the public tree audit.
 
+:::: {.clock #release-gate title="Release Gate" tags="docs,maintenance,release"}
+### Release Gate
+
+Before release, run the same checks CI expects: dependency diagnostics, lint,
+formatting, type checking, tests, packaging, package verification, public audit,
+and docs build.
+::::
+
 ## CI And Toolchain Versions
 
 Repository-managed external tool versions live in `versions.env`. That file is
@@ -64,3 +72,5 @@ workflow.
 
 Generated files are ignored. Do not commit `docs/site/`, `dist/`, `build/`,
 `.papercrown-cache/`, or local virtual environments.
+
+Use @clock.release-gate when deciding whether a change is ready to ship.
