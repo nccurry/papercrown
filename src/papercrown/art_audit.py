@@ -718,7 +718,7 @@ def _recipe_art_references(recipe: Recipe) -> list[ArtReference]:
                 recipe,
                 "cover",
                 recipe.cover.art,
-                expected_roles={"cover-front"},
+                expected_roles={"cover-front", "scene"},
             )
         )
     if recipe.ornaments.folio_frame:
@@ -760,6 +760,15 @@ def _recipe_art_references(recipe: Recipe) -> list[ArtReference]:
                         "chapter-divider",
                         "class-divider",
                         "cover",
+                        "handout",
+                        "item",
+                        "location",
+                        "map",
+                        "npc",
+                        "portrait",
+                        "scene",
+                        "splash",
+                        "spread",
                     },
                 )
             )
@@ -816,6 +825,15 @@ def _manifest_art_references(manifest: Manifest) -> list[ArtReference]:
                             "chapter-divider",
                             "class-divider",
                             "cover-front",
+                            "handout",
+                            "item",
+                            "location",
+                            "map",
+                            "npc",
+                            "portrait",
+                            "scene",
+                            "splash",
+                            "spread",
                         }
                     ),
                 )
@@ -873,10 +891,10 @@ def _manifest_art_references(manifest: Manifest) -> list[ArtReference]:
 
 def _expected_splash_roles(target: str) -> set[str]:
     if target == "front-cover":
-        return {"cover-front"}
+        return {"cover-front", "scene"}
     if target == "back-cover":
-        return {"cover-back"}
-    return {"splash"}
+        return {"cover-back", "scene"}
+    return {"scene", "splash"}
 
 
 def _reference(
@@ -1034,6 +1052,8 @@ def _folder_mismatch(asset: AuditedArtAsset) -> bool:
         return False
     parts = asset.relative_path.replace("\\", "/").lower().split("/")
     dirs = parts[:-1]
+    if not dirs:
+        return False
     expected_parts = expected.lower().strip("/").split("/")
     return not _contains_part_sequence(dirs, expected_parts)
 

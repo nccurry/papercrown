@@ -55,6 +55,25 @@ def test_classify_art_path_recognizes_canonical_roles(tmp_path: Path):
     )
 
 
+def test_classify_art_path_recognizes_flat_filename_roles(tmp_path: Path):
+    art = tmp_path / "Art"
+    examples = {
+        "cover-front-test-01.png": "cover-front",
+        "class-marshal.png": "class-divider",
+        "spot-class-marshal.png": "class-opening-spot",
+        "frame-baseline-human.png": "frame-divider",
+        "filler-spot-class-helmet-01.png": "filler-spot",
+        "page-finish-frame-vault-01.png": "page-finish",
+        "ornament-tailpiece-casing.png": "ornament-tailpiece",
+        "wear-coffee-small-01.png": "page-wear",
+        "bg-dockside-alias.png": "spot",
+        "scene-01-port-meridian-arrival.png": "scene",
+    }
+
+    for filename, role in examples.items():
+        assert classify_art_path(art / filename, art_root=art).role == role
+
+
 def test_art_audit_validates_alpha_and_unclassified_assets(tmp_path: Path):
     vault = tmp_path / "vault"
     art = tmp_path / "art"
@@ -354,3 +373,68 @@ def test_art_audit_allows_namespaced_art_packs_and_filler_art_dir(
     assert "art.reference-missing" not in diagnostic_codes
     assert "art.folder-mismatch" not in diagnostic_codes
     assert "art.unclassified" not in diagnostic_codes
+
+
+def test_art_audit_allows_flat_art_library(tmp_path: Path):
+    vault = tmp_path / "vault"
+    art = tmp_path / "art"
+    vault.mkdir()
+    art.mkdir()
+    (vault / "Foo.md").write_text("# Foo\n", encoding="utf-8")
+    Image.new("RGB", (128, 180), (255, 255, 255)).save(
+        art / "cover-front-docs-pack.png"
+    )
+    Image.new("RGBA", (128, 128), (0, 0, 0, 0)).save(
+        art / "filler-spot-general-token-01.png"
+    )
+    Image.new("RGB", (128, 128), (255, 255, 255)).save(
+        art / "bg-dockside-alias.png"
+    )
+    Image.new("RGB", (128, 128), (255, 255, 255)).save(
+        art / "scene-01-port-meridian-arrival.png"
+    )
+
+    recipe_path = tmp_path / "recipe.yaml"
+    recipe_path.write_text(
+        textwrap.dedent(
+            """
+            title: Flat Art Book
+            art_dir: art
+            cover:
+              enabled: true
+              art: scene-01-port-meridian-arrival.png
+            vaults:
+              v: vault
+            fillers:
+              enabled: true
+              slots:
+                chapter-end:
+                  min_space: 0.65in
+                  max_space: 3.5in
+                  shapes: [spot]
+              assets:
+                - id: docs-spot
+                  art: filler-spot-general-token-01.png
+                  shape: spot
+                  height: 1.35in
+            chapters:
+              - kind: file
+                title: Foo
+                art: scene-01-port-meridian-arrival.png
+                source: v:Foo.md
+            """
+        ).lstrip(),
+        encoding="utf-8",
+    )
+    recipe = load_recipe(recipe_path)
+    manifest = build_manifest(recipe)
+
+    result = audit_recipe_art(recipe, manifest)
+    diagnostic_codes = {
+        diagnostic.code for diagnostic in result.diagnostics.diagnostics
+    }
+
+    assert result.role_counts["scene"] == 1
+    assert result.role_counts["spot"] == 1
+    assert "art.reference-role" not in diagnostic_codes
+    assert "art.folder-mismatch" not in diagnostic_codes

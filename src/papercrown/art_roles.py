@@ -147,6 +147,7 @@ ROLE_REGISTRY: dict[str, ArtRoleSpec] = {
     "npc": ArtRoleSpec("npc", "content/npcs", 2.0, 3.0),
     "location": ArtRoleSpec("location", "content/locations", 6.0, 3.0),
     "handout": ArtRoleSpec("handout", "content/handouts", 6.0, 4.0),
+    "scene": ArtRoleSpec("scene", None),
     "excluded": ArtRoleSpec("excluded", None),
     "unclassified": ArtRoleSpec("unclassified", None),
 }
@@ -183,6 +184,12 @@ def classify_art_path(
         return _classification("class-divider", **_parse_prefix(stem, ("class",)))
     if _in_folder(dirs, "classes") and stem.startswith("class-"):
         return _classification("class-divider", **_parse_prefix(stem, ("class",)))
+    if stem.startswith("class-"):
+        return _classification(
+            "class-divider",
+            matched_convention="legacy",
+            **_parse_prefix(stem, ("class",)),
+        )
 
     if (
         _in_folder(dirs, "dividers") and "classes" not in dirs and "frames" not in dirs
@@ -471,6 +478,8 @@ def _classify_content(
         "npc": "npc",
         "location": "location",
         "handout": "handout",
+        "bg": "spot",
+        "scene": "scene",
         "stamp": "spot",
         "label": "spot",
         "ship": "handout",
