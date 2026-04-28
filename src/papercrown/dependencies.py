@@ -277,7 +277,7 @@ def check_native_pdf_runtime(
 
     preferred = _mapping(windows.get("preferred"))
     preferred_dir = Path(
-        _string_or_none(preferred.get("dll_dir")) or r"C:\msys64\mingw64\bin"
+        _string_or_none(preferred.get("dll_dir")) or r"C:\msys64\ucrt64\bin"
     )
     stale_entries = _sequence(windows.get("stale_unsupported"))
     stale_dirs = tuple(
@@ -706,8 +706,7 @@ def _classify_windows_native_runtime(
             name="windows",
             status=DependencyStatus.WARN,
             message=(
-                "MSYS2 UCRT64 Pango/GLib is installed but not configured "
-                "for WeasyPrint"
+                "MSYS2 UCRT64 Pango/GLib is installed but not configured for WeasyPrint"
             ),
             path=preferred_dir,
             version=glib_version,
