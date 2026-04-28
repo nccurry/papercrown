@@ -13,7 +13,7 @@ from papercrown.project.manifest import (
     classify_filler_art_path,
     slugify,
 )
-from papercrown.project.recipe import load_recipe
+from papercrown.project.recipe import RecipeError, load_recipe
 
 # ---------------------------------------------------------------------------
 # Fixtures
@@ -1263,7 +1263,7 @@ class TestKindSequence:
                 source: base:Rules/Intro.md
         """,
         )
-        with pytest.raises(Exception, match="source"):
+        with pytest.raises(RecipeError, match="source"):
             build_manifest(load_recipe(rp))
 
         rp = _write_recipe(

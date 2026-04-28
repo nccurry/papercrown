@@ -385,22 +385,27 @@ class TestCombinedBookRendering:
         # This test is cheap and obvious; keep it as the first line
         # of defense so if someone edits the format string they see
         # the failure immediately.
-        import inspect
-
-        src = inspect.getsource(pipeline._build_pandoc_base_args)
-        assert "-multiline_tables" in src, (
+        from_arg = next(
+            arg
+            for arg in pipeline._build_pandoc_base_args(
+                _make_ctx_for_book(),
+                css=False,
+            )
+            if arg.startswith("--from=")
+        )
+        assert "-multiline_tables" in from_arg, (
             "pipeline must disable multiline_tables in the pandoc --from "
             "format string (caused Bonded / Mycologist / Songweaver to "
             "vanish from the combined book). See pipeline.py."
         )
-        assert "-simple_tables" in src, (
+        assert "-simple_tables" in from_arg, (
             "pipeline must also disable simple_tables for safety"
         )
-        assert "-grid_tables" in src, (
+        assert "-grid_tables" in from_arg, (
             "pipeline must also disable grid_tables for safety"
         )
         # And pipe_tables must remain ENABLED, since we actually use them.
-        assert "+pipe_tables" in src, (
+        assert "+pipe_tables" in from_arg, (
             "pipeline must keep pipe_tables enabled for real tables"
         )
 
