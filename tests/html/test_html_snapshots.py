@@ -17,9 +17,9 @@ from types import SimpleNamespace
 
 import pytest
 
-from papercrown import assembly, pipeline
-from papercrown.manifest import Chapter, ChapterFillerSlot
-from papercrown.resources import (
+from papercrown.assembly import markdown as assembly
+from papercrown.project.manifest import Chapter, ChapterFillerSlot
+from papercrown.project.resources import (
     ASSETS_DIR,
     CORE_CSS_FILES,
     FONTS_DIR,
@@ -27,6 +27,7 @@ from papercrown.resources import (
     RESOURCE_DIR,
     TEMPLATE_FILE,
 )
+from papercrown.render import pipeline
 
 pytestmark = pytest.mark.usefixtures("require_pandoc")
 

@@ -9,11 +9,17 @@ from urllib.parse import quote
 import pytest
 from PIL import Image
 
-from papercrown import assembly, build, export, pipeline
-from papercrown.manifest import PageDamageAsset, PageDamageCatalog, build_manifest
-from papercrown.options import DraftMode, OutputProfile, PaginationMode
-from papercrown.recipe import load_recipe
-from papercrown.resources import CORE_CSS_FILES, TEMPLATE_FILE
+from papercrown.app.options import DraftMode, OutputProfile, PaginationMode
+from papercrown.assembly import markdown as assembly
+from papercrown.project.manifest import (
+    PageDamageAsset,
+    PageDamageCatalog,
+    build_manifest,
+)
+from papercrown.project.recipe import load_recipe
+from papercrown.project.resources import CORE_CSS_FILES, TEMPLATE_FILE
+from papercrown.render import build, pipeline
+from papercrown.system import export
 
 pytestmark = [
     pytest.mark.usefixtures("require_pandoc"),

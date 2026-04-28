@@ -9,9 +9,13 @@ from pathlib import Path
 
 import yaml
 
+# Repository root used to resolve every audited metadata file.
 ROOT = Path(__file__).resolve().parents[1]
+# Canonical env-style version pins consumed by installers and CI.
 VERSIONS_FILE = ROOT / "versions.env"
+# Structured dependency manifest checked against the version pins.
 DEPENDENCIES_FILE = ROOT / "dependencies.yaml"
+# Required keys that must be present in versions.env.
 REQUIRED_VERSION_KEYS = {
     "PYTHON_VERSION",
     "UV_VERSION",
@@ -22,6 +26,7 @@ REQUIRED_VERSION_KEYS = {
     "PYTHON_RUNTIME_IMAGE",
     "CI_IMAGE",
 }
+# Files scanned for dependency pins that should stay in sync.
 AUDITED_FILES = [
     "dependencies.yaml",
     "Dockerfile",
@@ -37,6 +42,7 @@ AUDITED_FILES = [
     ".github/workflows/pages.yml",
     ".github/workflows/release.yml",
 ]
+# Docker ARG defaults that must reference matching versions.env keys.
 DOCKER_ARG_DEFAULTS = {
     "Dockerfile": {
         "UV_BASE_IMAGE": "UV_BASE_IMAGE",
@@ -49,6 +55,7 @@ DOCKER_ARG_DEFAULTS = {
         "OBSIDIAN_EXPORT_VERSION": "OBSIDIAN_EXPORT_VERSION",
     },
 }
+# Script env defaults that must be sourced from versions.env keys.
 SCRIPT_ENV_DEFAULTS = {
     "scripts/container-build.sh": {
         "UV_BASE_IMAGE": "UV_BASE_IMAGE",
@@ -56,12 +63,14 @@ SCRIPT_ENV_DEFAULTS = {
         "OBSIDIAN_EXPORT_VERSION": "OBSIDIAN_EXPORT_VERSION",
     },
 }
+# Expected dependency policy type for each external tool.
 EXPECTED_TOOL_POLICIES = {
     "pandoc": ("minimum_env", "PANDOC_MIN_VERSION"),
     "obsidian-export": ("exact_env", "OBSIDIAN_EXPORT_VERSION"),
     "uv": ("exact_env", "UV_VERSION"),
     "task": ("exact_env", "TASK_VERSION"),
 }
+# Installation snippets that bypass the supported dependency path.
 FORBIDDEN_SNIPPETS = (
     (
         "cargo install " + "obsidian-export",

@@ -7,11 +7,14 @@ from pathlib import Path
 
 import pytest
 
-from papercrown.manifest import Manifest, build_manifest
-from papercrown.recipe import Recipe, load_recipe
+from papercrown.project.manifest import Manifest, build_manifest
+from papercrown.project.recipe import Recipe, load_recipe
 
+# Repository root shared by tests that need project-relative paths.
 PAPERCROWN_ROOT = Path(__file__).parent.parent.resolve()
+# Root directory for test fixtures.
 FIXTURE_ROOT = Path(__file__).parent / "fixtures"
+# Canonical minimal recipe used by smoke-style unit tests.
 MINI_RECIPE_PATH = FIXTURE_ROOT / "recipes" / "mini.yaml"
 
 

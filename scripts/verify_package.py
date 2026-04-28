@@ -8,9 +8,13 @@ import zipfile
 from email.parser import Parser
 from pathlib import Path
 
+# Repository root used to locate build artifacts from any working directory.
 ROOT = Path(__file__).resolve().parents[1]
+# Directory where the package build writes wheels and source distributions.
 DIST = ROOT / "dist"
+# SPDX license expression expected in the built wheel metadata.
 LICENSE_EXPRESSION = "AGPL-3.0-or-later"
+# Wheel member suffixes that prove runtime resources were packaged.
 REQUIRED_SUFFIXES = (
     "dist-info/licenses/LICENSE",
     "dist-info/licenses/THIRD_PARTY_LICENSES.md",
@@ -59,7 +63,7 @@ def main() -> int:
         if metadata.get("License-Expression") != LICENSE_EXPRESSION:
             missing.append(f"License-Expression: {LICENSE_EXPRESSION}")
     scripts = dict(parser.items("console_scripts"))
-    if scripts.get("papercrown") != "papercrown.cli:main":
+    if scripts.get("papercrown") != "papercrown.app.cli:main":
         missing.append("console_scripts.papercrown")
     if "papercrown-verify" in scripts:
         missing.append("removed console_scripts.papercrown-verify")

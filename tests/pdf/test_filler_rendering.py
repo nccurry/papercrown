@@ -5,8 +5,8 @@ from __future__ import annotations
 import pytest
 from weasyprint import HTML
 
-from papercrown.fillers import plan_fillers
-from papercrown.manifest import FillerAsset, FillerCatalog, FillerSlot
+from papercrown.media.fillers import plan_fillers
+from papercrown.project.manifest import FillerAsset, FillerCatalog, FillerSlot
 
 pytestmark = pytest.mark.usefixtures("require_weasyprint")
 

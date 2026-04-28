@@ -30,6 +30,8 @@ task check
 state, linting, formatting, type checking, tests, packaging, and package
 contents.
 
+For the package layout and subsystem ownership map, see [[Architecture]].
+
 :::: {.clock #release-gate title="Release Gate" tags="docs,maintenance,release"}
 ### Release Gate
 

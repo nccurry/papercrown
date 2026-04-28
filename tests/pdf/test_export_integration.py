@@ -1,7 +1,7 @@
 """Integration tests for the obsidian-export step.
 
-Exercises `papercrown.export.ensure_exports_fresh` against a real on-disk vault and
-verifies the subprocess actually succeeds. This guards against two classes
+Exercises `papercrown.system.export.ensure_exports_fresh` against a real on-disk
+vault and verifies the subprocess actually succeeds. This guards against two classes
 of silent failure we've tripped on in production:
 
   1. `obsidian-export` aborts mid-run because the build scans unrelated vault
@@ -19,9 +19,9 @@ from __future__ import annotations
 
 import pytest
 
-from papercrown import export
-from papercrown.manifest import build_manifest
-from papercrown.recipe import load_recipe
+from papercrown.project.manifest import build_manifest
+from papercrown.project.recipe import load_recipe
+from papercrown.system import export
 
 pytestmark = pytest.mark.usefixtures("require_pandoc")
 
