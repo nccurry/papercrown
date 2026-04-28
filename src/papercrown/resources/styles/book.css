@@ -902,13 +902,13 @@ figcaption {
 
 .splash-art p {
   margin: 0;
+  width: 100%;
 }
 
 .splash-img {
   width: 100%;
   height: auto;
   object-fit: contain;
-  mix-blend-mode: multiply;
   filter: contrast(1.03);
 }
 
