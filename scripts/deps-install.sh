@@ -4,7 +4,16 @@ set -euo pipefail
 repo_root=$(CDPATH= cd -- "$(dirname -- "$0")/.." && pwd)
 cd "$repo_root"
 
-export PATH="$HOME/.local/bin:$HOME/.cargo/bin:$PATH"
+export PATH="$HOME/.local/bin:$PATH"
+
+load_versions() {
+  if [ ! -f versions.env ]; then
+    printf '%s\n' "versions.env is missing." >&2
+    exit 1
+  fi
+  # shellcheck disable=SC1091
+  . ./versions.env
+}
 
 log() {
   printf '==> %s\n' "$1"
@@ -63,28 +72,66 @@ install_pandoc() {
   fi
 }
 
-install_rust() {
-  if command -v cargo >/dev/null 2>&1; then
-    return
+install_obsidian_export() {
+  expected="obsidian-export ${OBSIDIAN_EXPORT_VERSION}"
+  existing_path=$(command -v obsidian-export 2>/dev/null || true)
+  if [ -n "$existing_path" ] &&
+    obsidian-export --version 2>/dev/null | grep -q "^${expected}$"; then
+    case "$existing_path" in
+      *".cargo"*) ;;
+      *) return ;;
+    esac
   fi
   if ! command -v curl >/dev/null 2>&1; then
-    printf '%s\n' "Rust is missing and curl is not available." >&2
+    printf '%s\n' "obsidian-export is missing and curl is not available." >&2
     exit 1
   fi
-  log "Installing Rust"
-  curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs |
-    sh -s -- -y --profile minimal
-  export PATH="$HOME/.cargo/bin:$PATH"
-}
-
-install_obsidian_export() {
-  if command -v obsidian-export >/dev/null 2>&1; then
-    return
+  os=$(uname -s)
+  arch=$(uname -m)
+  case "$os:$arch" in
+    Linux*:x86_64|Linux*:amd64)
+      asset="obsidian-export-x86_64-unknown-linux-gnu.tar.xz"
+      ;;
+    Darwin*:arm64|Darwin*:aarch64)
+      asset="obsidian-export-aarch64-apple-darwin.tar.xz"
+      ;;
+    Darwin*:x86_64|Darwin*:amd64)
+      asset="obsidian-export-x86_64-apple-darwin.tar.xz"
+      ;;
+    *)
+      printf 'Unsupported obsidian-export binary platform: %s %s\n' "$os" "$arch" >&2
+      exit 1
+      ;;
+  esac
+  url="https://github.com/zoni/obsidian-export/releases/download/v${OBSIDIAN_EXPORT_VERSION}/${asset}"
+  tmp_dir=$(mktemp -d)
+  trap 'rm -rf "$tmp_dir"' EXIT
+  log "Installing obsidian-export ${OBSIDIAN_EXPORT_VERSION}"
+  curl --proto '=https' --tlsv1.2 -LsSf "$url" -o "$tmp_dir/$asset"
+  curl --proto '=https' --tlsv1.2 -LsSf "$url.sha256" -o "$tmp_dir/$asset.sha256"
+  expected_hash=$(awk '{print $1}' "$tmp_dir/$asset.sha256")
+  if command -v sha256sum >/dev/null 2>&1; then
+    actual_hash=$(sha256sum "$tmp_dir/$asset" | awk '{print $1}')
+  else
+    actual_hash=$(shasum -a 256 "$tmp_dir/$asset" | awk '{print $1}')
   fi
-  install_rust
-  log "Installing obsidian-export"
-  cargo install obsidian-export --locked
-  export PATH="$HOME/.cargo/bin:$PATH"
+  if [ "$expected_hash" != "$actual_hash" ]; then
+    printf '%s\n' "obsidian-export checksum mismatch." >&2
+    exit 1
+  fi
+  tar -C "$tmp_dir" -xf "$tmp_dir/$asset"
+  mkdir -p "$HOME/.local/bin"
+  binary=$(find "$tmp_dir" -type f -name obsidian-export -perm -u+x | head -n 1)
+  if [ -z "$binary" ]; then
+    binary=$(find "$tmp_dir" -type f -name obsidian-export | head -n 1)
+  fi
+  if [ -z "$binary" ]; then
+    printf '%s\n' "obsidian-export binary was not found in release archive." >&2
+    exit 1
+  fi
+  cp "$binary" "$HOME/.local/bin/obsidian-export"
+  chmod +x "$HOME/.local/bin/obsidian-export"
+  export PATH="$HOME/.local/bin:$PATH"
 }
 
 install_pdf_runtime() {
@@ -111,9 +158,9 @@ install_pdf_runtime() {
   esac
 }
 
+load_versions
 install_uv
 install_pandoc
-install_rust
 install_obsidian_export
 install_pdf_runtime
 

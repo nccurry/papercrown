@@ -1,0 +1,92 @@
+/* -------- Tables ------------------------------------------------------- */
+
+table {
+  border-collapse: collapse;
+  width: 100%;
+  margin: 0.6em 0 0.9em 0;
+  font-size: 0.95em;
+  page-break-inside: avoid;
+  break-inside: avoid;
+  /* `table-layout: auto` is the default; setting it explicitly + min-width
+     reset on cells lets a long-text column actually expand instead of
+     getting squeezed by short cells in adjacent columns. */
+  table-layout: auto;
+}
+
+thead {
+  display: table-header-group;
+}
+
+th, td {
+  padding: 0.35em 0.55em;
+  text-align: left;
+  vertical-align: top;
+  border-bottom: 1px solid var(--rule-light);
+  word-wrap: break-word;
+  overflow-wrap: break-word;
+  hyphens: auto;
+  /* `min-width: 0` overrides the auto-table heuristic that prevents text
+     from wrapping shorter than its longest word -- needed so the wide
+     description column doesn't push narrow columns out of bounds. */
+  min-width: 0;
+}
+
+/* Prefer narrow first columns + wide last column for the common
+   "label | description" table shape. WeasyPrint honors col widths. */
+table > colgroup col:last-child {
+  width: auto;
+}
+
+th {
+  font-family: var(--font-head);
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  font-size: 0.85em;
+  color: var(--paper);
+  background: var(--ink);
+  border-bottom: 2px solid var(--ink);
+}
+
+tbody tr:nth-child(even) {
+  background: rgba(0, 0, 0, 0.035);
+}
+
+tr {
+  page-break-inside: avoid;
+  break-inside: avoid;
+}
+
+/* -------- Blockquotes (non-callout) ------------------------------------ */
+
+blockquote {
+  border-left: 3px solid var(--accent);
+  margin: 0.8em 0;
+  padding: 0.1em 0 0.1em 0.9em;
+  color: var(--ink-soft);
+  font-style: italic;
+}
+
+/* -------- Code -------------------------------------------------------- */
+
+code, pre, kbd, samp {
+  font-family: var(--font-mono);
+  font-size: 0.92em;
+}
+
+code {
+  background: rgba(0, 0, 0, 0.05);
+  padding: 0 0.25em;
+  border-radius: 2px;
+}
+
+pre {
+  background: var(--ink);
+  color: var(--paper);
+  padding: 0.7em 0.9em;
+  border-radius: 2px;
+  overflow-x: auto;
+  page-break-inside: avoid;
+  break-inside: avoid;
+}
+pre > code { background: transparent; padding: 0; }

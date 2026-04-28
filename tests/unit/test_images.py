@@ -171,6 +171,41 @@ def test_cache_key_changes_when_optimization_settings_change(tmp_path):
         assert small_result.size == (200, 200)
 
 
+def test_optimization_session_memoizes_repeated_image_hashes(
+    tmp_path,
+    monkeypatch,
+):
+    image = tmp_path / "cover.png"
+    cache = tmp_path / "cache"
+    Image.new("RGB", (600, 600), color="red").save(image)
+    calls = 0
+    original = images._image_cache_key
+
+    def count_cache_key(*args, **kwargs):
+        nonlocal calls
+        calls += 1
+        return original(*args, **kwargs)
+
+    monkeypatch.setattr(images, "_image_cache_key", count_cache_key)
+    session = images.ImageOptimizationSession()
+
+    first = optimize_image(
+        image,
+        profile=OutputProfile.DRAFT,
+        cache_root=cache,
+        session=session,
+    )
+    second = optimize_image(
+        image,
+        profile=OutputProfile.DRAFT,
+        cache_root=cache,
+        session=session,
+    )
+
+    assert first == second
+    assert calls == 1
+
+
 def test_rewrite_markdown_image_refs_uses_cached_copy(tmp_path):
     art = tmp_path / "art"
     art.mkdir()

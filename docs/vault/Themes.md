@@ -50,7 +50,13 @@ recipe theme_options
 ```
 
 Web export writes that stack into a generated `styles/book.css` bundle in the
-output folder. Theme authors do not edit or rebuild a source `book.css`.
+output folder. Theme authors edit their own declared theme files, not the
+generated bundle.
+
+Theme packs usually override tokens and a few components in their own CSS. The
+theme declares its source files in `theme.yaml`; Paper Crown loads those files
+in order and does not infer filenames. For a very small local theme, one
+declared file like `theme.css` is also fine.
 
 ## Local Theme Example
 

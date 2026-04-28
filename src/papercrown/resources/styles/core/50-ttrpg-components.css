@@ -1,0 +1,86 @@
+/* ==========================================================================
+   Stat blocks
+   ========================================================================== */
+
+.stat-block {
+  background: var(--tint-block);
+  border: 1px solid var(--ink);
+  border-left: 4px solid var(--ink);
+  padding: 0.7em 0.9em 0.55em 0.9em;
+  margin: 0.9em 0;
+  page-break-inside: avoid;
+  break-inside: avoid;
+}
+
+.stat-block > .stat-line {
+  margin: 0;
+}
+.stat-block > .stat-line + .stat-line {
+  margin-top: 0.15em;
+  padding-top: 0.15em;
+  border-top: 1px dashed var(--rule-light);
+}
+
+.stat-block p {
+  margin: 0;
+  font-size: 0.98em;
+}
+
+/* The leading Strong inside a stat-line is the label -- render monospaced */
+.stat-line p strong:first-child {
+  font-family: var(--font-mono);
+  font-weight: 400;
+  font-size: 0.85em;
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+  color: var(--accent-deep);
+  margin-right: 0.3em;
+}
+
+/* ==========================================================================
+   Callouts
+   ========================================================================== */
+
+.callout {
+  background: var(--tint-callout);
+  border-left: 4px solid var(--accent);
+  padding: 0.55em 0.85em 0.6em 0.85em;
+  margin: 0.9em 0;
+  page-break-inside: avoid;
+  break-inside: avoid;
+}
+
+.callout-title {
+  font-family: var(--font-head);
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  font-size: 0.92em;
+  color: var(--ink);
+  margin-bottom: 0.2em;
+}
+
+.callout-body > *:first-child { margin-top: 0; }
+.callout-body > *:last-child  { margin-bottom: 0; }
+.callout-body p { font-size: 0.96em; }
+
+/* Callout color variants */
+.callout-tip     { border-left-color: var(--accent); }
+.callout-note    { border-left-color: var(--muted); }
+.callout-info    { border-left-color: var(--accent-deep); }
+.callout-example { border-left-color: #4b6f73; }
+.callout-question{ border-left-color: var(--accent); }
+.callout-warning { border-left-color: var(--warn); background: #f7ebe7; }
+.callout-danger  { border-left-color: var(--warn); background: #f3e2dd; }
+.callout-success { border-left-color: var(--success); }
+.callout-abstract{ border-left-color: var(--ink); }
+.callout-quote   { border-left-color: var(--ink-soft); font-style: italic; }
+.callout-todo    { border-left-color: var(--accent-deep); }
+.callout-cue     { border-left-color: var(--accent-deep); }
+.callout-angle   { border-left-color: var(--accent); }
+.callout-pressure{ border-left-color: var(--warn); background: #f8eee8; }
+
+.callout-warning .callout-title,
+.callout-danger  .callout-title {
+  color: var(--warn);
+}

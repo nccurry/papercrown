@@ -65,19 +65,13 @@ ROLE_REGISTRY: dict[str, ArtRoleSpec] = {
     "class-divider": ArtRoleSpec(
         "class-divider", "classes/dividers", 6.0, 4.0, transparent=False
     ),
-    "class-opening-spot": ArtRoleSpec(
-        "class-opening-spot", "classes/spots", 2.0, 2.0
-    ),
-    "frame-divider": ArtRoleSpec(
-        "frame-divider", "frames/dividers", 6.0, 3.0
-    ),
+    "class-opening-spot": ArtRoleSpec("class-opening-spot", "classes/spots", 2.0, 2.0),
+    "frame-divider": ArtRoleSpec("frame-divider", "frames/dividers", 6.0, 3.0),
     "splash": ArtRoleSpec("splash", "splashes", 6.0, 3.0, transparent=False),
     "ornament-headpiece": ArtRoleSpec(
         "ornament-headpiece", "ornaments/headpieces", 4.0, 0.8
     ),
-    "ornament-break": ArtRoleSpec(
-        "ornament-break", "ornaments/breaks", 2.0, 0.4
-    ),
+    "ornament-break": ArtRoleSpec("ornament-break", "ornaments/breaks", 2.0, 0.4),
     "ornament-tailpiece": ArtRoleSpec(
         "ornament-tailpiece",
         "ornaments/tailpieces",
@@ -165,9 +159,7 @@ def classify_art_path(
         return _classification("class-divider", **_parse_prefix(stem, ("class",)))
 
     if (
-        _in_folder(dirs, "dividers")
-        and "classes" not in dirs
-        and "frames" not in dirs
+        _in_folder(dirs, "dividers") and "classes" not in dirs and "frames" not in dirs
     ) or stem == "chapter-divider":
         return _classification(
             "chapter-divider",
@@ -180,8 +172,10 @@ def classify_art_path(
             **_parse_prefix(stem, ("divider",)),
         )
 
-    if _in_folder(dirs, "headers") or stem.endswith("-header") or stem.startswith(
-        "header-"
+    if (
+        _in_folder(dirs, "headers")
+        or stem.endswith("-header")
+        or stem.startswith("header-")
     ):
         return _classification(
             "chapter-header",
@@ -342,8 +336,7 @@ def _contains_sequence(items: list[str], sequence: list[str]) -> bool:
     if len(items) < len(sequence):
         return False
     return any(
-        items[index : index + len(sequence)] == sequence
-        for index in range(len(items))
+        items[index : index + len(sequence)] == sequence for index in range(len(items))
     )
 
 

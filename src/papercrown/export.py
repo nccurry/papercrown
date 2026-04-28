@@ -59,7 +59,8 @@ def discover_tools(*, require_weasyprint: bool = True) -> Tools:
     obsidian_export = shutil.which("obsidian-export")
     if not obsidian_export:
         raise RuntimeError(
-            "obsidian-export not on PATH. Install via `cargo install obsidian-export`."
+            "obsidian-export not on PATH. In a source checkout, "
+            "run `task deps:install`."
         )
     return Tools(
         pandoc=pandoc,

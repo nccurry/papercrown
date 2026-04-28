@@ -1,0 +1,25 @@
+/* Parchment Classic component overrides add a traditional fantasy texture. */
+body {
+  hyphens: auto;
+}
+
+h1::first-letter,
+.section-divider-title::first-letter {
+  color: var(--accent-deep);
+  font-size: 1.18em;
+}
+
+table th {
+  background: var(--accent-deep);
+}
+
+blockquote {
+  border-left-color: var(--accent-deep);
+  background: #f1dfb6;
+}
+
+.generated-matter,
+.ttrpg-block,
+.callout {
+  border-radius: 0;
+}

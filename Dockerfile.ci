@@ -1,32 +1,51 @@
-FROM ghcr.io/astral-sh/uv:python3.12-bookworm-slim
+# syntax=docker/dockerfile:1
+
+ARG UV_BASE_IMAGE=ghcr.io/astral-sh/uv:0.11.8-python3.12-trixie-slim
+ARG TASK_VERSION=3.50.0
+ARG OBSIDIAN_EXPORT_VERSION=25.3.0
+
+FROM ${UV_BASE_IMAGE}
+
+ARG TASK_VERSION
+ARG OBSIDIAN_EXPORT_VERSION
 
 ENV UV_SYSTEM_PYTHON=1 \
-    CARGO_HOME=/usr/local/cargo \
-    RUSTUP_HOME=/usr/local/rustup \
-    PATH=/usr/local/cargo/bin:$PATH
+    PYTHONUNBUFFERED=1 \
+    PATH=/usr/local/bin:$PATH
+
 WORKDIR /workspace
 
 RUN apt-get update \
     && apt-get install -y --no-install-recommends \
-        build-essential \
         ca-certificates \
         curl \
         git \
         libharfbuzz-subset0 \
         libpango-1.0-0 \
         libpangoft2-1.0-0 \
-        libssl-dev \
         pandoc \
-        pkg-config \
-    && curl -sL https://taskfile.dev/install.sh | sh -s -- -d -b /usr/local/bin \
+        shared-mime-info \
+        xz-utils \
+    && curl -sL https://taskfile.dev/install.sh \
+        | sh -s -- -d -b /usr/local/bin "v${TASK_VERSION}" \
     && rm -rf /var/lib/apt/lists/*
 
-RUN curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs \
-        | sh -s -- -y --profile minimal --default-toolchain stable \
-    && cargo install obsidian-export --locked
+RUN set -eux; \
+    asset="obsidian-export-x86_64-unknown-linux-gnu.tar.xz"; \
+    url="https://github.com/zoni/obsidian-export/releases/download/v${OBSIDIAN_EXPORT_VERSION}/${asset}"; \
+    tmp="$(mktemp -d)"; \
+    curl --proto '=https' --tlsv1.2 -LsSf "$url" -o "$tmp/$asset"; \
+    curl --proto '=https' --tlsv1.2 -LsSf "$url.sha256" -o "$tmp/$asset.sha256"; \
+    expected="$(awk '{print $1}' "$tmp/$asset.sha256")"; \
+    actual="$(sha256sum "$tmp/$asset" | awk '{print $1}')"; \
+    test "$expected" = "$actual"; \
+    tar -C "$tmp" -xf "$tmp/$asset"; \
+    install -m 0755 "$(find "$tmp" -type f -name obsidian-export | head -n 1)" /usr/local/bin/obsidian-export; \
+    rm -rf "$tmp"; \
+    python --version; \
+    uv --version; \
+    task --version; \
+    pandoc --version | head -n 1; \
+    obsidian-export --version
 
-COPY pyproject.toml uv.lock ./
-RUN uv sync --all-groups
-
-COPY . .
 CMD ["task", "check"]

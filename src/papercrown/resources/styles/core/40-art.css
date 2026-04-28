@@ -1,0 +1,412 @@
+/* -------- Images ------------------------------------------------------- */
+
+img {
+  max-width: 100%;
+  height: auto;
+  page-break-inside: avoid;
+  break-inside: avoid;
+  /* Generated ink-lineart images often have an off-white border that
+     doesn't quite match the paper tone. `mix-blend-mode: multiply` makes
+     the image's white pixels become whatever the paper underneath is,
+     blending the image into the page seamlessly. WeasyPrint supports
+     mix-blend-mode since 53. */
+  mix-blend-mode: multiply;
+}
+
+figure {
+  margin: 0.8em 0;
+  text-align: center;
+}
+figcaption {
+  font-family: var(--font-mono);
+  font-size: 0.8em;
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+  color: var(--muted);
+  margin-top: 0.3em;
+}
+
+.art-wide,
+.art-medium,
+.art-left,
+.art-right,
+.art-card,
+.art-large,
+.art-feature {
+  page-break-inside: avoid;
+  break-inside: avoid;
+  text-align: center;
+}
+
+.art-wide,
+.art-medium,
+.art-large,
+.art-feature,
+.art-pair,
+.art-triptych {
+  clear: both;
+}
+
+.art-wide {
+  margin: 1.0em 0 1.1em 0;
+}
+
+.art-wide img {
+  width: 100%;
+  max-height: 3.45in;
+  object-fit: contain;
+}
+
+.art-medium {
+  width: 74%;
+  margin: 0.9em auto 1.0em auto;
+}
+
+.art-medium img {
+  width: 100%;
+  max-height: 2.75in;
+  object-fit: contain;
+}
+
+.art-large {
+  width: 88%;
+  margin: 1.0em auto 1.15em auto;
+}
+
+.art-large img {
+  width: 100%;
+  max-height: 4.1in;
+  object-fit: contain;
+}
+
+.art-feature {
+  margin: 1.1em 0 1.2em 0;
+}
+
+.art-feature img {
+  width: 100%;
+  max-height: 4.9in;
+  object-fit: contain;
+}
+
+.art-left,
+.art-right {
+  width: 42%;
+  max-width: 2.75in;
+  margin-top: 0.15em;
+  margin-bottom: 0.6em;
+}
+
+.art-left {
+  float: left;
+  margin-right: 1.0em;
+}
+
+.art-right {
+  float: right;
+  margin-left: 1.0em;
+}
+
+.art-spot {
+  width: 34%;
+  max-width: 2.25in;
+}
+
+.art-small {
+  width: 28%;
+  max-width: 1.9in;
+}
+
+.art-frame img {
+  max-height: 3.35in;
+}
+
+.art-pair,
+.art-triptych {
+  display: flex;
+  gap: 0.18in;
+  align-items: flex-start;
+  margin: 0.95em 0 1.05em 0;
+  page-break-inside: avoid;
+  break-inside: avoid;
+}
+
+.art-card {
+  flex: 1 1 0;
+  margin: 0;
+}
+
+.art-card img {
+  width: 100%;
+  max-height: 1.65in;
+  object-fit: contain;
+}
+
+.class-opening-spot {
+  width: 30%;
+  max-width: 1.85in;
+  margin-top: 0.05em;
+  margin-bottom: 0.45em;
+}
+
+.class-opening-spot img {
+  width: 100%;
+  max-height: 1.45in;
+  object-fit: contain;
+}
+
+.background-spot {
+  width: 30%;
+  max-width: 1.75in;
+}
+
+.background-spot img {
+  width: 100%;
+  max-height: 1.45in;
+  object-fit: contain;
+}
+
+.background-section-plate {
+  clear: both;
+  margin: 0.35em 0 0.75em 0;
+  padding: 0;
+  page-break-inside: avoid;
+  break-inside: avoid;
+}
+
+.background-section-plate.art-pair,
+.background-section-plate .art-card {
+  break-inside: avoid;
+  page-break-inside: avoid;
+}
+
+.background-section-plate.art-medium {
+  width: 82%;
+  max-width: 4.4in;
+  margin-left: auto;
+  margin-right: auto;
+}
+
+.background-section-plate img {
+  max-height: 1.65in;
+}
+
+.ornament-tailpiece {
+  clear: both;
+  width: 42%;
+  max-width: 2.1in;
+  margin: 1.25em auto 0 auto;
+  text-align: center;
+  page-break-inside: avoid;
+  break-inside: avoid;
+}
+
+.ornament-tailpiece img {
+  width: 100%;
+  max-height: 0.8in;
+  object-fit: contain;
+  filter: contrast(1.05);
+}
+
+.filler-slot {
+  display: block;
+  height: 0;
+  margin: 0;
+  padding: 0;
+  overflow: hidden;
+  visibility: hidden;
+}
+
+.draft-art-placeholder {
+  box-sizing: border-box;
+  width: 100%;
+  min-height: 0.7in;
+  margin: 0.18in auto;
+  padding: 0.22in 0.3in;
+  border: 1px dashed var(--rule-light);
+  background: rgba(0, 0, 0, 0.025);
+  color: var(--muted);
+  font-family: var(--font-mono);
+  font-size: 8.5pt;
+  letter-spacing: 0.08em;
+  text-align: center;
+  text-transform: uppercase;
+  break-inside: avoid;
+  page-break-inside: avoid;
+}
+
+.draft-cover-placeholder,
+.draft-chapter-placeholder {
+  max-width: 5.75in;
+  min-height: 1.15in;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.filler-art {
+  clear: both;
+  margin: 0.12in auto 0.15in auto;
+  text-align: center;
+  page-break-inside: avoid;
+  break-inside: avoid;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.filler-img {
+  max-width: 100%;
+  max-height: 100%;
+  width: auto;
+  height: auto;
+  object-fit: contain;
+  mix-blend-mode: multiply;
+  filter: contrast(1.04);
+}
+
+.filler-tailpiece {
+  width: 42%;
+  max-width: 2.1in;
+}
+
+.filler-spot {
+  width: 52%;
+  max-width: 3.0in;
+}
+
+.filler-small-wide {
+  width: 72%;
+  max-width: 4.6in;
+}
+
+.filler-bottom-band {
+  width: 100%;
+}
+
+.filler-bottom-band .filler-img {
+  width: auto;
+  height: auto;
+  object-fit: contain;
+}
+
+.art-triptych .art-card img {
+  max-height: 1.25in;
+}
+
+.ornament-headpiece {
+  clear: both;
+  width: 92%;
+  max-width: 5.2in;
+  margin: 0.05in auto 0.18in auto;
+  text-align: center;
+  page-break-inside: avoid;
+  break-inside: avoid;
+}
+
+.ornament-headpiece img {
+  width: 100%;
+  max-height: 0.52in;
+  object-fit: contain;
+  filter: contrast(1.04);
+}
+
+.ornament-break {
+  clear: both;
+  width: 40%;
+  max-width: 1.75in;
+  margin: 0.32in auto;
+  text-align: center;
+  page-break-inside: avoid;
+  break-inside: avoid;
+}
+
+.ornament-break img {
+  width: 100%;
+  max-height: 0.34in;
+  object-fit: contain;
+  filter: contrast(1.02);
+}
+
+.splash-art {
+  page-break-inside: avoid;
+  break-inside: avoid;
+}
+
+.splash-art p {
+  margin: 0;
+  width: 100%;
+}
+
+.splash-img {
+  width: 100%;
+  height: auto;
+  object-fit: contain;
+  filter: contrast(1.03);
+}
+
+.splash-bottom-half {
+  clear: both;
+  width: 100%;
+  min-height: 3.25in;
+  margin: 0.22in 0 0.28in 0;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+}
+
+.splash-bottom-half .splash-img {
+  max-height: 4.65in;
+}
+
+.splash-corner-left,
+.splash-corner-right {
+  width: 72%;
+  max-width: 5.35in;
+  margin-top: -0.02in;
+  margin-bottom: 0.24in;
+  opacity: 0.96;
+}
+
+.splash-corner-left .splash-img,
+.splash-corner-right .splash-img {
+  filter: contrast(1.08);
+}
+
+.splash-corner-left {
+  float: left;
+  margin-left: -0.8in;
+  margin-right: 0.28in;
+}
+
+.splash-corner-right {
+  float: right;
+  margin-left: 0.28in;
+  margin-right: -0.8in;
+}
+
+.art-wide p,
+.art-medium p,
+.art-large p,
+.art-feature p,
+.art-left p,
+.art-right p,
+.art-card p {
+  margin: 0.2em 0 0 0;
+  font-family: var(--font-mono);
+  font-size: 7.6pt;
+  line-height: 1.25;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+.art-wide p:first-child,
+.art-medium p:first-child,
+.art-large p:first-child,
+.art-feature p:first-child,
+.art-left p:first-child,
+.art-right p:first-child,
+.art-card p:first-child {
+  margin-top: 0;
+}

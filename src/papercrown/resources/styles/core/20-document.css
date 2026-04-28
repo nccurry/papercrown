@@ -1,0 +1,228 @@
+/* -------- Base document ------------------------------------------------ */
+
+html {
+  font-size: 11pt;
+}
+
+body {
+  font-family: var(--font-body);
+  font-size: 10.5pt;
+  line-height: 1.45;
+  color: var(--ink);
+  background: transparent;
+  margin: 0;
+  hyphens: auto;
+  -webkit-font-smoothing: antialiased;
+}
+
+.pdf-anchor {
+  display: block;
+  height: 0;
+  margin: 0;
+  overflow: hidden;
+  padding: 0;
+  visibility: hidden;
+  font-size: 0;
+  line-height: 0;
+  bookmark-level: none;
+}
+
+/* -------- Headings ----------------------------------------------------- */
+
+h1, h2, h3, h4, h5, h6 {
+  font-family: var(--font-head);
+  color: var(--ink);
+  font-weight: 700;
+  line-height: 1.15;
+  page-break-after: avoid;
+  break-after: avoid;
+}
+
+/* PDF outline (the bookmark sidebar Chrome / Acrobat / Preview show)
+   ----------------------------------------------------------------------
+   Pandoc's TOC is depth-capped via --toc-depth on the CLI; WeasyPrint's
+   bookmarks default to ALL h1-h6 with no cap, which was making the
+   sidebar hierarchy disagree with the rendered TOC page. Pin the
+   bookmark levels to match the TOC exactly:
+
+     h1 -> level 1     (chapters)
+     h2 -> level 2     (sub-chapters / classes)
+     h3 -> level 3     (sub-sections, e.g. Level N feature blocks)
+     h4 -> level 4     (deep nests)
+     h5/h6 -> excluded (matches --toc-depth=4 in pipeline.py)
+
+   `bookmark-label: content()` makes the sidebar entry use the heading
+   text rather than the heading id (otherwise Acrobat sometimes shows
+   slugs). Keep these in sync with `--toc-depth` in pipeline.py. */
+h1 { bookmark-level: 1; bookmark-label: content(); }
+h2 { bookmark-level: 2; bookmark-label: content(); }
+h3 { bookmark-level: 3; bookmark-label: content(); }
+h4 { bookmark-level: 4; bookmark-label: content(); }
+h5, h6 { bookmark-level: none; }
+
+/* Headings used purely as visual chrome (cover title, chapter-opener
+   page, divider page) shouldn't pollute the bookmark tree. The cover
+   has no slug to jump to, and the chapter-opener fires for non-combined
+   builds where there's only one chapter anyway. */
+.cover h1,
+.chapter-opener h1,
+.cover-title,
+.chapter-title { bookmark-level: none; }
+/* Section-divider titles ARE real anchors and SHOULD appear as bookmarks
+   at their natural heading level (h1 for top-level wrappers, h2/h3 for
+   nested per-child dividers triggered by `child_divider: true`). */
+h1.section-divider-title { bookmark-level: 1; bookmark-label: content(); }
+h2.section-divider-title { bookmark-level: 2; bookmark-label: content(); }
+h3.section-divider-title { bookmark-level: 3; bookmark-label: content(); }
+h4.section-divider-title { bookmark-level: 4; bookmark-label: content(); }
+
+/* h1 in body content = chapter-level (classes, sections) */
+h1 {
+  font-size: 26pt;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+  margin: 0 0 0.6em 0;
+  padding-bottom: 0.35em;
+  border-bottom: 3px solid var(--ink);
+  string-set: chapter-name content();
+  page-break-before: always;
+  break-before: page;
+}
+
+/* But: the chapter-opener handles its own h1, and cover handles its own */
+.chapter-opener h1,
+.cover h1 {
+  border: 0;
+  padding: 0;
+  page-break-before: auto;
+  break-before: auto;
+}
+
+h2 {
+  font-size: 17pt;
+  letter-spacing: 0;
+  margin-top: 1.1em;
+  margin-bottom: 0.4em;
+  color: var(--accent-deep);
+  border-bottom: 1px solid var(--rule-light);
+  padding-bottom: 0.15em;
+}
+
+h3 {
+  font-size: 13pt;
+  font-weight: 600;
+  letter-spacing: 0;
+  margin-top: 0.9em;
+  margin-bottom: 0.3em;
+  color: var(--ink);
+}
+
+h4, h5, h6 {
+  font-size: 11pt;
+  letter-spacing: 0;
+  margin-top: 0.72em;
+  margin-bottom: 0.2em;
+  color: var(--ink-soft);
+}
+
+/* -------- Paragraphs & inline ------------------------------------------ */
+
+p {
+  margin: 0 0 0.55em 0;
+  /* Keep whole paragraphs together: if a paragraph would split across a page,
+     push it to the next page instead (creates some bottom whitespace, but
+     avoids broken paragraphs). Long paragraphs that exceed a page can still
+     break naturally. */
+  break-inside: avoid;
+  page-break-inside: avoid;
+  orphans: 4;
+  widows: 4;
+}
+
+.book-body > p:first-of-type,
+.chapter-wrap > p:first-of-type,
+.chapter-wrap .section-divider + p {
+  margin-top: 0.18in;
+  margin-bottom: 0.7em;
+  font-size: 1.04em;
+  line-height: 1.55;
+}
+
+/* List items: keep together where possible */
+li {
+  break-inside: avoid;
+  page-break-inside: avoid;
+}
+
+/* Drop cap: use CSS `initial-letter` (with WeasyPrint-safe fallback). We
+   avoid `float: left` on ::first-letter because it interacts poorly with
+   WeasyPrint's float/column layout (triggers internal assertions).
+   Dropping floats entirely -- the opening paragraph just gets a larger,
+   colored first letter inline. */
+.book-body > p:first-of-type::first-letter,
+.chapter-wrap > p:first-of-type::first-letter,
+.chapter-wrap .section-divider + p::first-letter,
+h1 + p::first-letter {
+  font-family: var(--font-head);
+  font-weight: 700;
+  font-size: 2.15em;
+  line-height: 1;
+  color: var(--accent-deep);
+  padding-right: 0.05em;
+}
+
+em, i {
+  color: var(--ink-soft);
+}
+strong, b {
+  color: var(--ink);
+}
+
+a {
+  color: var(--accent-deep);
+  text-decoration: none;
+}
+body.mode-digital a,
+body.mode-draft a,
+body.mode-web a {
+  text-decoration: underline;
+  text-decoration-thickness: 0.5pt;
+  text-underline-offset: 0.1em;
+}
+body.mode-print a {
+  /* Keep same color as body text in print */
+  color: inherit;
+  text-decoration: none;
+}
+
+hr {
+  border: 0;
+  height: 2px;
+  background: var(--rule);
+  margin: 1em 0;
+  position: relative;
+}
+
+/* -------- Lists -------------------------------------------------------- */
+
+/* Indent via `padding-left` rather than `margin-left`. WeasyPrint (and
+   paged-media browsers in general) drop the left margin on the
+   CONTINUATION fragment when a list breaks across pages, which makes
+   bullets shift back to the page edge on page 2+. Padding is part of
+   the box and is preserved on each fragment, so the indent stays. */
+ul, ol {
+  margin: 0.3em 0 0.6em 0;
+  padding-left: 1.2em;
+}
+/* Nested lists indent further, also via padding so continuation pages
+   keep the full hierarchy. */
+li > ul, li > ol {
+  margin: 0.1em 0 0.3em 0;
+  padding-left: 1.2em;
+}
+li {
+  margin: 0.1em 0;
+}
+ul > li::marker {
+  color: var(--accent);
+}

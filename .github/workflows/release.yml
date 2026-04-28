@@ -7,33 +7,32 @@ on:
 
 permissions:
   contents: write
+  packages: read
 
 jobs:
   release:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v6
-      - uses: actions/setup-python@v6
+      - uses: actions/cache@v4
         with:
-          python-version: '3.12'
-      - name: Install uv
-        uses: astral-sh/setup-uv@v8.1.0
-      - name: Install system tools
+          path: .uv-cache
+          key: uv-${{ runner.os }}-${{ hashFiles('uv.lock') }}
+          restore-keys: |
+            uv-${{ runner.os }}-
+      - name: Log in to GHCR
+        uses: docker/login-action@v4
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - name: Build release artifacts in CI image
+        shell: bash
         run: |
-          sudo apt-get update
-          sudo apt-get install -y pandoc libpango-1.0-0 libpangoft2-1.0-0 libharfbuzz-subset0
-      - name: Install Rust
-        uses: dtolnay/rust-toolchain@stable
-      - name: Install obsidian-export
-        run: cargo install obsidian-export --locked
-      - name: Install task
-        run: |
-          curl -sL https://taskfile.dev/install.sh | sh -s -- -d -b "$HOME/.local/bin"
-          echo "$HOME/.local/bin" >> "$GITHUB_PATH"
-      - name: Install dependencies
-        run: task setup
-      - name: Release
+          set -euo pipefail
+          bash scripts/ci-image-run.sh 'task package && task package:verify && task audit:public'
+      - name: Create GitHub release
         env:
           GH_TOKEN: ${{ github.token }}
           GITHUB_REF_NAME: ${{ github.ref_name }}
-        run: task release
+        run: gh release create "$GITHUB_REF_NAME" dist/* --generate-notes

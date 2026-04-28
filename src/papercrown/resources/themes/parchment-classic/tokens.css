@@ -1,3 +1,4 @@
+/* Parchment Classic: warm fantasy reference book with traditional rules texture. */
 :root {
   --paper: #f7edcf;
   --ink: #24160d;
@@ -11,13 +12,4 @@
   --success: #4f6f36;
   --tint-block: #efe0b8;
   --tint-callout: #f3e5bf;
-}
-
-body {
-  hyphens: auto;
-}
-
-.generated-matter,
-.ttrpg-block {
-  border-radius: 0;
 }

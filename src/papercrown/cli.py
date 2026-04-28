@@ -559,8 +559,12 @@ def init_command(
 @themes_app.command("list")
 def themes_list_command() -> None:
     """List bundled themes."""
-    for name in themes_mod.bundled_theme_names():
-        print(name)
+    for summary in themes_mod.bundled_theme_summaries():
+        label = f"{summary.name} - {summary.display_name}"
+        details = " / ".join(
+            item for item in (summary.category, summary.description) if item
+        )
+        print(f"{label}: {details}" if details else label)
 
 
 @themes_app.command("copy")

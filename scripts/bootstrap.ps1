@@ -15,7 +15,6 @@ function Refresh-Path {
     $processPath = [Environment]::GetEnvironmentVariable("Path", "Process")
     $extra = @(
         (Join-Path $HOME ".local\bin"),
-        (Join-Path $HOME ".cargo\bin"),
         (Join-Path $env:LOCALAPPDATA "Microsoft\WinGet\Links"),
         (Join-Path $env:LOCALAPPDATA "Microsoft\WindowsApps")
     )

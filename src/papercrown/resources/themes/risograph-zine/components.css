@@ -1,0 +1,27 @@
+/* Risograph Zine component overrides make the print-shop voice visible. */
+h1,
+h2,
+.cover-title,
+.section-divider-title {
+  letter-spacing: 0;
+}
+
+table th,
+pre {
+  background: var(--accent-deep);
+  color: #ffffff;
+}
+
+.callout {
+  border-left-color: var(--accent);
+}
+
+.ttrpg-block,
+.stat-block {
+  box-shadow: 0.06in 0.06in 0 var(--rule-light);
+}
+
+.section-divider-text,
+.cover-text {
+  background: var(--paper);
+}

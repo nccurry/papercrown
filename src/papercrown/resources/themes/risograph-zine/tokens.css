@@ -1,3 +1,4 @@
+/* Risograph Zine: bright inks and deliberately visible print energy. */
 :root {
   --paper: #fff7f0;
   --ink: #251b2d;
@@ -13,13 +14,4 @@
   --tint-callout: #e5fbf8;
   --paper-grain: none;
   --page-patina: none;
-}
-
-table th,
-pre {
-  background: var(--accent-deep);
-}
-
-.ttrpg-block {
-  box-shadow: 0.06in 0.06in 0 var(--rule-light);
 }

@@ -1,0 +1,679 @@
+/* ==========================================================================
+   Cover page
+   ========================================================================== */
+
+.cover {
+  page: cover-page;
+  /* Fit exactly one page and let cover art bleed to the physical page edge. */
+  box-sizing: border-box;
+  height: 11in;
+  max-height: 11in;
+  overflow: hidden;
+  position: relative;
+  padding: 0;
+  page-break-after: always;
+  break-after: page;
+  background: transparent;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-start;
+}
+
+.cover-art-wrap {
+  flex: 0 0 5.75in;
+  width: 100%;
+  height: 5.75in;
+  text-align: center;
+  display: flex;
+  align-items: stretch;
+  justify-content: stretch;
+  padding: 0;
+}
+.cover-art {
+  display: block;
+  max-width: none;
+  max-height: none;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  filter: contrast(1.05);
+}
+
+.cover::after,
+.section-divider::after,
+.splash-page::after {
+  content: "";
+  display: none;
+}
+
+.cover-text {
+  text-align: center;
+  border-top: 3px solid var(--ink);
+  border-bottom: 3px solid var(--ink);
+  margin: 0.35in 0.9in 0;
+  padding: 0.28in 0;
+}
+
+.cover-eyebrow {
+  font-family: var(--font-mono);
+  font-size: 10pt;
+  letter-spacing: 0.4em;
+  text-transform: uppercase;
+  color: var(--muted);
+  margin-bottom: 0.2in;
+}
+
+.cover-title {
+  font-family: var(--font-head);
+  font-size: 48pt;
+  line-height: 1;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  margin: 0;
+  color: var(--ink);
+}
+
+.cover-subtitle {
+  font-family: var(--font-body);
+  font-style: italic;
+  font-size: 13pt;
+  color: var(--ink-soft);
+  margin-top: 0.15in;
+}
+
+.cover-footer {
+  font-family: var(--font-mono);
+  font-size: 9pt;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  text-align: center;
+  color: var(--muted);
+  margin: auto 0.9in 0.35in;
+}
+
+/* ==========================================================================
+   Table of contents
+   ========================================================================== */
+
+.toc {
+  page-break-after: always;
+  break-after: page;
+  padding-top: 0.4in;
+}
+
+.toc-title {
+  font-family: var(--font-head);
+  font-size: 22pt;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  border-bottom: 3px solid var(--ink);
+  padding-bottom: 0.2em;
+  margin: 0 0 0.5in 0;
+  page-break-before: avoid;
+  break-before: avoid;
+  string-set: chapter-name "Contents";
+}
+
+.toc ul, .toc ol {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+/* Each `<li>` is a block so its nested `<ul>` of sub-entries stacks
+   BELOW the link (not flexed beside it). The flex layout that produces
+   the dotted leader + page number lives on the link itself. */
+.toc li {
+  font-family: var(--font-head);
+  font-size: 13pt;
+  margin: 0.4em 0;
+  display: block;
+  break-inside: auto;
+  page-break-inside: auto;
+}
+
+.toc li > a {
+  color: var(--ink);
+  text-decoration: none;
+  display: flex;
+  align-items: baseline;
+  padding: 0.2em 0;
+  border-bottom: 1px dotted var(--rule-light);
+  break-inside: avoid;
+  page-break-inside: avoid;
+}
+
+/* Leader dots + page number using leader() */
+.toc li > a::after {
+  content: leader(".") " " target-counter(attr(href), page);
+  font-family: var(--font-mono);
+  font-size: 0.85em;
+  color: var(--muted);
+  margin-left: 0.3em;
+  flex: 0 0 auto;
+}
+
+/* Progressive indentation: every nested `<ul>` shifts its rows another
+   1.4em to the right, so chapters sit flush left, subsections one step
+   in, subsubsections two steps in, and so on. */
+.toc li > ul {
+  padding-left: 1.4em;
+  margin: 0.2em 0 0.4em 0;
+}
+
+/* Tone down deeper levels: smaller, lighter, no uppercase tracking. */
+.toc ul ul li {
+  font-size: 11pt;
+  font-weight: 400;
+  margin: 0.2em 0;
+  letter-spacing: 0.01em;
+  text-transform: none;
+}
+.toc ul ul li > a {
+  color: var(--ink-soft);
+  border-bottom: 1px dotted rgba(0, 0, 0, 0.12);
+}
+.toc ul ul ul li {
+  font-size: 10pt;
+}
+.toc ul ul ul li > a {
+  color: var(--muted);
+  border-bottom: none;
+}
+.toc ul ul ul ul li {
+  font-size: 9.5pt;
+}
+
+/* ==========================================================================
+   Chapter opener
+   ========================================================================== */
+
+.chapter-opener {
+  page-break-before: always;
+  break-before: page;
+  page-break-after: always;
+  break-after: page;
+  padding: 0.8in 0 0.4in 0;
+  text-align: center;
+  string-set: chapter-name attr(data-chapter-name);
+}
+
+.chapter-art-wrap {
+  text-align: center;
+  padding: 0 0 0.3in 0;
+}
+.chapter-art {
+  max-width: 4.8in;     /* narrower than full text width for breathing room */
+  max-height: 5in;
+  width: auto;
+  height: auto;
+  filter: contrast(1.08);
+}
+
+.chapter-title-wrap {
+  border-top: 3px solid var(--ink);
+  border-bottom: 3px solid var(--ink);
+  padding: 0.35in 0;
+  margin: 0.3in 0.4in 0 0.4in;
+}
+
+.chapter-eyebrow {
+  font-family: var(--font-mono);
+  font-size: 10pt;
+  letter-spacing: 0.35em;
+  text-transform: uppercase;
+  color: var(--muted);
+  margin-bottom: 0.18in;
+}
+
+.chapter-title {
+  font-family: var(--font-head);
+  font-size: 42pt;
+  line-height: 1;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  margin: 0;
+  color: var(--ink);
+}
+
+/* Prevent the "border-bottom under h1" rule from doubling up when an
+   <h1> appears right after a chapter-opener */
+.chapter-opener + main h1:first-child,
+.chapter-opener + h1 {
+  display: none;
+}
+
+/* ==========================================================================
+   Utility classes (available for hand-authored markdown)
+   ========================================================================== */
+
+.two-col {
+  column-count: 2;
+  column-gap: 0.3in;
+  column-rule: 1px solid var(--rule-light);
+}
+.two-col > h1,
+.two-col > h2 {
+  column-span: all;
+}
+
+.no-break {
+  page-break-inside: avoid;
+  break-inside: avoid;
+}
+
+.minor-section {
+  page-break-inside: avoid;
+  break-inside: avoid;
+}
+
+/* ==========================================================================
+   Section-kind overrides
+   ========================================================================== */
+
+/* Backgrounds section uses lots of entries; tighten spacing */
+body.section-backgrounds h3,
+.chapter-wrap.section-backgrounds h3 {
+  margin-top: 0.6em;
+}
+
+.chapter-wrap.section-backgrounds .minor-section > p,
+.chapter-wrap.section-backgrounds .minor-section > ul,
+body.section-backgrounds .minor-section > p,
+body.section-backgrounds .minor-section > ul {
+  padding-left: 0.14in;
+  box-sizing: border-box;
+}
+
+.chapter-wrap.section-backgrounds .minor-section > h3 + p,
+body.section-backgrounds .minor-section > h3 + p {
+  margin-top: 0.05em;
+}
+
+/* Frames use compact variant entries; keep intro + variant stats together
+   without squeezing the prose into reference-card density. */
+body.section-ancestries h3,
+.chapter-wrap.section-ancestries h3 {
+  margin-top: 0.72em;
+  margin-bottom: 0.22em;
+}
+
+body.section-ancestries h3 + p,
+.chapter-wrap.section-ancestries h3 + p {
+  margin-top: 0;
+}
+
+body.section-ancestries .minor-section,
+.chapter-wrap.section-ancestries .minor-section {
+  page-break-inside: auto;
+  break-inside: auto;
+}
+
+body.section-ancestries p,
+.chapter-wrap.section-ancestries p {
+  margin-bottom: 0.48em;
+}
+
+body.section-ancestries hr,
+.chapter-wrap.section-ancestries hr {
+  margin: 0.68em 0;
+}
+
+.frame-summary-table table {
+  break-inside: auto;
+  page-break-inside: auto;
+}
+
+.frame-summary-table tr {
+  break-inside: avoid;
+  page-break-inside: avoid;
+}
+
+/* Original frame/background reference entries are nested children under an
+   appendix wrapper, so their item titles land as h2s. Visually match the
+   compact entry headings from the reskinned chapters. */
+.chapter-wrap.section-ancestries[id^="ch-original-"] h2,
+.chapter-wrap.section-ancestries[id^="ch-original-"] h3,
+.chapter-wrap.section-backgrounds[id^="ch-original-"] h2,
+.chapter-wrap.section-powers[id^="ch-original-"] h3,
+.chapter-wrap.section-powers[id^="ch-original-"] h4 {
+  font-size: 13pt;
+  font-weight: 600;
+  letter-spacing: 0;
+  margin-top: 0.7em;
+  margin-bottom: 0.3em;
+  color: var(--ink);
+  border-bottom: 0;
+  padding-bottom: 0;
+}
+
+/* ==========================================================================
+   Section divider page (wrapper chapters in the combined book)
+   ========================================================================== */
+
+.section-divider {
+  page: divider-page;
+  /* Force a fresh page and consume exactly one page (no overflow). */
+  page-break-before: always;
+  break-before: page;
+  page-break-after: always;
+  break-after: page;
+  page-break-inside: avoid;
+  break-inside: avoid;
+  box-sizing: border-box;
+  height: 100vh;
+  max-height: 100vh;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  text-align: center;
+  padding: 0.7in 0.6in;
+  position: relative;
+  string-set: chapter-name attr(data-chapter-name);
+}
+
+body.mode-digital .section-divider,
+body.mode-draft .section-divider {
+  page: digital-divider-page;
+}
+
+.section-divider-art-wrap {
+  flex: 0 0 auto;
+  margin-bottom: 0.6in;
+  width: 100%;
+  text-align: center;
+}
+.section-divider-art {
+  max-width: 5.5in;
+  max-height: 4.0in;
+  width: auto;
+  height: auto;
+  filter: contrast(1.05);
+}
+
+.section-divider-frame-art {
+  max-width: 5.75in;
+  max-height: 3.35in;
+  object-fit: contain;
+}
+
+.section-divider-text {
+  border-top: 4px solid var(--ink);
+  border-bottom: 4px solid var(--ink);
+  padding: 0.45in 1.5in;
+  margin-top: 0.2in;
+}
+
+.section-divider-eyebrow {
+  font-family: var(--font-mono);
+  font-size: 11pt;
+  letter-spacing: 0.4em;
+  text-transform: uppercase;
+  color: var(--muted);
+  margin-bottom: 0.15in;
+}
+
+.section-divider-eyebrow a,
+body.mode-digital .section-divider-eyebrow a,
+body.mode-draft .section-divider-eyebrow a {
+  color: inherit;
+  text-decoration: none;
+}
+
+.section-divider-title {
+  font-family: var(--font-head);
+  font-size: 52pt;
+  line-height: 1;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--ink);
+}
+
+/* ==========================================================================
+   Full-page splash art
+   ========================================================================== */
+
+.splash-page {
+  page: cover-page;
+  box-sizing: border-box;
+  height: 11in;
+  max-height: 11in;
+  overflow: hidden;
+  position: relative;
+  padding: 0.65in 0.78in;
+  page-break-before: always;
+  break-before: page;
+  page-break-after: always;
+  break-after: page;
+  background: transparent;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.splash-page p {
+  width: 100%;
+  margin: 0;
+  text-align: center;
+}
+
+.splash-page-art {
+  width: 100%;
+  max-height: 9.3in;
+  object-fit: contain;
+  mix-blend-mode: multiply;
+  filter: contrast(1.04);
+}
+
+.splash-back-cover {
+  padding-top: 0.72in;
+  padding-bottom: 0.72in;
+}
+
+/* When the divider title is a real heading (wrappers needing a TOC entry,
+   or per-child dividers triggered by `child_divider: true` in a recipe),
+   strip the per-level heading chrome -- no border, no extra margins, no
+   page-break -- so it still reads as a centered display title. We keep
+   string-set / bookmark behavior from the global heading rules so the
+   running header and PDF outline stay correct on divider pages.
+   Applies to h1-h6 because nested divider depth depends on tree depth. */
+h1.section-divider-title,
+h2.section-divider-title,
+h3.section-divider-title,
+h4.section-divider-title,
+h5.section-divider-title,
+h6.section-divider-title {
+  margin: 0;
+  padding: 0;
+  border: none;
+  background: none;
+  text-align: center;
+  page-break-before: avoid;
+  break-before: avoid;
+  /* The .section-divider-title font-size (52pt) declared above wins because
+     this selector has the same specificity but less display-related props. */
+}
+
+/* ==========================================================================
+   Optional section page breaks
+   ==========================================================================
+   Ordinary h2/h3 sections may share pages. Recipe/assembly code can opt a
+   heading into a fresh page by adding `.section-full-page`. */
+
+.section-full-page {
+  page-break-before: always;
+  break-before: page;
+}
+
+/* h2 in any chapter-wrap: a bit more visual separation overall */
+.chapter-wrap h2 {
+  clear: both;
+  margin-top: 0.8em;
+  padding-top: 0.4em;
+  border-top: 1px solid var(--rule-light);
+}
+
+.chapter-wrap h3 {
+  clear: both;
+}
+
+/* Class chapters have many source-file sections like Gadgets, Protocols,
+   Orders, and feature lists. Keep them readable as compact tool sections
+   instead of letting generic heading chrome dominate the page. */
+body.section-class h2:not(.section-divider-title):not(.level-heading),
+.chapter-wrap.section-class h3:not(.section-divider-title):not(.level-heading) {
+  font-size: 12.8pt;
+  letter-spacing: 0;
+  text-transform: none;
+  color: var(--ink);
+  margin-top: 0.75em;
+  margin-bottom: 0.25em;
+  padding: 0 0 0.12em 0;
+  border: 0;
+  border-bottom: 1px solid var(--rule-light);
+  background: none;
+}
+
+body.section-class h3:not(.section-divider-title):not(.level-heading),
+.chapter-wrap.section-class h4:not(.section-divider-title):not(.level-heading) {
+  font-size: 11.4pt;
+  letter-spacing: 0;
+  margin-top: 0.55em;
+  margin-bottom: 0.2em;
+  color: var(--ink);
+}
+
+/* ==========================================================================
+   Level headings ("Level N ...") inside class chapters
+   ==========================================================================
+   highlight-level-headings.lua tags these with .level-heading regardless
+   of their actual heading level (they may be h3 in single-chapter PDFs,
+   h4/h5 in the combined book after wrapper + child_divider demotion).
+   They're the most important navigational landmarks in a class spread,
+   so we style them identically at every level. */
+
+h1.level-heading,
+h2.level-heading,
+h3.level-heading,
+h4.level-heading,
+h5.level-heading,
+h6.level-heading {
+  font-family: var(--font-head);
+  font-size: 12pt;
+  font-weight: 700;
+  text-transform: none;
+  letter-spacing: 0;
+  color: var(--ink);
+  margin-top: 0.72em;
+  margin-bottom: 0.18em;
+  padding: 0 0 0.08em 0;
+  border: 0;
+  border-bottom: 1px solid var(--rule-light);
+  background: none;
+  page-break-after: avoid;
+  break-after: avoid;
+}
+
+/* Tighten the immediate-after content so the level heading visually
+   "owns" the feature(s) that follow */
+.level-heading + p,
+.level-heading + ul,
+.level-heading + .stat-block {
+  margin-top: 0.2em;
+}
+
+/* ==========================================================================
+   Quick reference appendix
+   ========================================================================== */
+
+body.section-quick-reference .book-body,
+.chapter-wrap.section-quick-reference {
+  font-size: 8.45pt;
+  line-height: 1.16;
+}
+
+body.section-quick-reference .book-body {
+  column-count: 2;
+  column-gap: 0.26in;
+}
+
+body.section-quick-reference h1,
+body.section-quick-reference .book-body > p:first-of-type {
+  column-span: all;
+}
+
+.quickref-grid {
+  display: table;
+  width: 100%;
+  table-layout: fixed;
+  border-spacing: 0.18in 0;
+}
+
+.quickref-col {
+  display: table-cell;
+  width: 50%;
+  font-size: 8.9pt;
+  line-height: 1.2;
+  vertical-align: top;
+}
+
+.quickref-col + .quickref-col {
+  margin-left: 0;
+}
+
+.quickref-col > h2:first-child {
+  margin-top: 0;
+}
+
+body.section-quick-reference h2,
+.chapter-wrap.section-quick-reference h2 {
+  font-size: 12.2pt;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--accent-deep);
+  margin-top: 0.4em;
+  margin-bottom: 0.18em;
+  padding: 0.08em 0 0.08em 0.35em;
+  border: 0;
+  border-left: 3px solid var(--accent);
+  background: var(--tint-block);
+  break-after: avoid;
+}
+
+body.section-quick-reference .stat-block,
+.chapter-wrap.section-quick-reference .stat-block {
+  margin: 0.22em 0 0.34em 0;
+  padding: 0.32em 0.52em 0.3em 0.52em;
+  break-inside: avoid;
+}
+
+body.section-quick-reference p,
+.chapter-wrap.section-quick-reference p {
+  margin: 0.16em 0;
+}
+
+/* ==========================================================================
+   Internal references (clickable links within the same PDF)
+   ========================================================================== */
+
+a.internal-ref {
+  color: var(--accent-deep);
+  font-weight: inherit;
+}
+body.mode-print a.internal-ref {
+  /* In print, internal refs render as small-caps text -- visually distinct
+     from body text but no underline (since you can't click paper). */
+  color: var(--ink);
+  text-decoration: none;
+  font-variant: small-caps;
+  letter-spacing: 0.04em;
+}
+body.mode-digital a.internal-ref,
+body.mode-draft a.internal-ref,
+body.mode-web a.internal-ref {
+  text-decoration: underline dotted;
+  text-decoration-thickness: 0.5pt;
+  text-underline-offset: 0.15em;
+}

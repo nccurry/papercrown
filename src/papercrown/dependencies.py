@@ -22,6 +22,7 @@ from .resources import FONTS_DIR, PACKAGE_DIR
 
 PAPERCROWN_DIR = PACKAGE_DIR.parent.parent.resolve()
 DEFAULT_DEPENDENCIES_FILE = PAPERCROWN_DIR / "dependencies.yaml"
+DEFAULT_VERSIONS_FILE = PAPERCROWN_DIR / "versions.env"
 _VERSION_TIMEOUT_SECONDS = 5
 _WINDOWS_LIBRARY_NAMES = ("libglib-2.0-0.dll", "libpango-1.0-0.dll")
 _GLIB_GIO_WARNING_EXPLANATION = (
@@ -176,6 +177,37 @@ def load_dependency_manifest(path: Path | None = None) -> dict[str, Any]:
     return cast(dict[str, Any], loaded)
 
 
+def load_versions_file(path: Path | None = None) -> dict[str, str]:
+    """Load repo-managed tool versions from ``versions.env``."""
+    versions_path = (path or DEFAULT_VERSIONS_FILE).resolve()
+    if not versions_path.is_file():
+        raise DependencyManifestError(f"tool version file not found: {versions_path}")
+    versions: dict[str, str] = {}
+    try:
+        lines = versions_path.read_text(encoding="utf-8").splitlines()
+    except OSError as error:
+        raise DependencyManifestError(
+            f"failed to read {versions_path}: {error}"
+        ) from error
+    for line_number, raw_line in enumerate(lines, start=1):
+        line = raw_line.strip()
+        if not line or line.startswith("#"):
+            continue
+        if "=" not in line:
+            raise DependencyManifestError(
+                f"{versions_path}:{line_number}: expected KEY=VALUE"
+            )
+        key, value = line.split("=", 1)
+        key = key.strip()
+        value = value.strip().strip('"').strip("'")
+        if not re.fullmatch(r"[A-Z][A-Z0-9_]*", key):
+            raise DependencyManifestError(
+                f"{versions_path}:{line_number}: invalid key {key!r}"
+            )
+        versions[key] = value
+    return versions
+
+
 def check_dependencies(path: Path | None = None) -> DependencyReport:
     """Run all dependency checks defined by dependencies.yaml."""
     manifest_path = (path or DEFAULT_DEPENDENCIES_FILE).resolve()
@@ -193,11 +225,26 @@ def check_dependencies(path: Path | None = None) -> DependencyReport:
                 )
             ],
         )
+    try:
+        versions = load_versions_file()
+    except DependencyManifestError as error:
+        return DependencyReport(
+            manifest_path=manifest_path,
+            checks=[
+                DependencyCheck(
+                    category="manifest",
+                    name="versions.env",
+                    status=DependencyStatus.ERROR,
+                    message=str(error),
+                    path=DEFAULT_VERSIONS_FILE,
+                )
+            ],
+        )
 
     checks: list[DependencyCheck] = []
     checks.extend(_check_python(manifest))
     checks.extend(_check_python_groups(manifest))
-    checks.extend(_check_external_tools(manifest))
+    checks.extend(_check_external_tools(manifest, versions=versions))
     checks.extend(check_native_pdf_runtime(manifest))
     checks.extend(_check_bundled_assets(manifest))
     return DependencyReport(manifest_path=manifest_path, checks=checks)
@@ -230,7 +277,7 @@ def check_native_pdf_runtime(
 
     preferred = _mapping(windows.get("preferred"))
     preferred_dir = Path(
-        _string_or_none(preferred.get("dll_dir")) or r"C:\msys64\mingw64\bin"
+        _string_or_none(preferred.get("dll_dir")) or r"C:\msys64\ucrt64\bin"
     )
     stale_entries = _sequence(windows.get("stale_unsupported"))
     stale_dirs = tuple(
@@ -445,7 +492,11 @@ def _check_python_groups(manifest: dict[str, Any]) -> list[DependencyCheck]:
     return checks
 
 
-def _check_external_tools(manifest: dict[str, Any]) -> list[DependencyCheck]:
+def _check_external_tools(
+    manifest: dict[str, Any],
+    *,
+    versions: dict[str, str],
+) -> list[DependencyCheck]:
     tools = _mapping(manifest.get("external_tools"))
     checks: list[DependencyCheck] = []
     for name, raw_spec in tools.items():
@@ -470,12 +521,19 @@ def _check_external_tools(manifest: dict[str, Any]) -> list[DependencyCheck]:
             )
             continue
         version = _run_version_command(version_command, executable, command)
+        status, message = _classify_external_tool_version(
+            command=command,
+            executable=Path(executable),
+            version=version,
+            spec=spec,
+            versions=versions,
+        )
         checks.append(
             DependencyCheck(
                 category="external_tools",
                 name=name,
-                status=DependencyStatus.OK,
-                message=f"{command!r} is available",
+                status=status,
+                message=message,
                 path=Path(executable),
                 version=version,
                 managed_by=_string_or_none(spec.get("managed_by")),
@@ -485,6 +543,78 @@ def _check_external_tools(manifest: dict[str, Any]) -> list[DependencyCheck]:
             )
         )
     return checks
+
+
+def _classify_external_tool_version(
+    *,
+    command: str,
+    executable: Path,
+    version: str | None,
+    spec: dict[str, Any],
+    versions: dict[str, str],
+) -> tuple[DependencyStatus, str]:
+    """Return status/message for an installed external command."""
+    policy = _mapping(spec.get("version_policy"))
+    detected = _extract_version(version)
+    exact = _policy_version(policy, "exact_env", versions)
+    minimum = _policy_version(policy, "minimum_env", versions)
+    if exact is not None:
+        if detected is None or _compare_versions(detected, exact) != 0:
+            found = version or "unknown"
+            return (
+                DependencyStatus.ERROR,
+                f"{command!r} version must be {exact}; found {found}",
+            )
+    if minimum is not None:
+        if detected is None or _compare_versions(detected, minimum) < 0:
+            found = version or "unknown"
+            return (
+                DependencyStatus.ERROR,
+                f"{command!r} must be at least {minimum}; found {found}",
+            )
+
+    path_text = str(executable).replace("\\", "/").lower()
+    warn_parts = [
+        part.lower().replace("\\", "/")
+        for part in _string_list(policy.get("warn_path_contains"))
+    ]
+    if any(part in path_text for part in warn_parts):
+        return (
+            DependencyStatus.WARN,
+            f"{command!r} is available but was installed from a non-preferred source",
+        )
+    return DependencyStatus.OK, f"{command!r} is available"
+
+
+def _policy_version(
+    policy: dict[str, Any],
+    field: str,
+    versions: dict[str, str],
+) -> str | None:
+    env_key = _string_or_none(policy.get(field))
+    if env_key is None:
+        return None
+    return versions.get(env_key)
+
+
+def _extract_version(value: str | None) -> str | None:
+    if not value:
+        return None
+    match = re.search(r"(\d+(?:\.\d+)+)", value)
+    return match.group(1) if match else None
+
+
+def _compare_versions(left: str, right: str) -> int:
+    left_parts = [int(part) for part in left.split(".") if part.isdigit()]
+    right_parts = [int(part) for part in right.split(".") if part.isdigit()]
+    max_len = max(len(left_parts), len(right_parts))
+    left_parts.extend([0] * (max_len - len(left_parts)))
+    right_parts.extend([0] * (max_len - len(right_parts)))
+    if left_parts < right_parts:
+        return -1
+    if left_parts > right_parts:
+        return 1
+    return 0
 
 
 def _check_bundled_assets(manifest: dict[str, Any]) -> list[DependencyCheck]:
@@ -576,8 +706,7 @@ def _classify_windows_native_runtime(
             name="windows",
             status=DependencyStatus.WARN,
             message=(
-                "MSYS2 UCRT64 Pango/GLib is installed but not configured "
-                "for WeasyPrint"
+                "MSYS2 UCRT64 Pango/GLib is installed but not configured for WeasyPrint"
             ),
             path=preferred_dir,
             version=glib_version,

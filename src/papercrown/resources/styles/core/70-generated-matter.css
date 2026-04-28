@@ -1,0 +1,113 @@
+/* ==========================================================================
+   Generated matter and typed TTRPG blocks
+   ========================================================================== */
+
+.generated-matter {
+  break-before: page;
+  page-break-before: always;
+}
+
+.front-matter {
+  break-after: page;
+  page-break-after: always;
+}
+
+.generated-matter h1 {
+  margin-top: 0;
+}
+
+.matter-title-page {
+  min-height: 8.6in;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  text-align: center;
+}
+
+.matter-title-page h1 {
+  border-bottom: 0;
+  font-size: 34pt;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.matter-title-page h2 {
+  border-bottom: 0;
+  color: var(--accent-deep);
+  font-size: 22pt;
+  margin-top: 0;
+}
+
+.matter-appendix-index ul {
+  columns: 2;
+  column-gap: 0.35in;
+}
+
+.matter-appendix-index li {
+  break-inside: avoid;
+  page-break-inside: avoid;
+}
+
+.ttrpg-block {
+  margin: 0;
+  padding: 0;
+  background: transparent;
+  border: 0;
+}
+
+.ttrpg-npc,
+.ttrpg-faction,
+.ttrpg-location,
+.ttrpg-encounter,
+.ttrpg-clue,
+.ttrpg-clock,
+.ttrpg-readaloud,
+.ttrpg-handout,
+.ttrpg-sidebar {
+  margin: 0.9em 0;
+  padding: 0.65em 0.8em 0.7em;
+  background: var(--tint-block);
+  border: 1px solid var(--rule-light);
+  border-left: 4px solid var(--accent-deep);
+  break-inside: avoid;
+  page-break-inside: avoid;
+}
+
+.ttrpg-npc > :first-child,
+.ttrpg-faction > :first-child,
+.ttrpg-location > :first-child,
+.ttrpg-encounter > :first-child,
+.ttrpg-clue > :first-child,
+.ttrpg-clock > :first-child,
+.ttrpg-readaloud > :first-child,
+.ttrpg-handout > :first-child,
+.ttrpg-sidebar > :first-child {
+  margin-top: 0;
+}
+
+.ttrpg-npc > :last-child,
+.ttrpg-faction > :last-child,
+.ttrpg-location > :last-child,
+.ttrpg-encounter > :last-child,
+.ttrpg-clue > :last-child,
+.ttrpg-clock > :last-child,
+.ttrpg-readaloud > :last-child,
+.ttrpg-handout > :last-child,
+.ttrpg-sidebar > :last-child {
+  margin-bottom: 0;
+}
+
+.ttrpg-clue,
+.ttrpg-clock {
+  border-left-color: var(--warn);
+}
+
+.ttrpg-readaloud,
+.ttrpg-handout,
+.ttrpg-sidebar {
+  background: var(--tint-callout);
+}
+
+.ttrpg-ref {
+  white-space: nowrap;
+}

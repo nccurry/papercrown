@@ -203,10 +203,9 @@ class RenderContext:
     pandoc: str  # path to pandoc binary
     weasyprint: str  # path to weasyprint binary
     template: Path  # Pandoc HTML template
-    css: Path  # book.css
+    css_files: list[Path]  # ordered stylesheets
     lua_filters: list[Path]  # ordered list
     resource_paths: list[Path]  # for Pandoc --resource-path
-    extra_css: list[Path] = field(default_factory=list)
     inline_css: list[str] = field(default_factory=list)
     fingerprint_paths: list[Path] = field(default_factory=list)
 
@@ -363,8 +362,7 @@ def _build_pandoc_base_args(ctx: RenderContext, *, css: bool) -> list[str]:
         f"--template={ctx.template.as_posix()}",
     ]
     if css:
-        args.append(f"--css={ctx.css.as_posix()}")
-        args.extend(f"--css={path.as_posix()}" for path in ctx.extra_css)
+        args.extend(f"--css={path.as_posix()}" for path in ctx.css_files)
     if ctx.resource_paths:
         # Pandoc uses the platform path separator (`;` on Windows, `:` on
         # POSIX) for `--resource-path`. Each path itself uses forward
@@ -377,7 +375,7 @@ def _build_pandoc_base_args(ctx: RenderContext, *, css: bool) -> list[str]:
         args.append(f"--lua-filter={lf.as_posix()}")
     if ctx.include_toc:
         # depth=4 surfaces chapters, sub-chapters, and a couple more nested
-        # levels (e.g. classes -> archetypes -> features). CSS in book.css
+        # levels (e.g. classes -> archetypes -> features). Core CSS
         # progressively indents each nested level so the hierarchy reads.
         args += ["--toc", "--toc-depth=4"]
     args += _build_pandoc_metadata(ctx)
@@ -660,20 +658,14 @@ def _render_stylesheets(
 ) -> list[Any]:
     """Return WeasyPrint stylesheets with optional late page-background override."""
     CSS, _ = _weasyprint_classes()
-    stylesheets: list[Any] = [
-        CSS(
-            filename=str(ctx.css),
-            url_fetcher=_WEASYPRINT_URL_FETCHER,
-            font_config=font_config,
-        )
-    ]
+    stylesheets: list[Any] = []
     stylesheets.extend(
         CSS(
             filename=str(path),
             url_fetcher=_WEASYPRINT_URL_FETCHER,
             font_config=font_config,
         )
-        for path in ctx.extra_css
+        for path in ctx.css_files
     )
     stylesheets.extend(
         CSS(
