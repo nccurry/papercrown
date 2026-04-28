@@ -22,25 +22,25 @@ localization, accessibility, and headings remain controlled by Markdown and CSS.
 | Filename | Use | Suggested Size | Direction |
 | --- | --- | --- | --- |
 | `covers/cover-front-genre-anthology.png` | Cover | 1650x2134 | A paper crown above four open books: fantasy codex, starship manual, occult dossier, pulp field guide |
-| `dividers/divider-overview-fantasy-codex.png` | Overview divider | 1800x1200 | Illuminated manuscript table with vellum pages, brass tools, and a subtle crown motif |
-| `dividers/divider-setup-launch-manual.png` | Setup divider | 1800x1200 | Starship launch console, checklist cards, command-line-like lights without readable text |
-| `dividers/divider-authoring-occult-casefile.png` | Authoring divider | 1800x1200 | Recipe cards, marked strings, candles, ink, and a clean YAML-like talisman layout |
-| `dividers/divider-maintaining-industrial-guide.png` | Maintaining divider | 1800x1200 | Pulp workbench with gauges, stamps, folders, and press-room tools |
-| `splashes/splash-core-flow-quest-map.png` | Overview splash | 2200x1200 | A route from vault to recipe to build output, expressed as a fantasy map |
-| `splashes/splash-theme-gallery-spread.png` | Authoring splash | 2200x1200 | Several genre books open on a table, each with a different layout language |
+| `dividers/divider-overview-fantasy-codex.png` | Overview divider | 1800x280 | Extra-wide illuminated manuscript table with vellum pages, brass tools, and a subtle crown motif |
+| `dividers/divider-setup-launch-manual.png` | Setup divider | 1800x280 | Extra-wide starship launch console, checklist cards, and command-panel lights without readable text |
+| `dividers/divider-authoring-occult-casefile.png` | Authoring divider | 1800x280 | Extra-wide recipe cards, marked strings, candles, ink, and abstract casefile talismans |
+| `dividers/divider-maintaining-industrial-guide.png` | Maintaining divider | 1800x280 | Extra-wide pulp workbench with gauges, stamps, folders, and press-room tools |
+| `splashes/splash-core-flow-quest-map.png` | Overview splash | 1800x540 | A route from vault to recipe to build output, expressed as a wide fantasy map |
+| `splashes/splash-theme-gallery-spread.png` | Authoring splash | 1800x540 | Several genre books open on a table, each with a different layout language in a wide spread |
 
 ## Ornaments
 
 | Filename | Use | Direction |
 | --- | --- | --- |
-| `ornaments/headpieces/ornament-headpiece-codex.png` | Overview headpiece | Illuminated crown-and-scroll flourish |
-| `ornaments/tailpieces/ornament-tailpiece-codex.png` | Overview tailpiece | Small quill, page, and crown mark |
-| `ornaments/headpieces/ornament-headpiece-launch.png` | Setup headpiece | Control-panel rule with docking lights |
-| `ornaments/tailpieces/ornament-tailpiece-launch.png` | Setup tailpiece | Beacon, orbit arc, and small crown mark |
-| `ornaments/headpieces/ornament-headpiece-casefile.png` | Authoring headpiece | Occult filing-tab flourish |
-| `ornaments/tailpieces/ornament-tailpiece-casefile.png` | Authoring tailpiece | Wax seal and recipe-card corner |
-| `ornaments/headpieces/ornament-headpiece-field-guide.png` | Maintaining headpiece | Pulp label strip with rivets |
-| `ornaments/tailpieces/ornament-tailpiece-field-guide.png` | Maintaining tailpiece | Stamp, wrench, and folded page mark |
+| `ornaments/headpieces/ornament-headpiece-codex.png` | Overview headpiece | Illuminated manuscript art band |
+| `ornaments/tailpieces/ornament-tailpiece-codex.png` | Overview tailpiece | Illuminated manuscript art band |
+| `ornaments/headpieces/ornament-headpiece-launch.png` | Setup headpiece | Launch-bay control-panel art band |
+| `ornaments/tailpieces/ornament-tailpiece-launch.png` | Setup tailpiece | Launch-bay control-panel art band |
+| `ornaments/headpieces/ornament-headpiece-casefile.png` | Authoring headpiece | Occult casefile art band |
+| `ornaments/tailpieces/ornament-tailpiece-casefile.png` | Authoring tailpiece | Occult casefile art band |
+| `ornaments/headpieces/ornament-headpiece-field-guide.png` | Maintaining headpiece | Pulp industrial art band |
+| `ornaments/tailpieces/ornament-tailpiece-field-guide.png` | Maintaining tailpiece | Pulp industrial art band |
 | `ornament-folio-frame.png` | PDF folio frame | Small neutral page-number frame |
 | `ornament-corner-bracket.png` | Future corner bracket | Transparent corner ornament once product support is expanded |
 
@@ -63,9 +63,9 @@ into recipe-level systems.
 | `filler-spot-*.png` | Small conditional filler art |
 | `filler-wide-*.png` | Narrow horizontal filler art |
 | `filler-bottom-*.png` | Bottom-band filler art |
-| `page-wear/wear-coffee-small-01.png` | Transparent page wear |
-| `page-wear/wear-edge-tear-small-01.png` | Transparent page wear |
-| `page-wear/wear-printer-misfeed-small-01.png` | Transparent page wear |
+| `page-wear/wear-nick-scratch-*.png` | Transparent scratch and scuff marks |
+| `page-wear/wear-smudge-grime-*.png` | Transparent smudges |
+| `page-wear/wear-printer-misfeed-*.png` | Transparent dragged smear bands |
 
 ## Integration Notes
 

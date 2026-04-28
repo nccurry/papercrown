@@ -1,8 +1,8 @@
 # Themes
 
 Themes control typography, page furniture, colors, and layout. Paper Crown
-ships with several bundled themes, including clean SRD, parchment classic,
-modern minimal, and more expressive genre styles.
+ships with six bundled themes: clean SRD, parchment classic, Pinlight
+industrial, occult casefile, pulp adventure, and risograph zine.
 
 :::: {.sidebar #theme-pack title="Theme Pack" tags="docs,theme,authoring"}
 ### Theme Pack
@@ -33,6 +33,62 @@ theme: my-clean-srd
 
 Theme assets are treated as render inputs. Changing theme CSS, templates, or
 resources invalidates the build cache for affected outputs.
+
+## CSS Anatomy
+
+Paper Crown's shared book foundation lives in ordered modules under
+`resources/styles/core/`. Those core modules provide fonts, page rules,
+document typography, art placement, TTRPG components, book structure,
+generated matter, and web/print fixes.
+
+At render time, Paper Crown layers styles in this order:
+
+```text
+Paper Crown core CSS modules
+selected theme CSS files
+recipe theme_options
+```
+
+Web export writes that stack into a generated `styles/book.css` bundle in the
+output folder. Theme authors do not edit or rebuild a source `book.css`.
+
+## Local Theme Example
+
+This documentation is rendered with its own local theme. The recipe selects a
+theme directory instead of using a bundled theme:
+
+```yaml
+theme_dir: ../themes
+theme: papercrown-docs
+```
+
+The local theme declares its CSS files in order:
+
+```yaml
+name: Paper Crown Docs Anthology
+css:
+  - tokens.css
+  - components.css
+  - polish.css
+template: book.html
+```
+
+Yes: those docs CSS files override the Paper Crown defaults. The first file
+sets broad tokens:
+
+```css
+:root {
+  --paper: #fbf6e9;
+  --ink: #201914;
+  --accent: #9a3f2b;
+  --accent-deep: #5f2b68;
+}
+```
+
+The component layer handles the docs-specific book treatment, and the later
+polish file adds narrow adjustments without turning the theme into one giant
+stylesheet. That is the intended pattern for custom themes: start with tokens,
+then add component overrides where the book needs its own voice.
 
 ## What Themes Can Style
 
