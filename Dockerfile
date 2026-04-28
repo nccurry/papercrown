@@ -1,7 +1,7 @@
 # syntax=docker/dockerfile:1
 
-ARG UV_BASE_IMAGE=ghcr.io/astral-sh/uv:0.11.8-python3.12-trixie-slim
-ARG PYTHON_RUNTIME_IMAGE=python:3.12-slim-bookworm
+ARG UV_BASE_IMAGE=ghcr.io/astral-sh/uv:0.11.8-python3.14-trixie-slim
+ARG PYTHON_RUNTIME_IMAGE=python:3.14-slim-trixie
 ARG OBSIDIAN_EXPORT_VERSION=25.3.0
 
 FROM ${UV_BASE_IMAGE} AS build

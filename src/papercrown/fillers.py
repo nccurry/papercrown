@@ -324,9 +324,7 @@ def write_filler_report(
                 if decision.render_height_in is not None
                 else selected_asset.height_in
             )
-            fill_ratio = (
-                decision.fill_ratio if decision.fill_ratio is not None else 1.0
-            )
+            fill_ratio = decision.fill_ratio if decision.fill_ratio is not None else 1.0
             asset_text = (
                 f"{selected_asset.id} "
                 f"({selected_asset.shape}, nominal={selected_asset.height_in:.2f}in, "
@@ -488,9 +486,7 @@ def _plan_filler_decisions(
         current = by_page.get(measurement.page_number)
         if current is None or rank < current[0]:
             by_page[measurement.page_number] = (rank, placement)
-            used_assets = _placement_use_map(
-                [item[1] for item in by_page.values()]
-            )
+            used_assets = _placement_use_map([item[1] for item in by_page.values()])
     placements = _finalize_placement_reuse(
         [by_page[page_number][1] for page_number in sorted(by_page)]
     )
@@ -931,8 +927,7 @@ def _asset_matches_context(
         return _named_filler_matches_context(stem, measurement)
     if stem.startswith("faction-"):
         return (
-            requested_context in {None, "setting"}
-            and chapter in SETTING_WIDE_CHAPTERS
+            requested_context in {None, "setting"} and chapter in SETTING_WIDE_CHAPTERS
         )
     if stem.startswith("gear-"):
         return (
@@ -941,8 +936,7 @@ def _asset_matches_context(
         )
     if stem.startswith("vista-"):
         return (
-            requested_context in {None, "setting"}
-            and chapter in SETTING_WIDE_CHAPTERS
+            requested_context in {None, "setting"} and chapter in SETTING_WIDE_CHAPTERS
         )
     return True
 

@@ -383,12 +383,16 @@ def _add_metadata_diagnostics(result: ArtAuditResult, asset: AuditedArtAsset) ->
     _add_print_size_diagnostic(result, asset)
     aspect = metadata.width / max(1, metadata.height)
     role = classification.role
-    if role in {
-        "filler-wide",
-        "filler-plate",
-        "filler-bottom",
-        "filler-page",
-    } and aspect < 1.15:
+    if (
+        role
+        in {
+            "filler-wide",
+            "filler-plate",
+            "filler-bottom",
+            "filler-page",
+        }
+        and aspect < 1.15
+    ):
         result.diagnostics.add(
             Diagnostic(
                 code="art.aspect-mismatch",
@@ -884,8 +888,10 @@ def _visible_content_metrics(
     width, height = image.size
     rgb = image.convert("RGB")
     paper = Image.new("RGB", image.size, PAPER_RGB)
-    diff = ImageChops.difference(rgb, paper).convert("L").point(
-        lambda value: 255 if value > VISIBLE_DIFF_THRESHOLD else 0
+    diff = (
+        ImageChops.difference(rgb, paper)
+        .convert("L")
+        .point(lambda value: 255 if value > VISIBLE_DIFF_THRESHOLD else 0)
     )
     alpha_mask = image.getchannel("A").point(
         lambda alpha: 255 if alpha > VISIBLE_ALPHA_THRESHOLD else 0
@@ -932,7 +938,6 @@ def _edge_background_metrics(image: Image.Image) -> tuple[float, float]:
         sum((mean[channel] - PAPER_RGB[channel]) ** 2 for channel in range(3))
     )
     return (distance, len(edge_pixels) / edge_count)
-
 
 
 def _folder_mismatch(asset: AuditedArtAsset) -> bool:

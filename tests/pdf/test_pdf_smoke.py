@@ -184,9 +184,7 @@ def test_stringset_element_drives_running_header_css(mini_recipe_path):
     """
     import re
 
-    css_text = "\n".join(
-        path.read_text(encoding="utf-8") for path in CORE_CSS_FILES
-    )
+    css_text = "\n".join(path.read_text(encoding="utf-8") for path in CORE_CSS_FILES)
     tpl_text = TEMPLATE_FILE.read_text(encoding="utf-8")
 
     # Template injects the stringset element fed from recipe.title.

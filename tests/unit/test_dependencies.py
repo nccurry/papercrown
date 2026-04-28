@@ -26,7 +26,7 @@ def test_versions_env_tracks_repo_managed_tool_versions(papercrown_root):
     versions = dependencies.load_versions_file(papercrown_root / "versions.env")
 
     assert versions["OBSIDIAN_EXPORT_VERSION"] == "25.3.0"
-    assert versions["PYTHON_VERSION"] == "3.12"
+    assert versions["PYTHON_VERSION"] == "3.14"
 
 
 def test_dependency_report_format_includes_owner_and_commands(tmp_path):

@@ -302,10 +302,7 @@ class FillerHeadingMarkerSpec:
             chapter=chapter,
             slot=slot,
             heading_level=heading_level,
-            slot_kind=(
-                _str_or_none(raw.get("slot_kind"))
-                or slot.removesuffix("-end")
-            ),
+            slot_kind=(_str_or_none(raw.get("slot_kind")) or slot.removesuffix("-end")),
             skip_first=bool(raw.get("skip_first", False)),
             context=_str_or_none(raw.get("context")),
         )
@@ -364,9 +361,7 @@ class FillerMarkersSpec:
                 headings.append(item)
                 continue
             if not isinstance(item, Mapping):
-                raise RecipeError(
-                    f"fillers.markers.headings[{i}] must be a mapping"
-                )
+                raise RecipeError(f"fillers.markers.headings[{i}] must be a mapping")
             headings.append(FillerHeadingMarkerSpec.from_dict(item, index=i))
         return cls(
             terminal=FillerTerminalMarkersSpec.from_raw(

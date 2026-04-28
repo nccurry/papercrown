@@ -69,6 +69,25 @@ function Get-RequiredCommand {
     return $command.Source
 }
 
+function Get-Sha256Hex {
+    param([string] $Path)
+
+    $stream = [System.IO.File]::OpenRead($Path)
+    try {
+        $sha256 = [System.Security.Cryptography.SHA256]::Create()
+        try {
+            $hash = [BitConverter]::ToString($sha256.ComputeHash($stream)) -replace "-", ""
+            return $hash.ToLowerInvariant()
+        }
+        finally {
+            $sha256.Dispose()
+        }
+    }
+    finally {
+        $stream.Dispose()
+    }
+}
+
 function Get-Winget {
     $winget = Get-Command winget -ErrorAction SilentlyContinue
     if (-not $winget) {
@@ -135,7 +154,7 @@ function Ensure-ObsidianExport {
     Invoke-WebRequest -Uri "$baseUrl/$asset" -OutFile $zip
     Invoke-WebRequest -Uri "$baseUrl/$asset.sha256" -OutFile $sha
     $expectedHash = ((Get-Content -LiteralPath $sha | Select-Object -First 1) -split "\s+")[0]
-    $actualHash = (Get-FileHash -Algorithm SHA256 -LiteralPath $zip).Hash.ToLowerInvariant()
+    $actualHash = Get-Sha256Hex -Path $zip
     if ($actualHash -ne $expectedHash.ToLowerInvariant()) {
         throw "obsidian-export checksum mismatch."
     }

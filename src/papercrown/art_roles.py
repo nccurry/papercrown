@@ -55,9 +55,7 @@ class ArtAssetClassification:
 
 
 ROLE_REGISTRY: dict[str, ArtRoleSpec] = {
-    "cover-front": ArtRoleSpec(
-        "cover-front", "covers", 8.5, 5.75, transparent=False
-    ),
+    "cover-front": ArtRoleSpec("cover-front", "covers", 8.5, 5.75, transparent=False),
     "cover-back": ArtRoleSpec("cover-back", "covers", 8.5, 5.75, transparent=False),
     "cover": ArtRoleSpec("cover", "covers", 8.5, 5.75, transparent=False),
     "chapter-divider": ArtRoleSpec(
@@ -171,9 +169,7 @@ def classify_art_path(
         return _classification("excluded")
 
     if stem == "cover-back" or stem.startswith("cover-back-"):
-        return _classification(
-            "cover-back", **_parse_prefix(stem, ("cover-back",))
-        )
+        return _classification("cover-back", **_parse_prefix(stem, ("cover-back",)))
     if stem in {"cover", "cover-front"} or stem.startswith("cover-front-"):
         role = "cover-front" if stem.startswith("cover-front") else "cover"
         convention = "canonical" if role == "cover-front" else "legacy"

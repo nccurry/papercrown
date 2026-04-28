@@ -63,9 +63,7 @@ _WEB_ASSET_ATTR_RE = re.compile(
     re.IGNORECASE,
 )
 _WINDOWS_ABSOLUTE_RE = re.compile(r"^[A-Za-z]:[\\/]")
-_CSS_URL_RE = re.compile(
-    r"url\(\s*(?P<quote>['\"]?)(?P<value>[^'\")]+)(?P=quote)\s*\)"
-)
+_CSS_URL_RE = re.compile(r"url\(\s*(?P<quote>['\"]?)(?P<value>[^'\")]+)(?P=quote)\s*\)")
 
 REQUIRED_FONTS: tuple[str, ...] = (
     "Rajdhani-Regular.ttf",
@@ -555,11 +553,7 @@ def _prepare_chapter_pdf_job(
 ) -> PdfRenderJob:
     """Prepare one chapter render without writing the PDF."""
     render_art = include_art and not _is_fast_draft(profile, draft_mode)
-    render_fillers = (
-        render_art
-        and manifest is not None
-        and manifest.fillers.enabled
-    )
+    render_fillers = render_art and manifest is not None and manifest.fillers.enabled
     markdown = assembly.assemble_chapter_markdown(
         chapter,
         export_map=export_map,
