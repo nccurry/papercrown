@@ -61,15 +61,7 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          source versions.env
-          image="${CI_IMAGE}:main"
-          docker pull "$image"
-          docker run --rm \
-            -e UV_CACHE_DIR=/workspace/.uv-cache \
-            -v "${{ github.workspace }}:/workspace" \
-            -w /workspace \
-            "$image" \
-            bash -lc 'git config --global --add safe.directory /workspace && uv sync --locked --all-groups && task check'
+          bash scripts/ci-image-run.sh 'task check'
 
   check-candidate:
     needs: toolchain

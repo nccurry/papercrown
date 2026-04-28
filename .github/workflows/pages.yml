@@ -53,14 +53,7 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          source versions.env
-          docker pull "${CI_IMAGE}:main"
-          docker run --rm \
-            -e UV_CACHE_DIR=/workspace/.uv-cache \
-            -v "${{ github.workspace }}:/workspace" \
-            -w /workspace \
-            "${CI_IMAGE}:main" \
-            bash -lc 'git config --global --add safe.directory /workspace && uv sync --locked --all-groups && task docs:build'
+          bash scripts/ci-image-run.sh 'task docs:build'
       - name: Configure Pages
         uses: actions/configure-pages@v6
       - name: Upload Pages artifact

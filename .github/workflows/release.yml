@@ -30,14 +30,7 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          source versions.env
-          docker pull "${CI_IMAGE}:main"
-          docker run --rm \
-            -e UV_CACHE_DIR=/workspace/.uv-cache \
-            -v "${{ github.workspace }}:/workspace" \
-            -w /workspace \
-            "${CI_IMAGE}:main" \
-            bash -lc 'git config --global --add safe.directory /workspace && uv sync --locked --all-groups && task package && task package:verify && task audit:public'
+          bash scripts/ci-image-run.sh 'task package && task package:verify && task audit:public'
       - name: Create GitHub release
         env:
           GH_TOKEN: ${{ github.token }}
