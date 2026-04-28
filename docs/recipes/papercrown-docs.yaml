@@ -185,6 +185,7 @@ chapters:
     toc_depth: 3
     sources:
       - docs:Recipes.md
+      - docs:Markdown Components.md
       - docs:Art.md
       - docs:Themes.md
       - docs:CLI.md
