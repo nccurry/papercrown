@@ -43,6 +43,12 @@ jobs:
           key: docs-cache-${{ hashFiles('versions.env', 'docs/recipes/papercrown-docs.yaml', 'docs/vault/**', 'docs/themes/**', 'docs/assets/**', 'src/papercrown/**') }}
           restore-keys: |
             docs-cache-
+      - name: Log in to GHCR
+        uses: docker/login-action@v4
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
       - name: Build docs
         shell: bash
         run: |
