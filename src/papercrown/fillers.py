@@ -1132,8 +1132,3 @@ def _page_content_bottom(page: object) -> float:
 
 def _stable_key(seed: str, asset_id: str) -> str:
     return hashlib.sha256(f"{seed}|{asset_id}".encode()).hexdigest()
-
-
-def _stable_unit(seed: str, salt: str) -> float:
-    digest = hashlib.sha256(f"{seed}|{salt}".encode()).hexdigest()
-    return int(digest[:12], 16) / float(16**12 - 1)

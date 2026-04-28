@@ -78,11 +78,6 @@ def load_theme(recipe: Recipe) -> ThemePack:
     )
 
 
-def theme_option_css(options: dict[str, str]) -> str | None:
-    """Return CSS custom-property overrides for recipe theme options."""
-    return _theme_options_css(options)
-
-
 def bundled_theme_names() -> list[str]:
     """Return bundled theme names available to recipes."""
     return [summary.name for summary in bundled_theme_summaries()]

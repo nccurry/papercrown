@@ -3,19 +3,16 @@
 from __future__ import annotations
 
 import hashlib
-import os
-import re
-import shutil
-import time
 from collections.abc import Callable
-from concurrent.futures import ThreadPoolExecutor, as_completed
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import cast
-from urllib.parse import unquote, urlparse
 
 from . import assembly, images, paths, pipeline, themes, ttrpg
+from . import build_jobs as _build_jobs
+from . import build_web as _build_web
 from . import page_damage as page_damage_module
+from .build_jobs import PdfRenderJob as PdfRenderJob
 from .cache import ArtifactCache, JsonValue, fingerprint_files
 from .diagnostics import DiagnosticSeverity
 from .export import Tools, ensure_exports_fresh
@@ -41,30 +38,18 @@ from .recipe import Recipe
 from .resources import (
     ASSETS_DIR,
     CORE_CSS_FILES,
-    CORE_STYLES_DIR,
     FONTS_DIR,
     LUA_FILTERS,
     TEXTURES_DIR,
 )
 
-LogFn = Callable[[str], None]
-WEB_IMAGE_SUFFIXES: set[str] = {
-    ".apng",
-    ".avif",
-    ".gif",
-    ".jpeg",
-    ".jpg",
-    ".png",
-    ".svg",
-    ".webp",
-}
-_WEB_ASSET_ATTR_RE = re.compile(
-    r'(?P<prefix>\b(?:src|href)=["\'])(?P<value>[^"\']+)(?P<suffix>["\'])',
-    re.IGNORECASE,
-)
-_WINDOWS_ABSOLUTE_RE = re.compile(r"^[A-Za-z]:[\\/]")
-_CSS_URL_RE = re.compile(r"url\(\s*(?P<quote>['\"]?)(?P<value>[^'\")]+)(?P=quote)\s*\)")
+_BuildTimer = _build_jobs.BuildTimer
+_RenderJobHooks = _build_jobs.RenderJobHooks
+_configure_job_timings = _build_jobs.configure_job_timings
+_run_prepared_jobs = _build_jobs.run_prepared_jobs
+_run_render_job_cached = _build_jobs.run_render_job_cached
 
+LogFn = Callable[[str], None]
 REQUIRED_FONTS: tuple[str, ...] = (
     "Rajdhani-Regular.ttf",
     "Rajdhani-SemiBold.ttf",
@@ -75,23 +60,6 @@ REQUIRED_FONTS: tuple[str, ...] = (
     "IBMPlexSerif-Bold.ttf",
     "IBMPlexSerif-BoldItalic.ttf",
 )
-
-
-@dataclass
-class _BuildTimer:
-    """Small opt-in timer for build orchestration diagnostics."""
-
-    enabled: bool
-    log: LogFn | None
-    start: float = field(default_factory=time.perf_counter)
-
-    def mark(self, label: str) -> None:
-        """Log elapsed time since the previous mark."""
-        if not self.enabled or self.log is None:
-            return
-        now = time.perf_counter()
-        self.log(f"  timing build {label}: {now - self.start:.2f}s")
-        self.start = now
 
 
 @dataclass(frozen=True)
@@ -125,17 +93,17 @@ class BuildResult:
 
 
 @dataclass(frozen=True)
-class PdfRenderJob:
-    """Prepared PDF render work that can run independently."""
+class _PdfJobOptions:
+    """Internal render options shared by chapter and combined-book jobs."""
 
-    label: str
-    markdown: str
-    out: Path
-    ctx: pipeline.RenderContext
-    input_paths: list[Path]
-    filler_catalog: FillerCatalog | None = None
-    page_damage_catalog: PageDamageCatalog | None = None
-    recipe_title: str | None = None
+    profile: OutputProfile
+    include_art: bool = True
+    draft_mode: DraftMode = DraftMode.FAST
+    pagination_mode: PaginationMode = PaginationMode.REPORT
+    page_damage_mode: PageDamageMode = PageDamageMode.AUTO
+    clean_pdf: bool = True
+    image_session: images.ImageOptimizationSession | None = None
+    filler_debug_overlay: bool = False
 
 
 def missing_fonts() -> list[str]:
@@ -168,24 +136,6 @@ def _image_cache_root(recipe: Recipe) -> Path:
     """Return the recipe image cache root, with a fallback for lightweight tests."""
     cache_dir = getattr(recipe, "cache_dir", Path.cwd() / ".papercrown-cache")
     return cache_dir / "images"
-
-
-def _configure_job_timings(
-    jobs: list[PdfRenderJob],
-    *,
-    enabled: bool,
-    log: LogFn | None,
-) -> None:
-    """Attach render diagnostics to prepared render jobs."""
-    for job in jobs:
-        ctx = getattr(job, "ctx", None)
-        if ctx is None:
-            continue
-        ctx.warning_log = log
-        if enabled:
-            ctx.timings = True
-            ctx.timing_label = job.label
-            ctx.timing_log = log
 
 
 def make_base_context(
@@ -541,17 +491,18 @@ def _prepare_chapter_pdf_job(
     chapter: Chapter,
     export_map: dict[Path, Path],
     *,
-    profile: OutputProfile,
+    options: _PdfJobOptions,
     manifest: Manifest | None = None,
-    include_art: bool = True,
-    draft_mode: DraftMode = DraftMode.FAST,
-    pagination_mode: PaginationMode = PaginationMode.REPORT,
-    page_damage_mode: PageDamageMode = PageDamageMode.AUTO,
-    clean_pdf: bool = True,
-    image_session: images.ImageOptimizationSession | None = None,
-    filler_debug_overlay: bool = False,
 ) -> PdfRenderJob:
     """Prepare one chapter render without writing the PDF."""
+    profile = options.profile
+    include_art = options.include_art
+    draft_mode = options.draft_mode
+    pagination_mode = options.pagination_mode
+    page_damage_mode = options.page_damage_mode
+    clean_pdf = options.clean_pdf
+    image_session = options.image_session
+    filler_debug_overlay = options.filler_debug_overlay
     render_art = include_art and not _is_fast_draft(profile, draft_mode)
     render_fillers = render_art and manifest is not None and manifest.fillers.enabled
     markdown = assembly.assemble_chapter_markdown(
@@ -655,18 +606,26 @@ def build_chapter_pdf(
         recipe,
         chapter,
         export_map,
-        profile=profile,
         manifest=manifest,
-        include_art=include_art,
-        draft_mode=draft_mode,
-        pagination_mode=pagination_mode,
-        page_damage_mode=page_damage_mode,
-        clean_pdf=clean_pdf,
-        image_session=image_session,
-        filler_debug_overlay=filler_debug_overlay,
+        options=_PdfJobOptions(
+            profile=profile,
+            include_art=include_art,
+            draft_mode=draft_mode,
+            pagination_mode=pagination_mode,
+            page_damage_mode=page_damage_mode,
+            clean_pdf=clean_pdf,
+            image_session=image_session,
+            filler_debug_overlay=filler_debug_overlay,
+        ),
     )
     _configure_job_timings([job], enabled=timings, log=log)
-    did_skip = _run_render_job_cached(job, cache=cache, force=force, log=log)
+    did_skip = _run_render_job_cached(
+        job,
+        cache=cache,
+        force=force,
+        log=log,
+        hooks=_render_job_hooks(),
+    )
     if did_skip and skipped is not None:
         skipped.append(job.out)
     return job.out
@@ -678,16 +637,17 @@ def _prepare_combined_book_job(
     manifest: Manifest,
     export_map: dict[Path, Path],
     *,
-    profile: OutputProfile,
-    include_art: bool = True,
-    draft_mode: DraftMode = DraftMode.FAST,
-    pagination_mode: PaginationMode = PaginationMode.REPORT,
-    page_damage_mode: PageDamageMode = PageDamageMode.AUTO,
-    clean_pdf: bool = True,
-    image_session: images.ImageOptimizationSession | None = None,
-    filler_debug_overlay: bool = False,
+    options: _PdfJobOptions,
 ) -> PdfRenderJob:
     """Prepare the combined book render without writing the PDF."""
+    profile = options.profile
+    include_art = options.include_art
+    draft_mode = options.draft_mode
+    pagination_mode = options.pagination_mode
+    page_damage_mode = options.page_damage_mode
+    clean_pdf = options.clean_pdf
+    image_session = options.image_session
+    filler_debug_overlay = options.filler_debug_overlay
     render_art = include_art and not _is_fast_draft(profile, draft_mode)
     render_fillers = render_art and manifest.fillers.enabled
     back_cover_pages = (
@@ -765,46 +725,6 @@ def _prepare_combined_book_job(
     )
 
 
-def build_combined_book(
-    tools: Tools,
-    recipe: Recipe,
-    manifest: Manifest,
-    export_map: dict[Path, Path],
-    *,
-    profile: OutputProfile,
-    cache: ArtifactCache | None = None,
-    force: bool = False,
-    skipped: list[Path] | None = None,
-    log: LogFn | None = None,
-    include_art: bool = True,
-    draft_mode: DraftMode = DraftMode.FAST,
-    pagination_mode: PaginationMode = PaginationMode.REPORT,
-    page_damage_mode: PageDamageMode = PageDamageMode.AUTO,
-    clean_pdf: bool = True,
-    timings: bool = False,
-    image_session: images.ImageOptimizationSession | None = None,
-) -> Path:
-    """Render the full manifest chapter tree to one combined book PDF."""
-    job = _prepare_combined_book_job(
-        tools,
-        recipe,
-        manifest,
-        export_map,
-        profile=profile,
-        include_art=include_art,
-        draft_mode=draft_mode,
-        pagination_mode=pagination_mode,
-        page_damage_mode=page_damage_mode,
-        clean_pdf=clean_pdf,
-        image_session=image_session,
-    )
-    _configure_job_timings([job], enabled=timings, log=log)
-    did_skip = _run_render_job_cached(job, cache=cache, force=force, log=log)
-    if did_skip and skipped is not None:
-        skipped.append(job.out)
-    return job.out
-
-
 def build_web_book(
     tools: Tools,
     recipe: Recipe,
@@ -820,8 +740,8 @@ def build_web_book(
         log("Building static web book...")
     out = paths.web_book_path(recipe)
     web_root = out.parent
-    _reset_web_output(web_root)
-    _copy_web_static_assets(web_root, recipe=recipe)
+    _build_web.reset_web_output(web_root)
+    _build_web.copy_web_static_assets(web_root, recipe=recipe)
 
     back_cover_pages = (
         assembly.render_back_cover_splashes(manifest.splashes) if include_art else ""
@@ -861,10 +781,10 @@ def build_web_book(
         image_session=image_session,
     )
     html = pipeline.render_markdown_to_html(markdown, ctx)
-    html = _rewrite_web_asset_refs(
+    html = _build_web.rewrite_web_asset_refs(
         html,
         web_root=web_root,
-        search_roots=_web_asset_search_roots(recipe),
+        search_roots=_build_web.web_asset_search_roots(recipe),
     )
     out.write_text(html, encoding="utf-8")
     return out
@@ -1001,6 +921,16 @@ def build_outputs(
     render_cache = ArtifactCache.load(request.recipe.cache_dir / "render-state.json")
     timer.mark("render cache load")
     effective_page_damage_mode = _effective_page_damage_mode(request)
+    pdf_job_options = _PdfJobOptions(
+        profile=request.profile,
+        include_art=request.include_art,
+        draft_mode=request.draft_mode,
+        pagination_mode=request.pagination_mode,
+        page_damage_mode=effective_page_damage_mode,
+        clean_pdf=request.clean_pdf,
+        image_session=image_session,
+        filler_debug_overlay=request.filler_debug_overlay,
+    )
 
     if request.scope is BuildScope.ALL:
         clean_stale_pdf_outputs(request.recipe, request.manifest, log=log)
@@ -1039,15 +969,8 @@ def build_outputs(
                     request.recipe,
                     chapter,
                     export_map,
-                    profile=request.profile,
                     manifest=request.manifest,
-                    include_art=request.include_art,
-                    draft_mode=request.draft_mode,
-                    pagination_mode=request.pagination_mode,
-                    page_damage_mode=effective_page_damage_mode,
-                    clean_pdf=request.clean_pdf,
-                    image_session=image_session,
-                    filler_debug_overlay=request.filler_debug_overlay,
+                    options=pdf_job_options,
                 )
             )
 
@@ -1072,15 +995,8 @@ def build_outputs(
                     request.recipe,
                     chapter,
                     export_map,
-                    profile=request.profile,
                     manifest=request.manifest,
-                    include_art=request.include_art,
-                    draft_mode=request.draft_mode,
-                    pagination_mode=request.pagination_mode,
-                    page_damage_mode=effective_page_damage_mode,
-                    clean_pdf=request.clean_pdf,
-                    image_session=image_session,
-                    filler_debug_overlay=request.filler_debug_overlay,
+                    options=pdf_job_options,
                 )
             )
 
@@ -1093,14 +1009,7 @@ def build_outputs(
                 request.recipe,
                 request.manifest,
                 export_map,
-                profile=request.profile,
-                include_art=request.include_art,
-                draft_mode=request.draft_mode,
-                pagination_mode=request.pagination_mode,
-                page_damage_mode=effective_page_damage_mode,
-                clean_pdf=request.clean_pdf,
-                image_session=image_session,
-                filler_debug_overlay=request.filler_debug_overlay,
+                options=pdf_job_options,
             )
         )
 
@@ -1112,6 +1021,7 @@ def build_outputs(
             force=request.force,
             max_workers=request.jobs,
             log=log,
+            hooks=_render_job_hooks(),
         )
         produced.extend(job_produced)
         skipped.extend(job_skipped)
@@ -1358,65 +1268,13 @@ def _render_image_search_roots(recipe: Recipe, manifest: Manifest | None) -> lis
     return list(dict.fromkeys(root.resolve() for root in roots if root.exists()))
 
 
-def _run_render_job_cached(
-    job: PdfRenderJob,
-    *,
-    cache: ArtifactCache | None,
-    force: bool,
-    log: LogFn | None,
-) -> bool:
-    """Render one prepared job unless the artifact cache is fresh."""
-    fingerprint = _render_job_fingerprint(job)
-    if cache is not None and not force and cache.hit(job.out, fingerprint):
-        if log is not None:
-            log(f"  cached: {_display_path(job.out)}")
-        return True
-    _render_job(job)
-    if cache is not None:
-        cache.record(job.out, fingerprint)
-    return False
-
-
-def _run_prepared_jobs(
-    jobs: list[PdfRenderJob],
-    *,
-    cache: ArtifactCache,
-    force: bool,
-    max_workers: int,
-    log: LogFn | None,
-) -> tuple[list[Path], list[Path]]:
-    """Run prepared render jobs, optionally in parallel."""
-    produced: list[Path] = []
-    skipped: list[Path] = []
-    pending: list[tuple[PdfRenderJob, str]] = []
-    for job in jobs:
-        fingerprint = _render_job_fingerprint(job)
-        if not force and cache.hit(job.out, fingerprint):
-            if log is not None:
-                log(f"  cached: {_display_path(job.out)}")
-            skipped.append(job.out)
-            continue
-        pending.append((job, fingerprint))
-
-    if max_workers <= 1 or len(pending) <= 1:
-        for job, fingerprint in pending:
-            _render_job(job)
-            cache.record(job.out, fingerprint)
-            produced.append(job.out)
-        return produced, skipped
-
-    with ThreadPoolExecutor(max_workers=max_workers) as executor:
-        futures = {
-            executor.submit(_render_job, job): (job, fingerprint)
-            for job, fingerprint in pending
-        }
-        for future in as_completed(futures):
-            job, fingerprint = futures[future]
-            future.result()
-            cache.record(job.out, fingerprint)
-            produced.append(job.out)
-    produced.sort(key=lambda path: path.as_posix())
-    return produced, skipped
+def _render_job_hooks() -> _RenderJobHooks:
+    """Return cache/executor callbacks for prepared PDF jobs."""
+    return _RenderJobHooks(
+        render=_render_job,
+        fingerprint=_render_job_fingerprint,
+        display_path=_display_path,
+    )
 
 
 def _render_job(job: PdfRenderJob) -> None:
@@ -1457,45 +1315,6 @@ def _pagination_report_path(out: Path, mode: PaginationMode) -> Path | None:
     if mode is PaginationMode.OFF:
         return None
     return out.with_suffix(".pagination-report.md")
-
-
-def _render_markdown_to_pdf_cached(
-    markdown: str,
-    out: Path,
-    ctx: pipeline.RenderContext,
-    *,
-    cache: ArtifactCache | None,
-    force: bool,
-    input_paths: list[Path],
-    log: LogFn | None,
-    filler_catalog: FillerCatalog | None = None,
-    page_damage_catalog: PageDamageCatalog | None = None,
-    recipe_title: str | None = None,
-) -> bool:
-    """Render a PDF unless the artifact cache proves it is up to date."""
-    ctx.page_background_underlay = (
-        page_damage_catalog is not None
-        and page_damage_catalog.enabled
-        and ctx.page_damage_mode == PageDamageMode.FULL.value
-    )
-    fingerprint = _render_fingerprint(markdown, ctx, input_paths=input_paths)
-    if cache is not None and not force and cache.hit(out, fingerprint):
-        if log is not None:
-            log(f"  cached: {_display_path(out)}")
-        return True
-    pipeline.render_markdown_to_pdf(
-        markdown,
-        out,
-        ctx,
-        filler_catalog=filler_catalog,
-        page_damage_catalog=page_damage_catalog,
-        recipe_title=recipe_title,
-        filler_report_path=_filler_report_path(out, ctx, filler_catalog),
-        missing_art_report_path=_missing_art_report_path(out, ctx, filler_catalog),
-    )
-    if cache is not None:
-        cache.record(out, fingerprint)
-    return False
 
 
 def _filler_report_path(
@@ -1666,201 +1485,3 @@ def _display_path(path: Path) -> str:
         return str(path.resolve().relative_to(cwd))
     except ValueError:
         return str(path)
-
-
-def _reset_web_output(web_root: Path) -> None:
-    """Delete and recreate the static web output directory."""
-    if web_root.exists():
-        shutil.rmtree(web_root)
-    web_root.mkdir(parents=True, exist_ok=True)
-
-
-def _copy_web_static_assets(web_root: Path, *, recipe: Recipe) -> None:
-    """Copy stylesheets and bundled fonts into a static web output tree."""
-    styles_dir = web_root / "styles"
-    styles_dir.mkdir(parents=True, exist_ok=True)
-    shutil.copytree(CORE_STYLES_DIR, styles_dir / "core", dirs_exist_ok=True)
-
-    theme = themes.load_theme(recipe)
-    theme_out = styles_dir / "themes" / theme.name
-    shutil.copytree(theme.root, theme_out, dirs_exist_ok=True)
-    _write_web_stylesheet_bundle(styles_dir, theme=theme, theme_out=theme_out)
-
-    fonts_out = web_root / "assets" / "fonts"
-    fonts_out.mkdir(parents=True, exist_ok=True)
-    if FONTS_DIR.is_dir():
-        for font in sorted(FONTS_DIR.iterdir(), key=lambda path: path.name):
-            if font.is_file():
-                shutil.copy2(font, fonts_out / font.name)
-
-
-def _write_web_stylesheet_bundle(
-    styles_dir: Path,
-    *,
-    theme: themes.ThemePack,
-    theme_out: Path,
-) -> None:
-    """Write a generated web CSS bundle from core modules and theme CSS."""
-    out = styles_dir / "book.css"
-    sources = [styles_dir / "core" / path.name for path in CORE_CSS_FILES]
-    sources.extend(theme_out / path.relative_to(theme.root) for path in theme.css_files)
-    sections = ["/* Generated by Paper Crown. Edit source CSS, not this file. */"]
-    for source in sources:
-        label = source.relative_to(styles_dir).as_posix()
-        css = _rebase_css_urls_for_output(
-            source.read_text(encoding="utf-8"),
-            source_css=source,
-            output_css=out,
-        ).strip()
-        sections.append(f"/* --- {label} --- */\n{css}")
-    out.write_text("\n\n".join(sections) + "\n", encoding="utf-8")
-
-
-def _rebase_css_urls_for_output(
-    css: str,
-    *,
-    source_css: Path,
-    output_css: Path,
-) -> str:
-    """Rebase relative ``url(...)`` references for a generated CSS bundle."""
-
-    def replace(match: re.Match[str]) -> str:
-        value = match.group("value").strip()
-        if _is_external_css_url(value):
-            return match.group(0)
-        target = (source_css.parent / value).resolve()
-        rel = os.path.relpath(target, output_css.parent.resolve()).replace("\\", "/")
-        return f"url('{rel}')"
-
-    return _CSS_URL_RE.sub(replace, css)
-
-
-def _is_external_css_url(value: str) -> bool:
-    """Return whether a CSS URL should not be rebased."""
-    lowered = value.lower()
-    return (
-        not value
-        or lowered.startswith(("data:", "http:", "https:", "file:", "var("))
-        or value.startswith(("/", "#"))
-    )
-
-
-def _rewrite_web_asset_refs(
-    html: str,
-    *,
-    web_root: Path,
-    search_roots: list[Path] | None = None,
-) -> str:
-    """Copy local image references into ``web_root`` and rewrite HTML attrs."""
-    copied: dict[Path, str] = {}
-    roots = search_roots or []
-
-    def replace(match: re.Match[str]) -> str:
-        value = match.group("value")
-        source = _local_asset_path(value, search_roots=roots)
-        if source is None:
-            return match.group(0)
-        if source.suffix.lower() not in WEB_IMAGE_SUFFIXES or not source.is_file():
-            return match.group(0)
-        relative = _copy_web_image(source, web_root=web_root, copied=copied)
-        return f"{match.group('prefix')}{relative}{match.group('suffix')}"
-
-    return _WEB_ASSET_ATTR_RE.sub(replace, html)
-
-
-def _local_asset_path(
-    value: str,
-    *,
-    search_roots: list[Path] | None = None,
-) -> Path | None:
-    """Resolve a local HTML asset reference to a filesystem path if possible."""
-    if _is_non_file_reference(value):
-        return None
-
-    path_value = value.split("#", 1)[0].split("?", 1)[0]
-    if not path_value:
-        return None
-
-    unquoted = unquote(path_value)
-    if _WINDOWS_ABSOLUTE_RE.match(unquoted):
-        return Path(unquoted)
-
-    parsed = urlparse(path_value)
-    if parsed.scheme == "file":
-        file_path = unquote(parsed.path)
-        if re.match(r"^/[A-Za-z]:/", file_path):
-            file_path = file_path[1:]
-        return Path(file_path)
-    if parsed.scheme:
-        return None
-
-    path = Path(unquoted)
-    if path.is_absolute():
-        return path
-    return _find_relative_asset(path, search_roots=search_roots or [])
-
-
-def _web_asset_search_roots(recipe: Recipe) -> list[Path]:
-    """Return roots searched for relative images in static web HTML."""
-    roots = [
-        recipe.cache_dir / "exports",
-        recipe.art_dir,
-        ASSETS_DIR,
-        *themes.load_theme(recipe).resource_paths,
-    ]
-    return list(dict.fromkeys(root.resolve() for root in roots if root.exists()))
-
-
-def _find_relative_asset(path: Path, *, search_roots: list[Path]) -> Path | None:
-    """Find a relative asset directly or by basename under known roots."""
-    for root in search_roots:
-        direct = root / path
-        if direct.is_file():
-            return direct
-    if len(path.parts) != 1:
-        return None
-    matches: list[Path] = []
-    for root in search_roots:
-        matches.extend(
-            candidate for candidate in root.rglob(path.name) if candidate.is_file()
-        )
-    if not matches:
-        return None
-    return sorted(matches, key=lambda candidate: candidate.as_posix())[0]
-
-
-def _is_non_file_reference(value: str) -> bool:
-    """Return whether an HTML reference is not a local file asset."""
-    lowered = value.lower()
-    return (
-        lowered.startswith("#")
-        or lowered.startswith("http://")
-        or lowered.startswith("https://")
-        or lowered.startswith("data:")
-        or lowered.startswith("mailto:")
-        or lowered.startswith("tel:")
-        or lowered.startswith("javascript:")
-    )
-
-
-def _copy_web_image(
-    source: Path,
-    *,
-    web_root: Path,
-    copied: dict[Path, str],
-) -> str:
-    """Copy an image under ``assets/images`` and return its web-relative path."""
-    resolved = source.resolve()
-    existing = copied.get(resolved)
-    if existing is not None:
-        return existing
-
-    stem = slugify(resolved.stem) or "image"
-    digest = hashlib.sha256(resolved.as_posix().encode("utf-8")).hexdigest()[:10]
-    filename = f"{stem}-{digest}{resolved.suffix.lower()}"
-    dest = web_root / "assets" / "images" / filename
-    dest.parent.mkdir(parents=True, exist_ok=True)
-    shutil.copy2(resolved, dest)
-    relative = dest.relative_to(web_root).as_posix()
-    copied[resolved] = relative
-    return relative

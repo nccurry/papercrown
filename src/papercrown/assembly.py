@@ -19,8 +19,10 @@ from __future__ import annotations
 import re
 from collections.abc import Iterator
 from pathlib import Path
-from typing import TypedDict
 
+from . import assembly_art as _art_blocks
+from . import assembly_headings as _headings
+from . import assembly_sources as _source_notes
 from .manifest import (
     Chapter,
     ChapterFillerSlot,
@@ -28,18 +30,11 @@ from .manifest import (
     Splash,
     slugify,
 )
-from .vaults import VaultIndex, WikilinkTarget
+from .vaults import VaultIndex
+
+render_back_cover_splashes = _art_blocks.render_back_cover_splashes
 
 FRAME_TABLE_MARKER = "<!-- AUTO_FRAME_TABLE -->"
-_OBSIDIAN_EMBED_LINE_RE = re.compile(r"^(?P<indent>\s*)!\[\[(?P<target>[^\]]+)\]\]\s*$")
-
-
-class TocNode(TypedDict):
-    """A manual table-of-contents node used during markdown assembly."""
-
-    title: str
-    ident: str
-    children: list[TocNode]
 
 
 # ---------------------------------------------------------------------------
@@ -71,11 +66,11 @@ def assemble_chapter_markdown(
 
     parts: list[str] = []
     for i, src in enumerate(chapter.source_files):
-        body = _read_via_export(src, export_map, vault_index=vault_index)
-        body = _strip_frontmatter(body).strip()
-        body = _normalize_heading_spacing(body)
+        body = _source_notes.read_via_export(src, export_map, vault_index=vault_index)
+        body = _source_notes.strip_frontmatter(body).strip()
+        body = _source_notes.normalize_heading_spacing(body)
         if i < len(chapter.source_strip_related) and chapter.source_strip_related[i]:
-            body = _strip_trailing_related_section(body)
+            body = _source_notes.strip_trailing_related_section(body)
         source_title = (
             chapter.source_titles[i] if i < len(chapter.source_titles) else None
         )
@@ -88,8 +83,8 @@ def assemble_chapter_markdown(
         if (
             source_title
             and not stripped_wrapper_heading
-            and not _starts_with_h1(body)
-            and not _starts_with_heading_title(body, source_title)
+            and not _source_notes.starts_with_h1(body)
+            and not _source_notes.starts_with_heading_title(body, source_title)
         ):
             body = f"# {source_title}\n\n{body}"
         if chapter.slug.startswith("original-"):
@@ -134,13 +129,13 @@ def assemble_chapter_markdown(
         if i == 0:
             parts.append(body)
         else:
-            parts.append("\n\n" + _demote_h1s(body).strip())
+            parts.append("\n\n" + _source_notes.demote_h1s(body).strip())
 
     combined = "\n\n".join(parts)
 
     # Make sure the chapter has an h1. If the first file didn't open with one,
     # prepend the chapter title.
-    if not _starts_with_h1(combined):
+    if not _source_notes.starts_with_h1(combined):
         combined = f"# {chapter.title}\n\n" + combined
     combined = _normalize_original_frame_size_line(combined, chapter)
     if chapter.style == "source-reference":
@@ -286,7 +281,7 @@ def assemble_combined_book_markdown(
             if is_top or wants_descendant_divider:
                 body = _strip_leading_h1(body)
             elif slug:
-                body = _ensure_leading_heading_id(body, slug)
+                body = _headings.ensure_leading_heading_id(body, slug)
             if depth >= 1:
                 body = _demote_headings(body, by=depth)
 
@@ -307,19 +302,6 @@ def assemble_combined_book_markdown(
     return markdown
 
 
-def render_back_cover_splashes(splashes: list[Splash] | None) -> str:
-    """Render back-cover splash placements as terminal cover pages."""
-    return "\n\n".join(
-        block
-        for block in (
-            _render_splash_page(splash)
-            for splash in splashes or []
-            if splash.target == "back-cover"
-        )
-        if block
-    )
-
-
 def add_manual_toc(
     markdown: str,
     chapters: list[Chapter],
@@ -327,10 +309,10 @@ def add_manual_toc(
     max_depth: int | None = None,
 ) -> str:
     """Attach heading ids and prepend the generated manual table of contents."""
-    markdown = _ensure_heading_ids(markdown)
-    markdown = _dedupe_generated_anchor_ids(markdown)
+    markdown = _headings.ensure_heading_ids(markdown)
+    markdown = _headings.dedupe_generated_anchor_ids(markdown)
     return (
-        _render_manual_toc(
+        _headings.render_manual_toc(
             markdown,
             toc_depths=_toc_depths_for_top_level(chapters),
             max_depth=max_depth,
@@ -338,17 +320,6 @@ def add_manual_toc(
         + "\n\n"
         + markdown
     )
-
-
-def _walk_with_depth(root: Chapter) -> Iterator[tuple[Chapter, int]]:
-    """Depth-first walk yielding `(chapter, depth)` pairs (root has depth 0)."""
-
-    def _go(ch: Chapter, depth: int) -> Iterator[tuple[Chapter, int]]:
-        yield ch, depth
-        for c in ch.children:
-            yield from _go(c, depth + 1)
-
-    yield from _go(root, 0)
 
 
 def _walk_with_ancestry(root: Chapter) -> Iterator[tuple[Chapter, int, list[Chapter]]]:
@@ -410,7 +381,7 @@ def _render_section_divider(
     """
     eyebrow = chapter.eyebrow or "Section"
     if eyebrow_link:
-        eyebrow = f"[{_markdown_link_text(eyebrow)}](#{eyebrow_link})"
+        eyebrow = f"[{_headings.markdown_link_text(eyebrow)}](#{eyebrow_link})"
     title = chapter.title
     slug = chapter.slug or "section"
     running_title = breadcrumb or title
@@ -452,8 +423,9 @@ def _render_section_divider(
     # Outer fence with attributes (data-* attribute requires the explicit
     # attribute syntax with quotes). Pandoc renders this as a `<div>` with
     # the listed classes/id/data-attrs.
+    running_title_attr = _headings.attribute_value(running_title)
     divider_attrs = (
-        f'.section-divider data-chapter-name="{_attribute_value(running_title)}" '
+        f'.section-divider data-chapter-name="{running_title_attr}" '
         f'id="div-{slug}"'
     )
     return (
@@ -510,17 +482,20 @@ def _strip_redundant_wrapper_heading(text: str, source_title: str) -> tuple[str,
     i = 0
     while i < len(lines) and lines[i].strip() == "":
         i += 1
-    if i >= len(lines) or not _is_atx_h1(lines[i]):
+    if i >= len(lines) or not _headings.is_atx_h1(lines[i]):
         return text, False
 
-    heading = _heading_title_for_slug(lines[i])
-    if heading is None or not _heading_matches_source_title(heading, source_title):
+    heading = _headings.heading_title_for_slug(lines[i])
+    if heading is None or not _source_notes.heading_matches_source_title(
+        heading,
+        source_title,
+    ):
         return text, False
 
     j = i + 1
     while j < len(lines) and lines[j].strip() == "":
         j += 1
-    if j >= len(lines) or _heading_level(lines[j]) is None:
+    if j >= len(lines) or _headings.heading_level(lines[j]) is None:
         return text, False
 
     return "\n".join(lines[:i] + lines[j:]).lstrip("\n"), True
@@ -540,7 +515,7 @@ def _inject_class_spot(text: str, chapter: Chapter) -> str:
     lines = body.splitlines()
     prefix = "\n".join(lines[:insert_at]).rstrip()
     suffix = "\n".join(lines[insert_at:]).lstrip("\n")
-    block = _render_image_block(
+    block = _art_blocks.render_image_block(
         chapter.spot_art_path,
         classes=".class-opening-spot .art-right .art-spot",
     )
@@ -556,7 +531,7 @@ def _normalize_original_frame_size_line(text: str, chapter: Chapter) -> str:
     i = 0
     while i < len(lines) and lines[i].strip() == "":
         i += 1
-    if i >= len(lines) or not _is_atx_h1(lines[i]):
+    if i >= len(lines) or not _headings.is_atx_h1(lines[i]):
         return text
 
     j = i + 1
@@ -578,7 +553,7 @@ def _append_filler_slots(text: str, slots: list[ChapterFillerSlot]) -> str:
     """Append zero-height conditional filler markers."""
     if not slots:
         return text
-    blocks = [_render_filler_slot(slot) for slot in slots]
+    blocks = [_art_blocks.render_filler_slot(slot) for slot in slots]
     return f"{text.rstrip()}\n\n" + "\n\n".join(blocks) + "\n"
 
 
@@ -592,7 +567,7 @@ def _append_source_end_filler_slot(
     context: str | None = None,
 ) -> str:
     """Append a section-scoped filler marker after one assembled source file."""
-    title = _first_heading_text(text) or source.stem
+    title = _source_notes.first_heading_text(text) or source.stem
     section_slug = slugify(title)
     source_slug = slugify(f"{source.parent.name}-{source.stem}")
     stable_slug = (
@@ -607,7 +582,7 @@ def _append_source_end_filler_slot(
         slot_kind=slot_kind or slot_name.removesuffix("-end"),
         context=context,
     )
-    return f"{text.rstrip()}\n\n{_render_filler_slot(slot)}\n"
+    return f"{text.rstrip()}\n\n{_art_blocks.render_filler_slot(slot)}\n"
 
 
 def _source_filler_context(
@@ -751,7 +726,7 @@ def _insert_heading_section_end_filler_slots(
                             used=used,
                         ),
                     )
-                title = _plain_heading_title(match.group(2))
+                title = _headings.plain_heading_title(match.group(2))
                 if skip_first and seen_headings == 1:
                     current_title = None
                     current_slug = None
@@ -797,7 +772,7 @@ def _render_section_end_filler_slot(
     count = used.get(section_slug, 0) + 1
     used[section_slug] = count
     stable_slug = section_slug if count == 1 else f"{section_slug}-{count}"
-    return _render_filler_slot(
+    return _art_blocks.render_filler_slot(
         ChapterFillerSlot(
             id=f"filler-{slot_name}-{chapter.slug}-{stable_slug}",
             slot=slot_name,
@@ -813,15 +788,6 @@ def _render_section_end_filler_slot(
 def _is_subclass_source(source: Path) -> bool:
     """Return whether a source file belongs to a class Subclasses folder."""
     return any(part.lower() == "subclasses" for part in source.parts)
-
-
-def _first_heading_text(text: str) -> str | None:
-    """Return the first ATX heading title in a markdown fragment."""
-    for line in text.splitlines():
-        match = re.match(r"^#{1,6}\s+(.+?)\s*(?:#+\s*)?$", line)
-        if match is not None:
-            return _plain_heading_title(match.group(1))
-    return None
 
 
 def _extract_frame_section_art_blocks(text: str) -> tuple[str, dict[str, str]]:
@@ -841,15 +807,15 @@ def _extract_frame_section_art_blocks(text: str) -> tuple[str, dict[str, str]]:
             i += 1
             continue
 
-        title = None if in_code else _heading_title_for_slug(line)
-        if not in_code and _is_atx_h1(line):
+        title = None if in_code else _headings.heading_title_for_slug(line)
+        if not in_code and _headings.is_atx_h1(line):
             is_first_h1 = not seen_h1
             seen_h1 = True
             if not is_first_h1 and title:
                 extracted = _extract_following_art_frame(lines, i + 1)
                 if extracted is not None:
                     art_src, next_index = extracted
-                    art_by_slug[slugify(_plain_heading_title(title))] = art_src
+                    art_by_slug[slugify(_headings.plain_heading_title(title))] = art_src
                     out.append(line)
                     i = next_index
                     continue
@@ -891,27 +857,6 @@ def _extract_following_art_frame(
     return art_src, j
 
 
-def _render_filler_slot(slot: ChapterFillerSlot) -> str:
-    """Render one Pandoc fenced div marker for post-layout filler selection."""
-    attrs = [
-        f'data-slot="{_attribute_value(slot.slot)}"',
-        f'data-chapter="{_attribute_value(slot.chapter_slug)}"',
-    ]
-    if slot.preferred_asset_id:
-        attrs.append(
-            f'data-preferred-filler="{_attribute_value(slot.preferred_asset_id)}"'
-        )
-    if slot.section_slug:
-        attrs.append(f'data-section="{_attribute_value(slot.section_slug)}"')
-    if slot.section_title:
-        attrs.append(f'data-section-title="{_attribute_value(slot.section_title)}"')
-    if slot.slot_kind:
-        attrs.append(f'data-slot-kind="{_attribute_value(slot.slot_kind)}"')
-    if slot.context:
-        attrs.append(f'data-filler-context="{_attribute_value(slot.context)}"')
-    return f":::: {{.filler-slot #{slot.id} {' '.join(attrs)}}}\n::::"
-
-
 def _inject_headpiece(text: str, headpiece_path: Path | None) -> str:
     """Insert one configured headpiece after the leading chapter heading."""
     if headpiece_path is None:
@@ -919,7 +864,10 @@ def _inject_headpiece(text: str, headpiece_path: Path | None) -> str:
     insert_at = _after_leading_h1_index(text)
     if insert_at is None:
         return text
-    block = _render_image_block(headpiece_path, classes=".ornament-headpiece")
+    block = _art_blocks.render_image_block(
+        headpiece_path,
+        classes=".ornament-headpiece",
+    )
     return _insert_block_at_line(text, insert_at, block)
 
 
@@ -930,7 +878,10 @@ def _replace_thematic_breaks_with_ornament(
     """Replace Markdown thematic breaks with a selected ornament in opted chapters."""
     if break_ornament_path is None:
         return text
-    block = _render_image_block(break_ornament_path, classes=".ornament-break")
+    block = _art_blocks.render_image_block(
+        break_ornament_path,
+        classes=".ornament-break",
+    )
     out: list[str] = []
     in_code = False
     for line in text.splitlines():
@@ -950,7 +901,10 @@ def _append_tailpiece(text: str, tailpiece_path: Path | None) -> str:
     """Append a configured tailpiece as in-flow art."""
     if tailpiece_path is None:
         return text
-    block = _render_image_block(tailpiece_path, classes=".ornament-tailpiece")
+    block = _art_blocks.render_image_block(
+        tailpiece_path,
+        classes=".ornament-tailpiece",
+    )
     return f"{text.rstrip()}\n\n{block}\n"
 
 
@@ -970,7 +924,7 @@ def _insert_chapter_splashes(
     """Insert configured in-flow splash art for a chapter body."""
     out = text
     for splash in splashes:
-        block = _render_splash_block(splash)
+        block = _art_blocks.render_splash_block(splash)
         if splash.target == "chapter-start":
             insert_at = _after_leading_h1_index(out)
             if insert_at is not None:
@@ -1004,7 +958,7 @@ def _insert_block_after_heading(text: str, heading_slug: str, block: str) -> str
         out.append(line)
         if inserted or in_code or not line.startswith("#"):
             continue
-        title = _heading_title_for_slug(line)
+        title = _headings.heading_title_for_slug(line)
         if title and _heading_matches_target_slug(title, heading_slug):
             out.extend(["", block, ""])
             inserted = True
@@ -1013,41 +967,8 @@ def _insert_block_after_heading(text: str, heading_slug: str, block: str) -> str
 
 def _heading_matches_target_slug(title: str, heading_slug: str) -> bool:
     """Return whether a rendered heading matches a recipe heading target."""
-    rendered_slug = slugify(_plain_heading_title(title))
+    rendered_slug = slugify(_headings.plain_heading_title(title))
     return rendered_slug == heading_slug or rendered_slug.startswith(f"{heading_slug}-")
-
-
-def _render_splash_block(splash: Splash) -> str:
-    """Render an in-flow splash art block."""
-    if splash.art_path is None:
-        return ""
-    placement_class = {
-        "corner-left": ".splash-corner-left",
-        "corner-right": ".splash-corner-right",
-        "bottom-half": ".splash-bottom-half",
-    }.get(splash.placement, ".splash-bottom-half")
-    return (
-        f":::: {{.splash-art {placement_class} #splash-{splash.id}}}\n"
-        f"![](<{splash.art_path.as_posix()}>){{.splash-img}}\n"
-        "::::"
-    )
-
-
-def _render_splash_page(splash: Splash) -> str:
-    """Render a full-page book splash, currently used for the back cover."""
-    if splash.art_path is None:
-        return ""
-    placement_class = ".splash-back-cover .cover-back-page"
-    return (
-        f":::: {{.splash-page {placement_class} #splash-{splash.id}}}\n\n"
-        f"![](<{splash.art_path.as_posix()}>){{.splash-page-art .cover-back-art}}\n\n"
-        "::::"
-    )
-
-
-def _render_image_block(path: Path, *, classes: str) -> str:
-    """Render a markdown image wrapped in a Pandoc fenced div."""
-    return f":::: {{{classes}}}\n![](<{path.as_posix()}>)\n::::"
 
 
 def _prefix_original_source_anchor(
@@ -1061,7 +982,7 @@ def _prefix_original_source_anchor(
     anchor = "original-" + slugify(source.stem)
     if anchor == chapter_slug:
         return text
-    marker = _anchor_marker(anchor)
+    marker = _headings.anchor_marker(anchor)
     if not is_first_source:
         return f"{marker}\n\n{text.lstrip()}"
 
@@ -1090,88 +1011,32 @@ def _inject_original_reference_anchors(text: str) -> str:
             out.append(line)
             continue
         if not in_code:
-            if _is_anchor_marker_line(line):
+            if _headings.is_anchor_marker_line(line):
                 out.append(line)
                 continue
-            if not saw_leading_h1 and _is_atx_h1(line):
+            if not saw_leading_h1 and _headings.is_atx_h1(line):
                 saw_leading_h1 = True
                 out.append(line)
                 continue
             anchor = _original_reference_anchor_id(line)
             if anchor:
                 if anchor not in seen:
-                    _append_anchor_marker(out, anchor)
+                    _headings.append_anchor_marker(out, anchor)
                     seen.add(anchor)
-                if _heading_id(line) == anchor:
+                if _headings.heading_id(line) == anchor:
                     line = _strip_heading_attributes(line)
         out.append(line)
     return "\n".join(out)
 
 
-def _append_anchor_marker(out: list[str], anchor: str) -> None:
-    """Append a hidden anchor heading with block-level spacing."""
-    if out and out[-1].strip():
-        out.append("")
-    out.append(_anchor_marker(anchor))
-    out.append("")
-
-
-def _anchor_marker(anchor: str) -> str:
-    """Return a zero-height Markdown heading destination marker for PDF links."""
-    return f"###### [ ](#{anchor}) {{.pdf-anchor #{anchor}}}"
-
-
-def _dedupe_generated_anchor_ids(text: str) -> str:
-    """Rename generated hidden anchors when they collide with visible headings.
-
-    Original-reference appendices intentionally add hidden anchors for feature
-    labels. Generic labels such as level rows can repeat across many sources,
-    so generated anchors must not claim the same id more than once.
-    """
-    real_ids = {
-        ident
-        for line in text.splitlines()
-        if not _is_anchor_marker_line(line)
-        for ident in [_heading_id(line)]
-        if ident
-    }
-    seen: dict[str, int] = {ident: 1 for ident in real_ids}
-    out: list[str] = []
-    for line in text.splitlines():
-        if not _is_anchor_marker_line(line):
-            out.append(line)
-            continue
-        ident = _heading_id(line)
-        if ident is None:
-            out.append(line)
-            continue
-        if ident in seen:
-            deduped = _unique_heading_id(ident, seen)
-            out.append(line.replace(f"#{ident}", f"#{deduped}"))
-        else:
-            seen[ident] = 1
-            out.append(line)
-    return "\n".join(out)
-
-
-def _has_anchor(text: str, anchor: str) -> bool:
-    """Return whether a raw HTML id or Markdown heading id already exists."""
-    return f'id="{anchor}"' in text or anchor in _explicit_heading_ids(text)
-
-
-def _is_anchor_marker_line(line: str) -> bool:
-    """Return whether a line is one of the hidden generated anchor headings."""
-    return ".pdf-anchor" in line and _heading_id(line) is not None
-
-
 def _original_reference_anchor_id(line: str) -> str | None:
     """Return an original reference anchor for a heading/standalone-bold line."""
-    title = _heading_title_for_slug(line)
+    title = _headings.heading_title_for_slug(line)
     if title:
-        explicit = _heading_id(line)
+        explicit = _headings.heading_id(line)
         if explicit and explicit.startswith("original-language-"):
             return explicit
-        base = _heading_base_id(title)
+        base = _headings.heading_base_id(title)
         if base.startswith("original-"):
             return None
         return base if base.startswith("original-") else "original-" + base
@@ -1181,7 +1046,7 @@ def _original_reference_anchor_id(line: str) -> str | None:
     title = match.group("title").rstrip(":").strip()
     if not title:
         return None
-    return "original-" + slugify(_plain_heading_title(title))
+    return "original-" + slugify(_headings.plain_heading_title(title))
 
 
 def _strip_heading_attributes(line: str) -> str:
@@ -1205,7 +1070,7 @@ def _after_leading_h1_index(text: str) -> int | None:
     i = 0
     while i < len(lines) and lines[i].strip() == "":
         i += 1
-    if i >= len(lines) or not _is_atx_h1(lines[i]):
+    if i >= len(lines) or not _headings.is_atx_h1(lines[i]):
         return None
     i += 1
     while i < len(lines) and lines[i].strip() == "":
@@ -1258,275 +1123,6 @@ def _opening_art_spot_fence(line: str) -> re.Match[str] | None:
     return match
 
 
-def _starts_with_h1(text: str) -> bool:
-    """Return True when the first nonblank line is an ATX H1."""
-    for line in text.splitlines():
-        if line.strip() == "":
-            continue
-        return _is_atx_h1(line)
-    return False
-
-
-def _starts_with_heading_title(text: str, title: str) -> bool:
-    """Return True if the first nonblank line is any ATX heading with title."""
-    for line in text.splitlines():
-        if line.strip() == "":
-            continue
-        heading = _heading_title_for_slug(line)
-        if heading is None:
-            return False
-        return _heading_matches_source_title(heading, title)
-    return False
-
-
-def _heading_matches_source_title(heading: str, title: str) -> bool:
-    wanted = _plain_heading_title(title).lower()
-    if _plain_heading_title(heading).lower() == wanted:
-        return True
-
-    source_link = re.fullmatch(
-        r"(?P<title>.+?)\s+\(\[[^\]]+\]\([^)]+\)\)",
-        heading,
-    )
-    if source_link is None:
-        return False
-    return _plain_heading_title(source_link.group("title")).lower() == wanted
-
-
-# ---------------------------------------------------------------------------
-# Internals
-# ---------------------------------------------------------------------------
-
-
-def _read_via_export(
-    src: Path,
-    export_map: dict[Path, Path] | None,
-    *,
-    vault_index: VaultIndex | None = None,
-) -> str:
-    """Read source file content, preferring an exported copy if available."""
-    raw: str | None = None
-    if export_map:
-        mapped = export_map.get(src.resolve())
-        if mapped is not None and mapped.is_file():
-            exported = mapped.read_text(encoding="utf-8")
-            if vault_index is not None:
-                raw = src.read_text(encoding="utf-8")
-                if _should_expand_obsidian_embeds(raw, exported, src, vault_index):
-                    return _expand_obsidian_embeds(raw, src, vault_index=vault_index)
-            return exported
-    raw = src.read_text(encoding="utf-8")
-    if vault_index is not None and _contains_obsidian_embed(raw):
-        return _expand_obsidian_embeds(raw, src, vault_index=vault_index)
-    return raw
-
-
-def _contains_obsidian_embed(text: str) -> bool:
-    return any(_OBSIDIAN_EMBED_LINE_RE.match(line) for line in text.splitlines())
-
-
-def _should_expand_obsidian_embeds(
-    raw: str,
-    exported: str,
-    src: Path,
-    vault_index: VaultIndex,
-) -> bool:
-    """Return true when an export dropped the bodies of embedded notes.
-
-    obsidian-export can produce a syntactically valid file containing only the
-    source headings and thematic breaks when it fails to resolve embedded note
-    bodies. That renders as a section heading followed by empty lines in the
-    final PDF, so fall back to a small local embed expander in that case.
-    """
-    targets = _obsidian_embed_targets(raw)
-    if not targets:
-        return False
-    if "[[" in exported and "]]" in exported:
-        return True
-    for target in targets:
-        embedded = _resolve_embed_path(src, target, vault_index)
-        if embedded is None:
-            continue
-        marker = _first_meaningful_line(embedded.read_text(encoding="utf-8"))
-        if marker and marker not in exported:
-            return True
-    return False
-
-
-def _obsidian_embed_targets(text: str) -> list[WikilinkTarget]:
-    targets: list[WikilinkTarget] = []
-    for line in text.splitlines():
-        match = _OBSIDIAN_EMBED_LINE_RE.match(line)
-        if match:
-            targets.append(WikilinkTarget.parse(match.group("target")))
-    return targets
-
-
-def _expand_obsidian_embeds(
-    text: str,
-    src: Path,
-    *,
-    vault_index: VaultIndex,
-    depth: int = 0,
-) -> str:
-    """Inline simple Obsidian note embeds from the source vault.
-
-    This is intentionally narrow: it handles whole-note embeds that occupy
-    their own line, which is a common pattern in spell compendia.
-    """
-    if depth > 5:
-        return text
-
-    out: list[str] = []
-    for line in text.splitlines():
-        match = _OBSIDIAN_EMBED_LINE_RE.match(line)
-        if not match:
-            out.append(line)
-            continue
-
-        target = WikilinkTarget.parse(match.group("target"))
-        embedded = _resolve_embed_path(src, target, vault_index)
-        if embedded is None:
-            out.append(line)
-            continue
-
-        body = embedded.read_text(encoding="utf-8")
-        body = _strip_frontmatter(body).strip()
-        body = _expand_obsidian_embeds(
-            body,
-            embedded,
-            vault_index=vault_index,
-            depth=depth + 1,
-        ).strip()
-
-        title = target.display_text or embedded.stem
-        if _embedded_body_needs_wrapper_heading(body, title):
-            out.extend(["", f"## {title}", ""])
-        else:
-            out.append("")
-        if body:
-            out.append(body)
-            out.append("")
-    return "\n".join(out)
-
-
-def _embedded_body_needs_wrapper_heading(body: str, title: str) -> bool:
-    """Return whether an expanded embed needs a synthetic title heading."""
-    first_heading = _first_heading_text(body)
-    if first_heading is None:
-        return True
-    return not _heading_matches_source_title(first_heading, title)
-
-
-def _resolve_embed_path(
-    src: Path,
-    target: WikilinkTarget,
-    vault_index: VaultIndex,
-) -> Path | None:
-    return vault_index.resolve(
-        target, prefer_vault=_source_vault_name(src, vault_index)
-    )
-
-
-def _source_vault_name(src: Path, vault_index: VaultIndex) -> str | None:
-    source = src.resolve()
-    for vault in vault_index.vaults:
-        try:
-            source.relative_to(vault.root)
-        except ValueError:
-            continue
-        return vault.name
-    return None
-
-
-def _first_meaningful_line(text: str) -> str | None:
-    body = _strip_frontmatter(text)
-    for line in body.splitlines():
-        stripped = line.strip()
-        if not stripped or stripped == "---":
-            continue
-        return stripped
-    return None
-
-
-def _strip_frontmatter(text: str) -> str:
-    """Drop a YAML frontmatter block at the top of a markdown file."""
-    if text.startswith("---\n"):
-        end = text.find("\n---\n", 4)
-        if end != -1:
-            return text[end + 5 :]
-        # Sometimes ends with ---\r\n or just --- on its own line at EOF
-        end = text.find("\n---", 4)
-        if end != -1 and (end + 4 == len(text) or text[end + 4] in "\r\n"):
-            return text[end + 4 :]
-    return text
-
-
-def _normalize_heading_spacing(text: str) -> str:
-    """Ensure ATX headings are separated from preceding body text.
-
-    Some source vault notes put `### Heading` immediately after a paragraph
-    or callout. Pandoc can treat that as literal paragraph text instead of a
-    heading, especially after raw obsidian-export fallback. Insert only the
-    missing blank line before headings; leave code fences untouched.
-    """
-    out: list[str] = []
-    in_code = False
-    for line in text.splitlines():
-        stripped = line.lstrip()
-        if stripped.startswith("```") or stripped.startswith("~~~"):
-            in_code = not in_code
-            out.append(line)
-            continue
-        if not in_code and out and out[-1].strip() and _heading_level(line) is not None:
-            out.append("")
-        out.append(line)
-    return "\n".join(out)
-
-
-def _strip_trailing_related_section(text: str) -> str:
-    """Remove a final `Related` backlink block from an inline source."""
-    lines = text.splitlines()
-    end = len(lines)
-    while end > 0 and lines[end - 1].strip() == "":
-        end -= 1
-    i = end - 1
-    while i >= 0:
-        stripped = lines[i].strip()
-        if stripped == "" or stripped.startswith("- ") or stripped.startswith("* "):
-            i -= 1
-            continue
-        break
-    if i < 0 or lines[i].strip().lower() != "**related**":
-        return text
-    j = i - 1
-    while j >= 0 and lines[j].strip() == "":
-        j -= 1
-    if j < 0 or lines[j].strip() != "---":
-        return text
-    return "\n".join(lines[:j]).rstrip()
-
-
-def _demote_h1s(text: str) -> str:
-    """Add one `#` to every top-level heading. Leaves code blocks alone."""
-    out: list[str] = []
-    in_code = False
-    for line in text.splitlines():
-        stripped = line.lstrip()
-        if stripped.startswith("```") or stripped.startswith("~~~"):
-            in_code = not in_code
-            out.append(line)
-            continue
-        if in_code:
-            out.append(line)
-            continue
-        if line.startswith("#"):
-            out.append("#" + line)
-        else:
-            out.append(line)
-    return "\n".join(out)
-
-
 def _demote_repeated_h1s(
     text: str,
     *,
@@ -1553,13 +1149,15 @@ def _demote_repeated_h1s(
         if in_code:
             out.append(line)
             continue
-        if _is_atx_h1(line):
+        if _headings.is_atx_h1(line):
             if seen_h1:
-                title = _heading_title_for_slug(line)
+                title = _headings.heading_title_for_slug(line)
                 if title:
                     art_src = None
                     if section_art:
-                        art_src = section_art.get(slugify(_plain_heading_title(title)))
+                        art_src = section_art.get(
+                            slugify(_headings.plain_heading_title(title))
+                        )
                     out.append(
                         _render_major_section_divider(
                             title,
@@ -1629,7 +1227,7 @@ def _apply_full_page_sections(
             out.append(line)
             continue
 
-        title = _heading_title_for_slug(line)
+        title = _headings.heading_title_for_slug(line)
         if title and slugify(title) in wanted:
             out.append(
                 _render_section_divider(
@@ -1639,7 +1237,7 @@ def _apply_full_page_sections(
                         eyebrow=divider_eyebrow or "Section",
                     ),
                     with_heading=True,
-                    level=_heading_level(line) or 2,
+                    level=_headings.heading_level(line) or 2,
                     eyebrow_link=divider_parent_slug,
                     breadcrumb=_breadcrumb_text(divider_eyebrow, title),
                 ).strip()
@@ -1655,7 +1253,7 @@ def _normalize_source_reference_size_line(text: str) -> str:
     i = 0
     while i < len(lines) and lines[i].strip() == "":
         i += 1
-    if i < len(lines) and _is_atx_h1(lines[i]):
+    if i < len(lines) and _headings.is_atx_h1(lines[i]):
         i += 1
     while i < len(lines) and lines[i].strip() == "":
         i += 1
@@ -1699,11 +1297,11 @@ def _render_auto_frame_table(text: str) -> str:
         if in_code:
             continue
 
-        level = _heading_level(line)
-        title = _heading_title_for_slug(line)
+        level = _headings.heading_level(line)
+        title = _headings.heading_title_for_slug(line)
         if level is None or not title:
             continue
-        plain_title = _plain_heading_title(title)
+        plain_title = _headings.plain_heading_title(title)
         if level == 1:
             if slugify(plain_title) in {"frames", "frames-ancestries"}:
                 current_family = None
@@ -1723,7 +1321,7 @@ def _render_auto_frame_table(text: str) -> str:
             "| "
             f"[{_frame_variant_link_text(variant)}](#{slugify(variant)})"
             " | "
-            f"[{_markdown_link_text(family)}](#{slugify(family)})"
+            f"[{_headings.markdown_link_text(family)}](#{slugify(family)})"
             " |"
         )
     lines.extend(["", "::::"])
@@ -1733,9 +1331,9 @@ def _render_auto_frame_table(text: str) -> str:
 def _frame_variant_link_text(title: str) -> str:
     match = re.match(r"^(?P<name>.+?)\s+\((?P<source>[^)]*)\)$", title)
     if not match:
-        return _markdown_link_text(title)
-    name = _markdown_link_text(match.group("name"))
-    source = _markdown_link_text(match.group("source"))
+        return _headings.markdown_link_text(title)
+    name = _headings.markdown_link_text(match.group("name"))
+    source = _headings.markdown_link_text(match.group("source"))
     return f"{name} *({source})*"
 
 
@@ -1769,208 +1367,3 @@ def _demote_headings(text: str, *, by: int) -> str:
         new_level = min(6, i + by)
         out.append("#" * new_level + line[i:])
     return "\n".join(out)
-
-
-def _is_atx_h1(line: str) -> bool:
-    return line.startswith("# ") or line == "#"
-
-
-def _ensure_leading_heading_id(text: str, ident: str) -> str:
-    """Attach `ident` to the first heading when a divider did not supply it."""
-    lines = text.splitlines()
-    i = 0
-    while i < len(lines) and lines[i].strip() == "":
-        i += 1
-    if i >= len(lines) or _heading_level(lines[i]) is None:
-        return text
-    if _heading_id(lines[i]):
-        return text
-    lines[i] = _add_heading_id(lines[i], ident)
-    return "\n".join(lines)
-
-
-def _heading_title_for_slug(line: str) -> str | None:
-    level = _heading_level(line)
-    if level is None:
-        return None
-    text = line[level:].strip()
-    if text.endswith("#"):
-        text = text.rstrip("#").rstrip()
-    if text.endswith("}"):
-        text = re.sub(r"\s*\{[^}]*\}\s*$", "", text).rstrip()
-    return text or None
-
-
-def _heading_level(line: str) -> int | None:
-    i = 0
-    while i < len(line) and line[i] == "#":
-        i += 1
-    if i == 0 or i > 6 or (i < len(line) and line[i] not in (" ", "\t")):
-        return None
-    return i
-
-
-def _ensure_heading_ids(text: str) -> str:
-    """Attach explicit ids to ATX headings that do not already have one."""
-    out: list[str] = []
-    seen: dict[str, int] = {ident: 1 for ident in _explicit_heading_ids(text)}
-    in_code = False
-    for line in text.splitlines():
-        stripped = line.lstrip()
-        if stripped.startswith("```") or stripped.startswith("~~~"):
-            in_code = not in_code
-            out.append(line)
-            continue
-        if in_code or not line.startswith("#"):
-            out.append(line)
-            continue
-
-        title = _heading_title_for_slug(line)
-        if not title:
-            out.append(line)
-            continue
-        explicit = _heading_id(line)
-        if explicit:
-            out.append(line)
-            continue
-
-        base = _heading_base_id(title)
-        ident = _unique_heading_id(base, seen)
-        out.append(_add_heading_id(line, ident))
-    return "\n".join(out)
-
-
-def _explicit_heading_ids(text: str) -> set[str]:
-    ids: set[str] = set()
-    in_code = False
-    for line in text.splitlines():
-        stripped = line.lstrip()
-        if stripped.startswith("```") or stripped.startswith("~~~"):
-            in_code = not in_code
-            continue
-        if in_code or not line.startswith("#"):
-            continue
-        ident = _heading_id(line)
-        if ident:
-            ids.add(ident)
-    return ids
-
-
-def _render_manual_toc(
-    markdown: str,
-    *,
-    toc_depths: dict[str, int] | None = None,
-    max_depth: int | None = None,
-) -> str:
-    entries: list[tuple[int, str, str]] = []
-    default_limit = 4 if max_depth is None else max(1, min(4, max_depth))
-    current_limit = default_limit
-    for level, title, ident in _toc_entries(markdown):
-        if level == 1:
-            chapter_limit = (toc_depths or {}).get(ident, 4)
-            current_limit = min(chapter_limit, default_limit)
-        if level <= current_limit:
-            entries.append((level, title, ident))
-    tree: list[TocNode] = []
-    stack: list[tuple[int, list[TocNode]]] = [(0, tree)]
-    for level, title, ident in entries:
-        level = max(1, min(4, level))
-        node = TocNode(title=title, ident=ident, children=[])
-        while stack and stack[-1][0] >= level:
-            stack.pop()
-        stack[-1][1].append(node)
-        stack.append((level, node["children"]))
-
-    lines: list[str] = [
-        ':::: {.toc role="doc-toc"}',
-        "# Table of Contents {.toc-title #table-of-contents}",
-        "",
-    ]
-
-    def emit(nodes: list[TocNode], indent: int) -> None:
-        if not nodes:
-            return
-        for node in nodes:
-            title = _markdown_link_text(_plain_heading_title(node["title"]))
-            ident = node["ident"]
-            lines.append("  " * indent + f"- [{title}](#{ident})")
-            emit(node["children"], indent + 1)
-
-    emit(tree, 0)
-    lines.append("")
-    lines.append("::::")
-    return "\n".join(lines)
-
-
-def _toc_entries(markdown: str) -> Iterator[tuple[int, str, str]]:
-    in_code = False
-    for line in markdown.splitlines():
-        stripped = line.lstrip()
-        if stripped.startswith("```") or stripped.startswith("~~~"):
-            in_code = not in_code
-            continue
-        if in_code or not line.startswith("#"):
-            continue
-        level = _heading_level(line)
-        title = _heading_title_for_slug(line)
-        ident = _heading_id(line)
-        if level is None or not title or not ident:
-            continue
-        yield level, title, ident
-
-
-def _heading_id(line: str) -> str | None:
-    match = re.search(r"\{[^}]*#([A-Za-z0-9_-]+)[^}]*\}\s*$", line)
-    if not match:
-        return None
-    return match.group(1)
-
-
-def _heading_base_id(title: str) -> str:
-    plain = _plain_heading_title(title)
-    original = re.match(r"^Original\s+-\s+(.+)$", plain)
-    if original:
-        return "original-" + slugify(original.group(1))
-    return slugify(plain)
-
-
-def _add_heading_id(line: str, ident: str) -> str:
-    if line.rstrip().endswith("}"):
-        return line.rstrip()[:-1].rstrip() + f" #{ident}}}"
-    return line.rstrip() + f" {{#{ident}}}"
-
-
-def _unique_heading_id(base: str, seen: dict[str, int]) -> str:
-    count = seen.get(base, 0)
-    seen[base] = count + 1
-    if count == 0:
-        return base
-    ident = f"{base}-{count}"
-    while ident in seen:
-        count += 1
-        seen[base] = count + 1
-        ident = f"{base}-{count}"
-    seen[ident] = 1
-    return ident
-
-
-def _plain_heading_title(title: str) -> str:
-    text = re.sub(r"`([^`]*)`", r"\1", title)
-    text = re.sub(r"!\[([^\]]*)\]\([^)]+\)", r"\1", text)
-    text = re.sub(r"\[([^\]]+)\]\([^)]+\)", r"\1", text)
-    text = text.replace("*", "").replace("_", "")
-    text = re.sub(r"\s+", " ", text)
-    return text.strip()
-
-
-def _markdown_link_text(text: str) -> str:
-    return text.replace("\\", "\\\\").replace("[", "\\[").replace("]", "\\]")
-
-
-def _attribute_value(text: str) -> str:
-    return (
-        text.replace("&", "&amp;")
-        .replace('"', "&quot;")
-        .replace("<", "&lt;")
-        .replace(">", "&gt;")
-    )

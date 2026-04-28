@@ -6,7 +6,6 @@ import hashlib
 import math
 import os
 import re
-import shutil
 import threading
 from dataclasses import dataclass
 from pathlib import Path
@@ -363,12 +362,6 @@ def resolve_local_image(target: str, *, search_roots: list[Path]) -> Path | None
             if matches:
                 return matches[0].resolve()
     return None
-
-
-def copy_image(source: Path, dest: Path) -> None:
-    """Copy an image file, creating the destination parent first."""
-    dest.parent.mkdir(parents=True, exist_ok=True)
-    shutil.copy2(source, dest)
 
 
 def _default_image_cache_root() -> Path:

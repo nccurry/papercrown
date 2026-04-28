@@ -122,25 +122,6 @@ def _export_failure_message(
     )
 
 
-def export_vault(tools: Tools, vault_root: Path, dest: Path) -> None:
-    """Export an entire Obsidian vault into ``dest``.
-
-    Raises:
-        RuntimeError: If obsidian-export exits non-zero.
-    """
-    dest.mkdir(parents=True, exist_ok=True)
-    result = _run_export_command([tools.obsidian_export, str(vault_root), str(dest)])
-    if result.returncode != 0:
-        stderr = result.stderr or ""
-        stdout = result.stdout or ""
-        first_lines = (stderr or stdout).splitlines()
-        first = first_lines[0] if first_lines else "unknown error"
-        raise RuntimeError(
-            f"obsidian-export on {vault_root.name} failed: {first}\n"
-            f"STDERR (tail):\n{stderr[-500:]}"
-        )
-
-
 def export_source_file(
     tools: Tools,
     source_file: Path,

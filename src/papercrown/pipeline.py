@@ -19,7 +19,6 @@ import html as html_lib
 import importlib
 import os
 import re
-import subprocess
 import tempfile
 import time
 from collections.abc import Callable
@@ -34,12 +33,19 @@ from PIL import Image, UnidentifiedImageError
 from pypdf import PdfReader, PdfWriter
 
 from . import fillers, page_damage, pagination
+from . import pipeline_pandoc as _pandoc
+from . import pipeline_pdf as _pdf_tools
 from .manifest import FillerCatalog, PageDamageCatalog
+from .pipeline_snapshots import normalize_for_snapshot as normalize_for_snapshot
 from .resources import TEXTURES_DIR
 
 _WINDOWS_ABSOLUTE_URL_RE = re.compile(r"^[A-Za-z]:[\\/]")
 PT_PER_IN = 72.0
 BOTTOM_BLEED_BOTTOM_INSET_IN = 0.12
+_build_pandoc_base_args = _pandoc.build_pandoc_base_args
+_run_subprocess = _pandoc.run_subprocess
+_save_fitz_pdf = _pdf_tools.save_fitz_pdf
+_write_pdf_metadata = _pdf_tools.write_pdf_metadata
 if os.name == "nt":
     # GLib's default Windows VFS enumerates UWP file-association handlers and
     # can emit unrelated GLib-GIO warnings. We only fetch local build assets.
@@ -267,122 +273,6 @@ class RenderContext:
 # ---------------------------------------------------------------------------
 # Stage 1: markdown -> HTML
 # ---------------------------------------------------------------------------
-
-
-def _build_pandoc_metadata(ctx: RenderContext) -> list[str]:
-    args: list[str] = [
-        "--metadata",
-        f"pagetitle={ctx.chapter_title}",
-        "--metadata",
-        f"chapter-title={ctx.chapter_title}",
-        "--metadata",
-        f"chapter-eyebrow={ctx.chapter_eyebrow}",
-        "--metadata",
-        f"section-kind={ctx.section_kind}",
-    ]
-    if ctx.chapter_opener:
-        args += ["--metadata", "chapter-opener=true"]
-    if ctx.title_prefix:
-        args += ["--metadata", f"title-prefix={ctx.title_prefix}"]
-    for key, value in (
-        ("book-author", ctx.book_author),
-        ("book-description", ctx.book_description),
-        ("book-keywords", ctx.book_keywords),
-        ("book-date", ctx.book_date),
-        ("book-publisher", ctx.book_publisher),
-        ("book-version", ctx.book_version),
-        ("book-license", ctx.book_license),
-    ):
-        if value:
-            args += ["--metadata", f"{key}={value}"]
-    if ctx.valid_anchors:
-        args += ["--metadata", f"valid-anchors={ctx.valid_anchors}"]
-    if ctx.chapter_art and ctx.chapter_art.is_file():
-        # Use `--variable`, NOT `--metadata`, for path-typed template
-        # values. Pandoc YAML-parses `--metadata` values, and a Windows
-        # path like `C:/Users/...` matches YAML's mapping syntax (`C:`
-        # looks like a key with `/Users/...` as the value), which corrupts
-        # the path before the template substitution and produces nonsense
-        # like `withBinaryFile: invalid argument`. `--variable` values are
-        # treated as opaque strings, which is what we want for paths. The
-        # template references `$chapter-art$` either way -- variables and
-        # metadata share that namespace at template-render time.
-        args += ["--variable", f"chapter-art={ctx.chapter_art.as_posix()}"]
-    args += ["--metadata", f"output-profile={ctx.output_profile}"]
-    if ctx.output_profile == "digital":
-        args += ["--metadata", "digital=true"]
-    if ctx.draft_placeholders:
-        args += ["--variable", "draft-placeholders=true"]
-    if ctx.ornament_folio_frame and ctx.ornament_folio_frame.is_file():
-        args += [
-            "--variable",
-            f"ornament-folio-frame={ctx.ornament_folio_frame.as_posix()}",
-        ]
-    if ctx.ornament_corner_bracket and ctx.ornament_corner_bracket.is_file():
-        args += [
-            "--variable",
-            f"ornament-corner-bracket={ctx.ornament_corner_bracket.as_posix()}",
-        ]
-    if ctx.page_background_underlay:
-        args += ["--variable", "page-background-underlay=true"]
-    if ctx.cover_enabled:
-        args += [
-            "--metadata",
-            "cover=true",
-            "--metadata",
-            f"cover-title={ctx.cover_title or ctx.chapter_title}",
-            "--metadata",
-            f"cover-eyebrow={ctx.cover_eyebrow or 'A Player Book'}",
-        ]
-        if ctx.cover_subtitle:
-            args += ["--metadata", f"cover-subtitle={ctx.cover_subtitle}"]
-        if ctx.cover_footer:
-            args += ["--metadata", f"cover-footer={ctx.cover_footer}"]
-        if ctx.cover_art and ctx.cover_art.is_file():
-            # Variable, not metadata -- see chapter-art comment.
-            args += ["--variable", f"cover-art={ctx.cover_art.as_posix()}"]
-    return args
-
-
-def _build_pandoc_base_args(ctx: RenderContext, *, css: bool) -> list[str]:
-    # Disable yaml_metadata_block: combined-book markdown has many `---`
-    # horizontal rules paired with `*italic*` lines, which Pandoc otherwise
-    # misparses as a YAML alias inside metadata. Our content has no real
-    # YAML frontmatter (assembly.py strips any), so we don't need it.
-    #
-    # Disable multiline_tables / simple_tables / grid_tables: a chapter body
-    # with TWO `---` thematic breaks and bold-text paragraphs between them
-    # gets pattern-matched as a multiline table whose body silently absorbs
-    # the surrounding `:::::` chapter-wrap closing fence -- which then nests
-    # every subsequent chapter inside the previous one (Bonded, Mycologist,
-    # and Songweaver were vanishing this way). We only use pipe_tables for
-    # real tables, so the others are pure foot-gun.
-    args: list[str] = [
-        "--from=markdown+pipe_tables+backtick_code_blocks+fenced_divs+bracketed_spans+implicit_figures-yaml_metadata_block-multiline_tables-simple_tables-grid_tables",
-        "--standalone",
-        # Forward-slash absolute path -- see chapter-art comment for why we
-        # avoid both `file:///` URIs and backslash Windows paths.
-        f"--template={ctx.template.as_posix()}",
-    ]
-    if css:
-        args.extend(f"--css={path.as_posix()}" for path in ctx.css_files)
-    if ctx.resource_paths:
-        # Pandoc uses the platform path separator (`;` on Windows, `:` on
-        # POSIX) for `--resource-path`. Each path itself uses forward
-        # slashes so Pandoc's path parser doesn't trip on `\U` etc.
-        args.append(
-            "--resource-path="
-            f"{os.pathsep.join(p.as_posix() for p in ctx.resource_paths)}"
-        )
-    for lf in ctx.lua_filters:
-        args.append(f"--lua-filter={lf.as_posix()}")
-    if ctx.include_toc:
-        # depth=4 surfaces chapters, sub-chapters, and a couple more nested
-        # levels (e.g. classes -> archetypes -> features). Core CSS
-        # progressively indents each nested level so the hierarchy reads.
-        args += ["--toc", "--toc-depth=4"]
-    args += _build_pandoc_metadata(ctx)
-    return args
 
 
 def render_markdown_to_html(markdown: str, ctx: RenderContext) -> str:
@@ -733,28 +623,26 @@ def _inject_inline_css(html: str, css_blocks: list[str]) -> str:
     return html.replace("</head>", style + "</head>", 1)
 
 
-def _write_pdf_metadata(out_pdf: Path, *, title: str, ctx: RenderContext) -> None:
-    """Write standard PDF document metadata after cleanup passes."""
-    metadata = {
-        "/Title": title,
-        "/Creator": "papercrown",
-    }
-    optional = {
-        "/Author": ctx.book_author,
-        "/Subject": ctx.book_description,
-        "/Keywords": ctx.book_keywords,
-        "/Publisher": ctx.book_publisher,
-        "/Version": ctx.book_version,
-        "/License": ctx.book_license,
-        "/Date": ctx.book_date,
-    }
-    metadata.update({key: value for key, value in optional.items() if value})
-    reader = PdfReader(str(out_pdf))
-    writer = PdfWriter()
-    writer.clone_document_from_reader(reader)
-    writer.add_metadata(metadata)
-    with out_pdf.open("wb") as handle:
-        writer.write(handle)
+def _clean_pdf(path: Path) -> None:
+    """Compatibility wrapper for PDF cleanup using this module's fitz importer."""
+    fitz: Any = importlib.import_module("fitz")
+    tmp_path = path.with_name(f"{path.stem}.cleaning{path.suffix}")
+    if tmp_path.exists():
+        tmp_path.unlink()
+    doc = fitz.open(path)
+    try:
+        doc.save(
+            tmp_path,
+            garbage=4,
+            deflate=True,
+            deflate_images=True,
+            deflate_fonts=True,
+            clean=True,
+            use_objstms=1,
+        )
+    finally:
+        doc.close()
+    _pdf_tools.replace_pdf(tmp_path, path)
 
 
 def _write_filler_debug_overlay(
@@ -1082,23 +970,6 @@ def _bottom_bleed_display_size_pt(
     return natural_width_pt * scale, natural_height_pt * scale
 
 
-def _save_fitz_pdf(document: Any, out_pdf: Path) -> None:
-    """Save a PyMuPDF document with the same cleanup settings used elsewhere."""
-    tmp_path = out_pdf.with_name(f"{out_pdf.stem}.fitz-saving{out_pdf.suffix}")
-    if tmp_path.exists():
-        tmp_path.unlink()
-    document.save(
-        tmp_path,
-        garbage=4,
-        deflate=True,
-        deflate_images=False,
-        deflate_fonts=True,
-        clean=True,
-        use_objstms=1,
-    )
-    _replace_pdf(tmp_path, out_pdf)
-
-
 def _page_has_page_number(page: Any, page_number: int) -> bool:
     """Return whether ``page`` appears to render its page number as text."""
     try:
@@ -1146,40 +1017,6 @@ def _write_pdf_with_bottom_bleeds(
 
     with out_pdf.open("wb") as handle:
         writer.write(handle)
-
-
-def _clean_pdf(path: Path) -> None:
-    """Rewrite the PDF to drop unused resources after page merges."""
-    fitz: Any = importlib.import_module("fitz")
-    tmp_path = path.with_name(f"{path.stem}.cleaning{path.suffix}")
-    if tmp_path.exists():
-        tmp_path.unlink()
-    doc = fitz.open(path)
-    try:
-        doc.save(
-            tmp_path,
-            garbage=4,
-            deflate=True,
-            deflate_images=True,
-            deflate_fonts=True,
-            clean=True,
-            use_objstms=1,
-        )
-    finally:
-        doc.close()
-    _replace_pdf(tmp_path, path)
-
-
-def _replace_pdf(source: Path, target: Path) -> None:
-    """Replace a PDF, retrying briefly for Windows handle release lag."""
-    for attempt in range(8):
-        try:
-            source.replace(target)
-            return
-        except PermissionError:
-            if attempt == 7:
-                raise
-            time.sleep(0.25)
 
 
 def _bottom_bleed_overlay_pdf(
@@ -1330,132 +1167,3 @@ def _split_resource_suffix(value: str) -> tuple[str, str]:
         if idx != -1:
             suffix_at = min(suffix_at, idx)
     return value[:suffix_at], value[suffix_at:]
-
-
-def _run_subprocess(cmd: list[str]) -> subprocess.CompletedProcess[str]:
-    """Run a subprocess capturing stdout/stderr as text.
-
-    Forces utf-8 with replacement so non-cp1252 bytes in tool output (smart
-    quotes, em-dashes, etc.) can't crash the reader thread on Windows and
-    leave `result.stderr = None`.
-    """
-    return subprocess.run(
-        cmd,
-        capture_output=True,
-        text=True,
-        encoding="utf-8",
-        errors="replace",
-    )
-
-
-# ---------------------------------------------------------------------------
-# Snapshot normalization
-# ---------------------------------------------------------------------------
-
-
-_TOKEN_PAPERCROWN = "<<papercrown>>"
-_TOKEN_FIXTURE = "<<fixture>>"
-_TOKEN_TMP = "<<tmp>>"
-
-
-def normalize_for_snapshot(
-    html: str,
-    *,
-    papercrown_root: Path | None = None,
-    fixture_root: Path | None = None,
-) -> str:
-    """Strip absolute paths from HTML before snapshot comparison.
-
-    Two forms get normalized:
-
-      1. `file://` URIs -- old Pandoc behavior; we still see them in some
-         versions and in tests that synthesize them.
-      2. Plain absolute paths -- current Pandoc behavior on Windows after
-         we switched away from `Path.as_uri()` (some Pandoc builds mangle
-         file:// URIs containing URL-escaped spaces, leaving literal `%20`
-         in the output filename).
-
-    Mappings:
-      - paths inside `papercrown_root`  -> <<papercrown>>/relative/path
-      - paths inside `fixture_root` -> <<fixture>>/relative/path
-      - generic absolute / file:// paths -> <<tmp>>/<basename>
-    """
-    from urllib.parse import unquote, urlsplit
-
-    out = html
-
-    def _normalize_path(raw: str) -> str:
-        # `raw` is a (possibly url-encoded) absolute path with no scheme.
-        # Decode percent escapes so spaces and punctuation compare naturally.
-        # actual filesystem path before relative_to() resolution.
-        decoded = unquote(raw)
-        path = Path(decoded)
-        if papercrown_root is not None:
-            try:
-                rel = path.resolve().relative_to(papercrown_root.resolve())
-                return f"{_TOKEN_PAPERCROWN}/{rel.as_posix()}"
-            except (ValueError, OSError):
-                pass
-        if fixture_root is not None:
-            try:
-                rel = path.resolve().relative_to(fixture_root.resolve())
-                return f"{_TOKEN_FIXTURE}/{rel.as_posix()}"
-            except (ValueError, OSError):
-                pass
-        return f"{_TOKEN_TMP}/{path.name}"
-
-    # 1. file:// URIs (legacy / test-only path).
-    def _replace_uri(match: re.Match[str]) -> str:
-        uri = match.group(0)
-        parsed = urlsplit(uri)
-        path_str = parsed.path
-        if parsed.netloc and parsed.netloc != "localhost":
-            path_str = f"//{parsed.netloc}{path_str}"
-        if re.match(r"^/[A-Za-z]:[\\/]", path_str):
-            path_str = path_str[1:]
-        return _normalize_path(path_str)
-
-    out = re.sub(r"file:///?[^\s\"'<>]+", _replace_uri, out)
-
-    # 2. Plain absolute paths inside known roots. We search for the literal
-    # root path in the HTML (with backslashes normalized to forward slashes
-    # and vice versa) and replace each occurrence with the token + the
-    # remaining path. This covers `<link href="C:\path\to\book.css">` and
-    # similar without trying to enumerate every absolute-path shape on disk.
-    def _root_replace(root: Path | None, token: str) -> None:
-        nonlocal out
-        if root is None:
-            return
-        root_abs = root.resolve()
-        # Build candidate string forms to look for in the HTML. On Windows
-        # paths can appear with either separator; normalize to both.
-        forms: list[str] = []
-        s = str(root_abs)
-        forms.append(s)
-        forms.append(s.replace("\\", "/"))
-        forms.append(s.replace("/", "\\"))
-        # De-dup while preserving order
-        seen: set[str] = set()
-        unique_forms: list[str] = []
-        for form in forms:
-            if form in seen:
-                continue
-            seen.add(form)
-            unique_forms.append(form)
-
-        def _build_repl(form: str) -> re.Pattern[str]:
-            # Match the form followed by either / or \ then the relative path
-            # up to the next whitespace / quote / angle-bracket.
-            return re.compile(re.escape(form) + r"[\\/]([^\s\"'<>]+)")
-
-        for form in unique_forms:
-            pat = _build_repl(form)
-            out = pat.sub(
-                lambda m: f"{token}/{m.group(1).replace(chr(92), '/')}",
-                out,
-            )
-
-    _root_replace(papercrown_root, _TOKEN_PAPERCROWN)
-    _root_replace(fixture_root, _TOKEN_FIXTURE)
-
-    return out
