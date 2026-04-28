@@ -30,6 +30,8 @@ from .recipe import (
     PAGE_DAMAGE_SIZES,
     ChapterSpec,
     FillerAssetSpec,
+    FillerHeadingMarkerSpec,
+    FillerMarkersSpec,
     Recipe,
     SourceRef,
     SplashSpec,
@@ -100,6 +102,17 @@ class FillerCatalog:
 
 
 @dataclass(frozen=True)
+class ChapterHeadingFillerMarker:
+    """A heading-scoped filler marker policy resolved for one chapter."""
+
+    slot: str
+    heading_level: int
+    slot_kind: str
+    skip_first: bool = False
+    context: str | None = None
+
+
+@dataclass(frozen=True)
 class PageDamageAsset:
     """A resolved transparent page-wear asset."""
 
@@ -145,6 +158,7 @@ class ChapterFillerSlot:
     section_slug: str | None = None
     section_title: str | None = None
     slot_kind: str | None = None
+    context: str | None = None
 
 
 @dataclass
@@ -164,6 +178,11 @@ class Chapter:
     source_files: list[Path] = field(default_factory=list)
     source_titles: list[str | None] = field(default_factory=list)
     source_strip_related: list[bool] = field(default_factory=list)
+    source_filler_enabled: list[bool] = field(default_factory=list)
+    source_boundary_filler_slot: str | None = None
+    subclass_filler_slot: str | None = "subclass-end"
+    heading_filler_markers: list[ChapterHeadingFillerMarker] | None = None
+    fillers_enabled: bool = True
     children: list[Chapter] = field(default_factory=list)
     individual_pdf: bool = False
     individual_pdf_subdir: str | None = None
@@ -341,16 +360,20 @@ def classify_filler_art_path(
 def _legacy_filler_category(path: Path, role: str) -> str:
     """Map the role registry back to the historical filler category names."""
     stem = path.stem.lower()
-    if role == "cover":
+    if role in {"cover", "cover-front", "cover-back"}:
         return "cover-art"
     if role == "splash":
         return "manual-splash"
+    if role == "spread":
+        return "spread-art"
     if role == "chapter-divider":
         return "divider-art"
     if role == "class-opening-spot":
         return "class-opening"
     if role == "ornament-tailpiece":
         return "tailpiece"
+    if role in {"ornament-corner", "ornament-folio"}:
+        return role
     if role == "faction":
         return "setting-wide"
     if role == "gear":
@@ -362,7 +385,9 @@ def _legacy_filler_category(path: Path, role: str) -> str:
         "label-",
         "map-",
         "diagram-",
+        "screenshot-",
         "icon-",
+        "logo-",
         "portrait-",
         "ship-",
         "vehicle-",
@@ -610,6 +635,7 @@ def _build_page_damage_catalog(
 def _attach_chapter_filler_slots(
     chapters: list[Chapter],
     catalog: FillerCatalog,
+    markers: FillerMarkersSpec,
     warnings: list[str],
 ) -> None:
     """Attach terminal conditional filler slots to chapters with body content."""
@@ -619,19 +645,42 @@ def _attach_chapter_filler_slots(
     by_id = {asset.id: asset for asset in catalog.assets}
     for chapter in chapters:
         for candidate in chapter.walk():
+            candidate.filler_slots.clear()
+            candidate.heading_filler_markers = []
+            if not candidate.fillers_enabled:
+                candidate.source_boundary_filler_slot = None
+                candidate.subclass_filler_slot = None
+                continue
+            candidate.heading_filler_markers = _chapter_heading_filler_markers(
+                candidate,
+                markers.headings,
+                catalog,
+            )
+            if candidate.subclass_filler_slot not in catalog.slots:
+                candidate.subclass_filler_slot = None
             if not candidate.source_files:
                 continue
-            if (
-                candidate.slug.startswith("original-")
-                and candidate.tailpiece_path is None
-            ):
+            if candidate.source_boundary_filler_slot not in catalog.slots:
+                candidate.source_boundary_filler_slot = None
+            if _skip_terminal_filler_slot(candidate):
                 continue
-            slot_name = "class-end" if candidate.style == "class" else "chapter-end"
+            slot_name = (
+                markers.terminal.class_slot
+                if candidate.style == "class"
+                else markers.terminal.chapter_slot
+            )
+            if slot_name is None:
+                continue
             if slot_name not in catalog.slots:
-                if slot_name == "class-end" and "chapter-end" in catalog.slots:
-                    slot_name = "chapter-end"
+                if (
+                    slot_name == markers.terminal.class_slot
+                    and markers.terminal.chapter_slot in catalog.slots
+                ):
+                    slot_name = markers.terminal.chapter_slot
                 else:
                     continue
+            if slot_name is None:
+                continue
             preferred_asset = None
             if candidate.tailpiece_path is not None:
                 preferred_asset = by_path.get(candidate.tailpiece_path.resolve())
@@ -653,8 +702,91 @@ def _attach_chapter_filler_slots(
                     section_slug=candidate.slug,
                     section_title=candidate.title,
                     slot_kind="terminal",
+                    context=_chapter_filler_context(candidate),
                 )
             )
+
+
+def _chapter_heading_filler_markers(
+    chapter: Chapter,
+    marker_specs: list[FillerHeadingMarkerSpec],
+    catalog: FillerCatalog,
+) -> list[ChapterHeadingFillerMarker]:
+    markers: list[ChapterHeadingFillerMarker] = []
+    for spec in marker_specs:
+        if spec.slot not in catalog.slots:
+            continue
+        if not _marker_spec_matches_chapter(spec, chapter):
+            continue
+        markers.append(
+            ChapterHeadingFillerMarker(
+                slot=spec.slot,
+                heading_level=spec.heading_level,
+                slot_kind=spec.slot_kind,
+                skip_first=spec.skip_first,
+                context=spec.context or _chapter_filler_context(chapter),
+            )
+        )
+    return markers
+
+
+def _marker_spec_matches_chapter(
+    spec: FillerHeadingMarkerSpec,
+    chapter: Chapter,
+) -> bool:
+    target = spec.chapter.lower().strip()
+    return target in {
+        chapter.slug.lower(),
+        chapter.title.lower(),
+        slugify(chapter.title),
+    }
+
+
+def _set_fillers_enabled(chapter: Chapter, enabled: bool) -> None:
+    chapter.fillers_enabled = enabled
+    for child in chapter.children:
+        _set_fillers_enabled(child, enabled)
+
+
+def _skip_terminal_filler_slot(chapter: Chapter) -> bool:
+    if not chapter.slug.startswith("original-") or chapter.tailpiece_path is not None:
+        return False
+    return chapter.style not in {
+        "rules",
+        "class",
+        "powers",
+        "equipment",
+        "source-reference",
+    }
+
+
+def _chapter_filler_context(chapter: Chapter) -> str:
+    if chapter.slug.startswith("original-") or chapter.style == "source-reference":
+        return "reference"
+    if chapter.style == "powers" or chapter.slug in {
+        "powers",
+        "spells",
+        "spellcasting",
+    }:
+        return "powers"
+    if chapter.style == "equipment" or chapter.slug in {"combat", "gear", "equipment"}:
+        return "combat"
+    if chapter.style == "quick-reference" or chapter.slug in {
+        "quick-reference",
+        "reference",
+    }:
+        return "reference"
+    if chapter.style == "class":
+        return "class"
+    if chapter.style == "ancestries" or chapter.slug == "frames":
+        return "frame"
+    if chapter.style == "backgrounds":
+        return "setting"
+    if chapter.slug in {"languages", "language"}:
+        return "languages"
+    if chapter.slug in {"setting-primer", "backgrounds", "for-gms"}:
+        return "setting"
+    return "general"
 
 
 # ---------------------------------------------------------------------------
@@ -681,6 +813,8 @@ def _build_file_chapter(
         headpiece_path=_art_path(recipe, spec.headpiece),
         break_ornament_path=_art_path(recipe, spec.break_ornament),
         source_files=[src],
+        subclass_filler_slot=recipe.fillers.markers.subclass.slot,
+        fillers_enabled=spec.fillers_enabled,
         style=spec.style,
         individual_pdf=spec.individual_pdfs,
         individual_pdf_subdir=spec.individual_pdf_subdir,
@@ -716,6 +850,8 @@ def _build_catalog_chapter(
         tailpiece_path=_art_path(recipe, spec.tailpiece),
         headpiece_path=_art_path(recipe, spec.headpiece),
         break_ornament_path=_art_path(recipe, spec.break_ornament),
+        subclass_filler_slot=recipe.fillers.markers.subclass.slot,
+        fillers_enabled=spec.fillers_enabled,
         style=spec.style,
         individual_pdf=spec.individual_pdfs,
         individual_pdf_subdir=spec.individual_pdf_subdir,
@@ -777,6 +913,8 @@ def _build_composite_chapter(
         headpiece_path=_art_path(recipe, spec.headpiece),
         break_ornament_path=_art_path(recipe, spec.break_ornament),
         source_files=files,
+        subclass_filler_slot=recipe.fillers.markers.subclass.slot,
+        fillers_enabled=spec.fillers_enabled,
         style=spec.style,
         individual_pdf=spec.individual_pdfs,
         individual_pdf_subdir=spec.individual_pdf_subdir,
@@ -870,6 +1008,8 @@ def _build_classes_catalog_chapters(
             headpiece_path=_art_path(recipe, spec.headpiece),
             break_ornament_path=_art_path(recipe, spec.break_ornament),
             source_files=files,
+            subclass_filler_slot=recipe.fillers.markers.subclass.slot,
+            fillers_enabled=spec.fillers_enabled,
             style=spec.child_style,
             individual_pdf=spec.individual_pdfs,
             individual_pdf_subdir=spec.individual_pdf_subdir,
@@ -896,6 +1036,8 @@ def _build_classes_catalog_chapters(
         headpiece_path=_art_path(recipe, spec.headpiece),
         break_ornament_path=_art_path(recipe, spec.break_ornament),
         children=children,
+        subclass_filler_slot=recipe.fillers.markers.subclass.slot,
+        fillers_enabled=spec.fillers_enabled,
         style=spec.style,
         full_page_sections=list(spec.full_page_sections),
         toc_depth=spec.toc_depth,
@@ -925,6 +1067,8 @@ def _build_group_chapter(
         tailpiece_path=_art_path(recipe, spec.tailpiece),
         headpiece_path=_art_path(recipe, spec.headpiece),
         break_ornament_path=_art_path(recipe, spec.break_ornament),
+        subclass_filler_slot=recipe.fillers.markers.subclass.slot,
+        fillers_enabled=spec.fillers_enabled,
         style=spec.style,
         full_page_sections=list(spec.full_page_sections),
         toc_depth=spec.toc_depth,
@@ -939,6 +1083,8 @@ def _build_group_chapter(
                 ch.style = spec.child_style
             if spec.child_divider:
                 ch.divider = True
+            if not wrapper.fillers_enabled:
+                _set_fillers_enabled(ch, False)
             wrapper.children.append(ch)
 
     return wrapper
@@ -953,10 +1099,12 @@ def _build_sequence_chapter(
     files: list[Path] = []
     source_titles: list[str | None] = []
     source_strip_related: list[bool] = []
+    source_filler_enabled: list[bool] = []
     for item in spec.sources:
         files.append(_resolve_source(item.source, recipe, vault_index))
         source_titles.append(item.title)
         source_strip_related.append(item.strip_related)
+        source_filler_enabled.append(item.filler_enabled)
 
     title = spec.title or (source_titles[0] if source_titles else None) or files[0].stem
     return Chapter(
@@ -970,6 +1118,12 @@ def _build_sequence_chapter(
         source_files=files,
         source_titles=source_titles,
         source_strip_related=source_strip_related,
+        source_filler_enabled=source_filler_enabled,
+        source_boundary_filler_slot=(
+            recipe.fillers.markers.source_boundary.sequence_slot
+        ),
+        subclass_filler_slot=recipe.fillers.markers.subclass.slot,
+        fillers_enabled=spec.fillers_enabled,
         style=spec.style,
         individual_pdf=spec.individual_pdfs,
         individual_pdf_subdir=spec.individual_pdf_subdir,
@@ -1008,6 +1162,8 @@ def _build_folder_chapter(
         headpiece_path=_art_path(recipe, spec.headpiece),
         break_ornament_path=_art_path(recipe, spec.break_ornament),
         source_files=files,
+        subclass_filler_slot=recipe.fillers.markers.subclass.slot,
+        fillers_enabled=spec.fillers_enabled,
         style=spec.style,
         individual_pdf=spec.individual_pdfs,
         individual_pdf_subdir=spec.individual_pdf_subdir,
@@ -1062,7 +1218,7 @@ def build_manifest(recipe: Recipe) -> Manifest:
     splashes = _build_splashes(recipe.splashes, recipe, chapters, warnings)
     fillers = _build_filler_catalog(recipe, warnings)
     page_damage = _build_page_damage_catalog(recipe, warnings)
-    _attach_chapter_filler_slots(chapters, fillers, warnings)
+    _attach_chapter_filler_slots(chapters, fillers, recipe.fillers.markers, warnings)
 
     return Manifest(
         recipe=recipe,

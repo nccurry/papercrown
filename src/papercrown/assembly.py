@@ -21,7 +21,13 @@ from collections.abc import Iterator
 from pathlib import Path
 from typing import TypedDict
 
-from .manifest import Chapter, ChapterFillerSlot, Splash, slugify
+from .manifest import (
+    Chapter,
+    ChapterFillerSlot,
+    ChapterHeadingFillerMarker,
+    Splash,
+    slugify,
+)
 from .vaults import VaultIndex, WikilinkTarget
 
 FRAME_TABLE_MARKER = "<!-- AUTO_FRAME_TABLE -->"
@@ -95,7 +101,10 @@ def assemble_chapter_markdown(
             )
         if (
             include_fillers
+            and chapter.fillers_enabled
             and chapter.style == "class"
+            and chapter.subclass_filler_slot
+            and _source_filler_enabled(chapter, i)
             and not chapter.slug.startswith("original-")
             and _is_subclass_source(src)
         ):
@@ -103,7 +112,22 @@ def assemble_chapter_markdown(
                 body,
                 chapter,
                 src,
-                slot_name="subclass-end",
+                slot_name=chapter.subclass_filler_slot,
+            )
+        if (
+            include_fillers
+            and chapter.fillers_enabled
+            and chapter.source_boundary_filler_slot
+            and _source_filler_enabled(chapter, i)
+            and i < len(chapter.source_files) - 1
+        ):
+            body = _append_source_end_filler_slot(
+                body,
+                chapter,
+                src,
+                slot_name=chapter.source_boundary_filler_slot,
+                slot_kind="source-boundary",
+                context=_source_filler_context(chapter, src, source_title),
             )
         if include_source_markers:
             body = _inject_source_file_marker(body, src)
@@ -128,14 +152,16 @@ def assemble_chapter_markdown(
     section_art: dict[str, str] = {}
     if chapter.slug == "frames":
         combined, section_art = _extract_frame_section_art_blocks(combined)
-        if include_fillers:
+    if include_fillers and chapter.fillers_enabled:
+        for marker in _chapter_heading_filler_markers(chapter):
             combined = _insert_heading_section_end_filler_slots(
                 combined,
                 chapter,
-                slot_name="frame-family-end",
-                heading_level=1,
-                slot_kind="frame-family",
-                skip_first=True,
+                slot_name=marker.slot,
+                heading_level=marker.heading_level,
+                slot_kind=marker.slot_kind,
+                skip_first=marker.skip_first,
+                context=marker.context,
             )
     combined = _demote_repeated_h1s(
         combined,
@@ -158,16 +184,7 @@ def assemble_chapter_markdown(
         )
     if include_art and include_tailpiece_art:
         combined = _append_tailpiece(combined, chapter.tailpiece_path)
-    if include_fillers and chapter.slug == "backgrounds":
-        combined = _insert_heading_section_end_filler_slots(
-            combined,
-            chapter,
-            slot_name="background-section-end",
-            heading_level=2,
-            slot_kind="background-section",
-            skip_first=False,
-        )
-    if include_fillers:
+    if include_fillers and chapter.fillers_enabled:
         combined = _append_filler_slots(combined, chapter.filler_slots)
     if chapter.slug.startswith("original-"):
         combined = _inject_original_reference_anchors(combined)
@@ -185,6 +202,7 @@ def assemble_combined_book_markdown(
     include_tailpiece_art: bool = False,
     splashes: list[Splash] | None = None,
     include_source_markers: bool = False,
+    include_back_cover_splashes: bool = True,
 ) -> str:
     """Concatenate every chapter into one big markdown blob for the combined book.
 
@@ -279,14 +297,27 @@ def assemble_combined_book_markdown(
                 "::::::\n\n"
             )
             parts.append(wrapped)
-    if include_art:
-        for splash in splashes or []:
-            if splash.target == "back-cover":
-                parts.append(_render_splash_page(splash))
+    if include_art and include_back_cover_splashes:
+        back_cover_pages = render_back_cover_splashes(splashes)
+        if back_cover_pages:
+            parts.append(back_cover_pages)
     markdown = "\n\n".join(parts)
     if include_toc:
         return add_manual_toc(markdown, chapters)
     return markdown
+
+
+def render_back_cover_splashes(splashes: list[Splash] | None) -> str:
+    """Render back-cover splash placements as terminal cover pages."""
+    return "\n\n".join(
+        block
+        for block in (
+            _render_splash_page(splash)
+            for splash in splashes or []
+            if splash.target == "back-cover"
+        )
+        if block
+    )
 
 
 def add_manual_toc(
@@ -557,6 +588,8 @@ def _append_source_end_filler_slot(
     source: Path,
     *,
     slot_name: str,
+    slot_kind: str | None = None,
+    context: str | None = None,
 ) -> str:
     """Append a section-scoped filler marker after one assembled source file."""
     title = _first_heading_text(text) or source.stem
@@ -571,9 +604,110 @@ def _append_source_end_filler_slot(
         chapter_slug=chapter.slug,
         section_slug=section_slug,
         section_title=title,
-        slot_kind=slot_name.removesuffix("-end"),
+        slot_kind=slot_kind or slot_name.removesuffix("-end"),
+        context=context,
     )
     return f"{text.rstrip()}\n\n{_render_filler_slot(slot)}\n"
+
+
+def _source_filler_context(
+    chapter: Chapter,
+    source: Path,
+    source_title: str | None,
+) -> str:
+    """Return the semantic art context for a generated source-boundary slot."""
+    text = " ".join(
+        (
+            chapter.style,
+            chapter.slug,
+            source_title or "",
+            source.stem,
+            source.parent.name,
+        )
+    ).lower()
+    if chapter.slug.startswith("original-") or chapter.style == "source-reference":
+        return "reference"
+    if chapter.style == "quick-reference" or chapter.slug in {
+        "quick-reference",
+        "reference",
+    }:
+        return "reference"
+    equipment_terms = (
+        "adventuring equipment",
+        "weapon",
+        "armor",
+        "gear",
+        "artifact",
+        "schematic",
+        "module",
+        "inventory",
+        "wealth",
+    )
+    if any(term in text for term in equipment_terms):
+        return "equipment"
+    if chapter.style == "powers" or any(
+        term in text for term in ("power", "spell", "magic", "chaos")
+    ):
+        return "powers"
+    combat_terms = (
+        "combat",
+        "heroic action",
+        "heroic reaction",
+        "hit point",
+        "wound",
+        "dying",
+        "grappl",
+        "cover",
+        "range",
+        "reach",
+    )
+    if chapter.style == "equipment" or any(term in text for term in combat_terms):
+        return "combat"
+    if chapter.style == "class":
+        return "class"
+    if chapter.style == "ancestries" or chapter.slug == "frames":
+        return "frame"
+    if chapter.style == "backgrounds":
+        return "setting"
+    if chapter.slug in {"languages", "language"}:
+        return "languages"
+    return "general"
+
+
+def _source_filler_enabled(chapter: Chapter, index: int) -> bool:
+    """Return whether source-end filler markers may follow this source file."""
+    return (
+        index >= len(chapter.source_filler_enabled)
+        or chapter.source_filler_enabled[index]
+    )
+
+
+def _chapter_heading_filler_markers(
+    chapter: Chapter,
+) -> list[ChapterHeadingFillerMarker]:
+    """Return resolved heading marker policies, with direct-test defaults."""
+    if chapter.heading_filler_markers is not None:
+        return chapter.heading_filler_markers
+    if chapter.slug == "frames":
+        return [
+            ChapterHeadingFillerMarker(
+                slot="frame-family-end",
+                heading_level=1,
+                slot_kind="frame-family",
+                skip_first=True,
+                context="frame",
+            )
+        ]
+    if chapter.slug == "backgrounds":
+        return [
+            ChapterHeadingFillerMarker(
+                slot="background-section-end",
+                heading_level=2,
+                slot_kind="background-section",
+                context="setting",
+            )
+        ]
+    return []
 
 
 def _insert_heading_section_end_filler_slots(
@@ -584,6 +718,7 @@ def _insert_heading_section_end_filler_slots(
     heading_level: int,
     slot_kind: str,
     skip_first: bool,
+    context: str | None = None,
 ) -> str:
     """Insert filler markers at the end of sections headed by a given level."""
     out: list[str] = []
@@ -612,6 +747,7 @@ def _insert_heading_section_end_filler_slots(
                             section_title=current_title,
                             section_slug=current_slug,
                             slot_kind=slot_kind,
+                            context=context,
                             used=used,
                         ),
                     )
@@ -633,6 +769,7 @@ def _insert_heading_section_end_filler_slots(
                 section_title=current_title,
                 section_slug=current_slug,
                 slot_kind=slot_kind,
+                context=context,
                 used=used,
             ),
         )
@@ -655,6 +792,7 @@ def _render_section_end_filler_slot(
     section_slug: str,
     slot_kind: str,
     used: dict[str, int],
+    context: str | None = None,
 ) -> str:
     count = used.get(section_slug, 0) + 1
     used[section_slug] = count
@@ -667,6 +805,7 @@ def _render_section_end_filler_slot(
             section_slug=section_slug,
             section_title=section_title,
             slot_kind=slot_kind,
+            context=context,
         )
     )
 
@@ -768,6 +907,8 @@ def _render_filler_slot(slot: ChapterFillerSlot) -> str:
         attrs.append(f'data-section-title="{_attribute_value(slot.section_title)}"')
     if slot.slot_kind:
         attrs.append(f'data-slot-kind="{_attribute_value(slot.slot_kind)}"')
+    if slot.context:
+        attrs.append(f'data-filler-context="{_attribute_value(slot.context)}"')
     return f":::: {{.filler-slot #{slot.id} {' '.join(attrs)}}}\n::::"
 
 
@@ -896,10 +1037,10 @@ def _render_splash_page(splash: Splash) -> str:
     """Render a full-page book splash, currently used for the back cover."""
     if splash.art_path is None:
         return ""
-    placement_class = ".splash-back-cover"
+    placement_class = ".splash-back-cover .cover-back-page"
     return (
         f":::: {{.splash-page {placement_class} #splash-{splash.id}}}\n\n"
-        f"![](<{splash.art_path.as_posix()}>){{.splash-page-art}}\n\n"
+        f"![](<{splash.art_path.as_posix()}>){{.splash-page-art .cover-back-art}}\n\n"
         "::::"
     )
 

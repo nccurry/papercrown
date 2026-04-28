@@ -176,12 +176,213 @@ FILLER_SHAPES = {
     "tailpiece",
     "spot",
     "small-wide",
+    "plate",
     "bottom-band",
+    "page-finish",
     "corner-left",
     "corner-right",
     "page-wear",
     "full-page",
 }
+
+
+@dataclass(frozen=True)
+class FillerTerminalMarkersSpec:
+    """Recipe policy for terminal chapter filler markers."""
+
+    chapter_slot: str | None = "chapter-end"
+    class_slot: str | None = "class-end"
+
+    @classmethod
+    def from_raw(cls, raw: object, *, loc: str) -> FillerTerminalMarkersSpec:
+        """Parse the optional ``fillers.markers.terminal`` value."""
+        if raw is None:
+            return cls()
+        if raw is False:
+            return cls(chapter_slot=None, class_slot=None)
+        if not isinstance(raw, Mapping):
+            raise RecipeError(f"{loc} must be a mapping or false")
+        return cls(
+            chapter_slot=_marker_slot_or_none(
+                raw.get("chapter_slot", raw.get("chapter")),
+                default="chapter-end",
+                loc=f"{loc}.chapter_slot",
+            ),
+            class_slot=_marker_slot_or_none(
+                raw.get("class_slot", raw.get("class")),
+                default="class-end",
+                loc=f"{loc}.class_slot",
+            ),
+        )
+
+
+@dataclass(frozen=True)
+class FillerSourceBoundaryMarkersSpec:
+    """Recipe policy for sequence source-boundary filler markers."""
+
+    sequence_slot: str | None = "section-end"
+
+    @classmethod
+    def from_raw(cls, raw: object, *, loc: str) -> FillerSourceBoundaryMarkersSpec:
+        """Parse the optional ``fillers.markers.source_boundary`` value."""
+        if raw is None:
+            return cls()
+        if raw is False:
+            return cls(sequence_slot=None)
+        if isinstance(raw, str):
+            return cls(sequence_slot=_required_marker_slot(raw, loc=loc))
+        if not isinstance(raw, Mapping):
+            raise RecipeError(f"{loc} must be a mapping, string, or false")
+        return cls(
+            sequence_slot=_marker_slot_or_none(
+                raw.get("sequence_slot", raw.get("sequence", raw.get("slot"))),
+                default="section-end",
+                loc=f"{loc}.sequence_slot",
+            )
+        )
+
+
+@dataclass(frozen=True)
+class FillerSubclassMarkersSpec:
+    """Recipe policy for subclass source-end filler markers."""
+
+    slot: str | None = "subclass-end"
+
+    @classmethod
+    def from_raw(cls, raw: object, *, loc: str) -> FillerSubclassMarkersSpec:
+        """Parse the optional ``fillers.markers.subclass`` value."""
+        if raw is None:
+            return cls()
+        if raw is False:
+            return cls(slot=None)
+        if isinstance(raw, str):
+            return cls(slot=_required_marker_slot(raw, loc=loc))
+        if not isinstance(raw, Mapping):
+            raise RecipeError(f"{loc} must be a mapping, string, or false")
+        return cls(
+            slot=_marker_slot_or_none(
+                raw.get("slot"),
+                default="subclass-end",
+                loc=f"{loc}.slot",
+            )
+        )
+
+
+@dataclass(frozen=True)
+class FillerHeadingMarkerSpec:
+    """Recipe policy for generated section-end filler markers."""
+
+    chapter: str
+    slot: str
+    heading_level: int
+    slot_kind: str
+    skip_first: bool = False
+    context: str | None = None
+
+    @classmethod
+    def from_dict(
+        cls,
+        raw: Mapping[str, object],
+        *,
+        index: int,
+    ) -> FillerHeadingMarkerSpec:
+        """Parse one ``fillers.markers.headings`` entry."""
+        loc = f"fillers.markers.headings[{index}]"
+        chapter = _str_or_none(raw.get("chapter"))
+        if chapter is None:
+            raise RecipeError(f"{loc}.chapter is required")
+        slot = _required_marker_slot(raw.get("slot"), loc=f"{loc}.slot")
+        heading_level = _positive_int(
+            raw.get("heading_level"),
+            loc=f"{loc}.heading_level",
+        )
+        if heading_level > 6:
+            raise RecipeError(f"{loc}.heading_level must be between 1 and 6")
+        return cls(
+            chapter=chapter,
+            slot=slot,
+            heading_level=heading_level,
+            slot_kind=(
+                _str_or_none(raw.get("slot_kind"))
+                or slot.removesuffix("-end")
+            ),
+            skip_first=bool(raw.get("skip_first", False)),
+            context=_str_or_none(raw.get("context")),
+        )
+
+
+def _default_heading_marker_specs() -> list[FillerHeadingMarkerSpec]:
+    return [
+        FillerHeadingMarkerSpec(
+            chapter="frames",
+            slot="frame-family-end",
+            heading_level=1,
+            slot_kind="frame-family",
+            skip_first=True,
+            context="frame",
+        ),
+        FillerHeadingMarkerSpec(
+            chapter="backgrounds",
+            slot="background-section-end",
+            heading_level=2,
+            slot_kind="background-section",
+            context="setting",
+        ),
+    ]
+
+
+@dataclass(frozen=True)
+class FillerMarkersSpec:
+    """Recipe policy for generated invisible filler marker slots."""
+
+    terminal: FillerTerminalMarkersSpec = field(
+        default_factory=FillerTerminalMarkersSpec
+    )
+    source_boundary: FillerSourceBoundaryMarkersSpec = field(
+        default_factory=FillerSourceBoundaryMarkersSpec
+    )
+    subclass: FillerSubclassMarkersSpec = field(
+        default_factory=FillerSubclassMarkersSpec
+    )
+    headings: list[FillerHeadingMarkerSpec] = field(
+        default_factory=_default_heading_marker_specs
+    )
+
+    @classmethod
+    def from_dict(cls, raw: object) -> FillerMarkersSpec:
+        """Build marker policy from the optional ``fillers.markers`` mapping."""
+        if raw is None:
+            return cls()
+        if not isinstance(raw, Mapping):
+            raise RecipeError("fillers.markers must be a mapping when provided")
+        headings_raw = raw.get("headings", _default_heading_marker_specs())
+        if not isinstance(headings_raw, list):
+            raise RecipeError("fillers.markers.headings must be a list")
+        headings: list[FillerHeadingMarkerSpec] = []
+        for i, item in enumerate(headings_raw):
+            if isinstance(item, FillerHeadingMarkerSpec):
+                headings.append(item)
+                continue
+            if not isinstance(item, Mapping):
+                raise RecipeError(
+                    f"fillers.markers.headings[{i}] must be a mapping"
+                )
+            headings.append(FillerHeadingMarkerSpec.from_dict(item, index=i))
+        return cls(
+            terminal=FillerTerminalMarkersSpec.from_raw(
+                raw.get("terminal"),
+                loc="fillers.markers.terminal",
+            ),
+            source_boundary=FillerSourceBoundaryMarkersSpec.from_raw(
+                raw.get("source_boundary"),
+                loc="fillers.markers.source_boundary",
+            ),
+            subclass=FillerSubclassMarkersSpec.from_raw(
+                raw.get("subclass"),
+                loc="fillers.markers.subclass",
+            ),
+            headings=headings,
+        )
 
 
 @dataclass(frozen=True)
@@ -263,6 +464,7 @@ class FillersSpec:
     art_dir: str | None = None
     slots: dict[str, FillerSlotSpec] = field(default_factory=dict)
     assets: list[FillerAssetSpec] = field(default_factory=list)
+    markers: FillerMarkersSpec = field(default_factory=FillerMarkersSpec)
 
     @classmethod
     def from_dict(cls, raw: Mapping[str, object] | None) -> FillersSpec:
@@ -302,6 +504,7 @@ class FillersSpec:
             art_dir=_str_or_none(raw.get("art_dir")),
             slots=slots,
             assets=assets,
+            markers=FillerMarkersSpec.from_dict(raw.get("markers")),
         )
 
 
@@ -477,6 +680,7 @@ class SourceItem:
     source: SourceRef
     title: str | None = None
     strip_related: bool = False
+    filler_enabled: bool = True
 
     @classmethod
     def from_raw(cls, raw: object, *, loc: str) -> SourceItem:
@@ -494,6 +698,7 @@ class SourceItem:
             source=SourceRef.parse(source_raw),
             title=_str_or_none(raw.get("title")),
             strip_related=bool(raw.get("strip_related", False)),
+            filler_enabled=_bool_value(raw.get("filler", True), loc=f"{loc}.filler"),
         )
 
 
@@ -573,6 +778,8 @@ class ChapterSpec:
     replace_existing_opening_art: bool = False
     # optional end-of-chapter ornament; filename relative to recipe.art_dir
     tailpiece: str | None = None
+    # disable generated filler markers inside this chapter.
+    fillers_enabled: bool = True
 
     @classmethod
     def from_dict(
@@ -692,6 +899,7 @@ class ChapterSpec:
                 raw.get("replace_existing_opening_art", False)
             ),
             tailpiece=_str_or_none(raw.get("tailpiece")),
+            fillers_enabled=_bool_value(raw.get("fillers", True), loc=f"{loc}.fillers"),
         )
 
 
@@ -1284,6 +1492,39 @@ def _str_or_none(value: object) -> str | None:
         return None
     s = str(value).strip()
     return s if s else None
+
+
+def _bool_value(value: object, *, loc: str) -> bool:
+    """Validate a boolean recipe value."""
+    if not isinstance(value, bool):
+        raise RecipeError(f"{loc} must be true or false")
+    return value
+
+
+def _required_marker_slot(value: object, *, loc: str) -> str:
+    """Validate one filler marker slot name."""
+    slot = _str_or_none(value)
+    if slot is None:
+        raise RecipeError(f"{loc} is required")
+    if not re.match(r"^[A-Za-z0-9_-]+$", slot):
+        raise RecipeError(
+            f"{loc} must contain only letters, numbers, underscores, and hyphens"
+        )
+    return slot
+
+
+def _marker_slot_or_none(
+    value: object,
+    *,
+    default: str,
+    loc: str,
+) -> str | None:
+    """Parse an optional marker slot where false disables the marker."""
+    if value is None:
+        return default
+    if value is False:
+        return None
+    return _required_marker_slot(value, loc=loc)
 
 
 def _string_list_or_one(value: object) -> list[str]:

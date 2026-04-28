@@ -39,6 +39,7 @@ from .resources import TEXTURES_DIR
 
 _WINDOWS_ABSOLUTE_URL_RE = re.compile(r"^[A-Za-z]:[\\/]")
 PT_PER_IN = 72.0
+BOTTOM_BLEED_BOTTOM_INSET_IN = 0.12
 if os.name == "nt":
     # GLib's default Windows VFS enumerates UWP file-association handlers and
     # can emit unrelated GLib-GIO warnings. We only fetch local build assets.
@@ -256,9 +257,11 @@ class RenderContext:
     pagination_mode: str = "report"
     page_damage_mode: str = "auto"
     pagination_report_path: Path | None = None
+    filler_debug_overlay_path: Path | None = None
     timings: bool = False
     timing_label: str = ""
     timing_log: Callable[[str], None] | None = None
+    warning_log: Callable[[str], None] | None = None
 
 
 # ---------------------------------------------------------------------------
@@ -530,13 +533,16 @@ def render_html_to_pdf(
         stage_start = _log_timing(ctx, "pagination fix pass", stage_start)
     final_doc = first_doc
     placements: list[fillers.FillerPlacement] = []
+    filler_decisions: list[fillers.FillerDecision] = []
     catalog = filler_catalog
     if catalog is not None and catalog.enabled:
-        placements = fillers.plan_fillers(
+        placements, filler_decisions = fillers.plan_filler_decisions(
             first_doc,
             catalog,
             recipe_title=recipe_title or ctx.chapter_title,
         )
+        for warning in fillers.filler_warnings(placements):
+            _log_warning(ctx, warning)
         if filler_report_path is not None:
             fillers.write_filler_report(
                 filler_report_path,
@@ -639,6 +645,13 @@ def render_html_to_pdf(
         ctx=ctx,
     )
     _log_timing(ctx, "pdf metadata", stage_start)
+    if ctx.filler_debug_overlay_path is not None:
+        _write_filler_debug_overlay(
+            out_pdf,
+            ctx.filler_debug_overlay_path,
+            filler_decisions,
+            placements,
+        )
     return out_pdf
 
 
@@ -649,6 +662,12 @@ def _log_timing(ctx: RenderContext, stage: str, start: float) -> float:
         label = f" {ctx.timing_label}" if ctx.timing_label else ""
         ctx.timing_log(f"  timing{label} {stage}: {now - start:.2f}s")
     return now
+
+
+def _log_warning(ctx: RenderContext, message: str) -> None:
+    """Log a non-fatal render warning when a build logger is attached."""
+    if ctx.warning_log is not None:
+        ctx.warning_log(message)
 
 
 def _render_stylesheets(
@@ -736,6 +755,56 @@ def _write_pdf_metadata(out_pdf: Path, *, title: str, ctx: RenderContext) -> Non
     writer.add_metadata(metadata)
     with out_pdf.open("wb") as handle:
         writer.write(handle)
+
+
+def _write_filler_debug_overlay(
+    source_pdf: Path,
+    debug_pdf: Path,
+    decisions: list[fillers.FillerDecision],
+    placements: list[fillers.FillerPlacement],
+) -> None:
+    """Write a separate PDF annotated with filler measurements and choices."""
+    debug_pdf.parent.mkdir(parents=True, exist_ok=True)
+    fitz: Any = importlib.import_module("fitz")
+    doc = fitz.open(source_pdf)
+    placed = {(placement.slot_id, placement.page_number) for placement in placements}
+    try:
+        for decision in decisions:
+            measurement = decision.measurement
+            page_index = measurement.page_number - 1
+            if page_index < 0 or page_index >= len(doc):
+                continue
+            page = doc[page_index]
+            page_rect = page.rect
+            top = max(0.0, measurement.slot_y_in * PT_PER_IN)
+            bottom = min(page_rect.height, measurement.content_bottom_in * PT_PER_IN)
+            if bottom <= top:
+                bottom = min(page_rect.height, top + 0.12 * PT_PER_IN)
+            rect = fitz.Rect(
+                page_rect.x0 + 0.55 * PT_PER_IN,
+                top,
+                page_rect.x1 - 0.55 * PT_PER_IN,
+                bottom,
+            )
+            is_placed = (measurement.slot_id, measurement.page_number) in placed
+            color = (0.0, 0.45, 0.25) if is_placed else (0.75, 0.32, 0.0)
+            page.draw_rect(rect, color=color, width=1.0, overlay=True)
+            asset_text = decision.asset.id if decision.asset is not None else "none"
+            label = (
+                f"{measurement.slot_name} {measurement.slot_id} | "
+                f"{decision.reason} | {asset_text} | "
+                f"{measurement.available_in:.2f}in"
+            )
+            page.insert_textbox(
+                fitz.Rect(rect.x0, max(0.0, rect.y0 - 18.0), rect.x1, rect.y0),
+                label,
+                fontsize=6.5,
+                color=color,
+                overlay=True,
+            )
+        _save_fitz_pdf(doc, debug_pdf)
+    finally:
+        doc.close()
 
 
 def _folio_frame_css(path: Path) -> str:
@@ -954,8 +1023,12 @@ def _stamp_bottom_bleed_fitz(
 ) -> None:
     """Stamp one bottom-bleed filler directly onto a PyMuPDF page."""
     asset = placement.asset
-    band_height = max(asset.height_in + 0.25, 1.0) * PT_PER_IN
-    max_image_height = asset.height_in * PT_PER_IN
+    render_height_in = _placement_render_height_in(placement)
+    band_height = max(render_height_in + 0.25, 1.0) * PT_PER_IN
+    bottom_inset = BOTTOM_BLEED_BOTTOM_INSET_IN * PT_PER_IN
+    max_image_height = (
+        max(0.1, render_height_in - BOTTOM_BLEED_BOTTOM_INSET_IN) * PT_PER_IN
+    )
     page_rect = page.rect
     mask_rect = fitz.Rect(
         page_rect.x0,
@@ -969,11 +1042,12 @@ def _stamp_bottom_bleed_fitz(
         max_height_pt=max_image_height,
     )
     image_x0 = page_rect.x0 + (page_rect.width - image_width) / 2.0
+    image_y1 = page_rect.y1 - bottom_inset
     image_rect = fitz.Rect(
         image_x0,
-        page_rect.y1 - image_height,
+        image_y1 - image_height,
         image_x0 + image_width,
-        page_rect.y1,
+        image_y1,
     )
     page.draw_rect(mask_rect, color=None, fill=(0.984, 0.980, 0.973), overlay=True)
     page.insert_image(
@@ -1116,7 +1190,9 @@ def _bottom_bleed_overlay_pdf(
     """Render one transparent full-page PDF overlay for bottom-bleed art."""
     _, HTML = _weasyprint_classes()
     asset = placement.asset
-    band_height = max(asset.height_in + 0.25, 1.0)
+    render_height_in = _placement_render_height_in(placement)
+    band_height = max(render_height_in + 0.25, 1.0)
+    image_max_height = max(0.1, render_height_in - BOTTOM_BLEED_BOTTOM_INSET_IN)
     image_src = html_lib.escape(asset.art_path.resolve().as_uri(), quote=True)
     overlay_html = f"""
     <!doctype html>
@@ -1139,9 +1215,9 @@ def _bottom_bleed_overlay_pdf(
       img {{
         position: absolute;
         left: 50%;
-        bottom: 0;
+        bottom: {BOTTOM_BLEED_BOTTOM_INSET_IN:.3f}in;
         max-width: 8.5in;
-        max-height: {asset.height_in:.3f}in;
+        max-height: {image_max_height:.3f}in;
         width: auto;
         height: auto;
         transform: translateX(-50%);
@@ -1159,6 +1235,11 @@ def _bottom_bleed_overlay_pdf(
             url_fetcher=_WEASYPRINT_URL_FETCHER,
         ).write_pdf(**ctx.pdf_settings.weasy_options()),
     )
+
+
+def _placement_render_height_in(placement: fillers.FillerPlacement) -> float:
+    """Return a placement's selected image height with legacy fallback."""
+    return placement.render_height_in or placement.asset.height_in
 
 
 def _normalize_weasyprint_url(url: str) -> str:

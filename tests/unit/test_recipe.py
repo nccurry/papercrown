@@ -672,6 +672,56 @@ class TestLoadRecipeErrors:
         with pytest.raises(RecipeError, match="skip"):
             load_recipe(p)
 
+    def test_fillers_parse_marker_policy_and_opt_outs(self, tmp_path):
+        p = _write_recipe(
+            tmp_path,
+            """
+            title: X
+            vaults:
+              custom: vault
+            fillers:
+              enabled: true
+              slots:
+                chapter-end:
+                  min_space: 0.65in
+                  max_space: 5.5in
+                  shapes: [tailpiece, plate, page-finish]
+              markers:
+                terminal:
+                  chapter_slot: chapter-end
+                  class_slot: false
+                source_boundary: false
+                subclass: false
+                headings:
+                  - chapter: Reference
+                    slot: chapter-end
+                    heading_level: 2
+                    slot_kind: reference-section
+                    context: reference
+            chapters:
+              - kind: sequence
+                title: Reference
+                fillers: false
+                sources:
+                  - source: custom:Foo.md
+                    filler: false
+        """,
+        )
+
+        recipe = load_recipe(p)
+
+        assert recipe.fillers.slots["chapter-end"].shapes == [
+            "tailpiece",
+            "plate",
+            "page-finish",
+        ]
+        assert recipe.fillers.markers.terminal.class_slot is None
+        assert recipe.fillers.markers.source_boundary.sequence_slot is None
+        assert recipe.fillers.markers.subclass.slot is None
+        assert recipe.fillers.markers.headings[0].slot_kind == "reference-section"
+        assert recipe.chapters[0].fillers_enabled is False
+        assert recipe.chapters[0].sources[0].filler_enabled is False
+
     def test_missing_chapters(self, tmp_path):
         p = _write_recipe(
             tmp_path,

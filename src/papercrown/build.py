@@ -113,6 +113,7 @@ class BuildRequest:
     pagination_mode: PaginationMode = PaginationMode.REPORT
     draft_mode: DraftMode = DraftMode.FAST
     page_damage_mode: PageDamageMode = PageDamageMode.AUTO
+    filler_debug_overlay: bool = False
     timings: bool = False
 
 
@@ -177,13 +178,16 @@ def _configure_job_timings(
     enabled: bool,
     log: LogFn | None,
 ) -> None:
-    """Attach opt-in timing diagnostics to prepared render jobs."""
-    if not enabled:
-        return
+    """Attach render diagnostics to prepared render jobs."""
     for job in jobs:
-        job.ctx.timings = True
-        job.ctx.timing_label = job.label
-        job.ctx.timing_log = log
+        ctx = getattr(job, "ctx", None)
+        if ctx is None:
+            continue
+        ctx.warning_log = log
+        if enabled:
+            ctx.timings = True
+            ctx.timing_label = job.label
+            ctx.timing_log = log
 
 
 def make_base_context(
@@ -547,9 +551,15 @@ def _prepare_chapter_pdf_job(
     page_damage_mode: PageDamageMode = PageDamageMode.AUTO,
     clean_pdf: bool = True,
     image_session: images.ImageOptimizationSession | None = None,
+    filler_debug_overlay: bool = False,
 ) -> PdfRenderJob:
     """Prepare one chapter render without writing the PDF."""
     render_art = include_art and not _is_fast_draft(profile, draft_mode)
+    render_fillers = (
+        render_art
+        and manifest is not None
+        and manifest.fillers.enabled
+    )
     markdown = assembly.assemble_chapter_markdown(
         chapter,
         export_map=export_map,
@@ -560,7 +570,7 @@ def _prepare_chapter_pdf_job(
             else None
         ),
         include_splashes=render_art,
-        include_fillers=render_art,
+        include_fillers=render_fillers,
         include_source_markers=True,
     )
     markdown = _prepare_ttrpg_markdown(
@@ -590,6 +600,8 @@ def _prepare_chapter_pdf_job(
         image_session=image_session,
     )
     ctx.pagination_report_path = _pagination_report_path(out, pagination_mode)
+    if filler_debug_overlay:
+        ctx.filler_debug_overlay_path = _filler_debug_overlay_path(out)
     return PdfRenderJob(
         label=chapter.title,
         markdown=markdown,
@@ -641,6 +653,7 @@ def build_chapter_pdf(
     clean_pdf: bool = True,
     timings: bool = False,
     image_session: images.ImageOptimizationSession | None = None,
+    filler_debug_overlay: bool = False,
 ) -> Path:
     """Render one chapter to a PDF and return the output path."""
     job = _prepare_chapter_pdf_job(
@@ -656,6 +669,7 @@ def build_chapter_pdf(
         page_damage_mode=page_damage_mode,
         clean_pdf=clean_pdf,
         image_session=image_session,
+        filler_debug_overlay=filler_debug_overlay,
     )
     _configure_job_timings([job], enabled=timings, log=log)
     did_skip = _run_render_job_cached(job, cache=cache, force=force, log=log)
@@ -677,24 +691,32 @@ def _prepare_combined_book_job(
     page_damage_mode: PageDamageMode = PageDamageMode.AUTO,
     clean_pdf: bool = True,
     image_session: images.ImageOptimizationSession | None = None,
+    filler_debug_overlay: bool = False,
 ) -> PdfRenderJob:
     """Prepare the combined book render without writing the PDF."""
     render_art = include_art and not _is_fast_draft(profile, draft_mode)
+    render_fillers = render_art and manifest.fillers.enabled
+    back_cover_pages = (
+        assembly.render_back_cover_splashes(manifest.splashes) if render_art else ""
+    )
     markdown = assembly.assemble_combined_book_markdown(
         manifest.chapters,
         export_map=export_map,
         vault_index=manifest.vault_index,
         include_toc=False,
         include_art=render_art,
-        include_fillers=render_art,
+        include_fillers=render_fillers,
         splashes=manifest.splashes,
         include_source_markers=True,
+        include_back_cover_splashes=False,
     )
     markdown = _prepare_book_markdown_with_manual_toc(
         markdown,
         recipe,
         manifest.chapters,
     )
+    if back_cover_pages:
+        markdown = f"{markdown.rstrip()}\n\n{back_cover_pages}\n"
     markdown = _rewrite_render_images(
         markdown,
         recipe,
@@ -717,6 +739,8 @@ def _prepare_combined_book_job(
         image_session=image_session,
     )
     ctx.pagination_report_path = _pagination_report_path(out, pagination_mode)
+    if filler_debug_overlay:
+        ctx.filler_debug_overlay_path = _filler_debug_overlay_path(out)
     return PdfRenderJob(
         label=recipe.title,
         markdown=markdown,
@@ -805,6 +829,9 @@ def build_web_book(
     _reset_web_output(web_root)
     _copy_web_static_assets(web_root, recipe=recipe)
 
+    back_cover_pages = (
+        assembly.render_back_cover_splashes(manifest.splashes) if include_art else ""
+    )
     markdown = assembly.assemble_combined_book_markdown(
         manifest.chapters,
         export_map=export_map,
@@ -815,6 +842,7 @@ def build_web_book(
         include_tailpiece_art=True,
         splashes=manifest.splashes,
         include_source_markers=True,
+        include_back_cover_splashes=False,
     )
     markdown = _prepare_book_markdown_with_manual_toc(
         markdown,
@@ -822,6 +850,8 @@ def build_web_book(
         manifest.chapters,
         toc_max_depth=2,
     )
+    if back_cover_pages:
+        markdown = f"{markdown.rstrip()}\n\n{back_cover_pages}\n"
     markdown = _rewrite_render_images(
         markdown,
         recipe,
@@ -1023,6 +1053,7 @@ def build_outputs(
                     page_damage_mode=effective_page_damage_mode,
                     clean_pdf=request.clean_pdf,
                     image_session=image_session,
+                    filler_debug_overlay=request.filler_debug_overlay,
                 )
             )
 
@@ -1055,6 +1086,7 @@ def build_outputs(
                     page_damage_mode=effective_page_damage_mode,
                     clean_pdf=request.clean_pdf,
                     image_session=image_session,
+                    filler_debug_overlay=request.filler_debug_overlay,
                 )
             )
 
@@ -1074,6 +1106,7 @@ def build_outputs(
                 page_damage_mode=effective_page_damage_mode,
                 clean_pdf=request.clean_pdf,
                 image_session=image_session,
+                filler_debug_overlay=request.filler_debug_overlay,
             )
         )
 
@@ -1497,6 +1530,11 @@ def _missing_art_report_path(
     return out.with_suffix(".missing-art.md")
 
 
+def _filler_debug_overlay_path(out: Path) -> Path:
+    """Return the sibling debug PDF path for filler overlay diagnostics."""
+    return out.with_name(f"{out.stem}.filler-debug{out.suffix}")
+
+
 def _render_fingerprint(
     markdown: str,
     ctx: pipeline.RenderContext,
@@ -1543,6 +1581,7 @@ def _render_fingerprint(
         "draft_placeholders": ctx.draft_placeholders,
         "pagination_mode": ctx.pagination_mode,
         "page_damage_mode": ctx.page_damage_mode,
+        "filler_debug_overlay": ctx.filler_debug_overlay_path is not None,
     }
     return fingerprint_files(paths_for_hash, extra=extra)
 
