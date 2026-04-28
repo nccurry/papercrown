@@ -91,8 +91,8 @@ def test_python_group_checks_read_pyproject_and_uv_lock(papercrown_root):
     assert all(check.path == papercrown_root / "pyproject.toml" for check in checks)
 
 
-def test_windows_native_runtime_msys2_pango_passes():
-    preferred = Path(r"C:\msys64\mingw64\bin")
+def test_windows_native_runtime_msys2_ucrt64_pango_passes():
+    preferred = Path(r"C:\msys64\ucrt64\bin")
 
     check = dependencies._classify_windows_native_runtime(
         preferred_dir=preferred,
@@ -108,14 +108,14 @@ def test_windows_native_runtime_msys2_pango_passes():
         check_command="uv run papercrown deps check",
         install_command="install msys2",
         update_command="update msys2",
-        configure_command='setx WEASYPRINT_DLL_DIRECTORIES "C:\\msys64\\mingw64\\bin"',
+        configure_command='setx WEASYPRINT_DLL_DIRECTORIES "C:\\msys64\\ucrt64\\bin"',
     )
 
     assert check.status is dependencies.DependencyStatus.OK
 
 
 def test_windows_native_runtime_prefers_env_over_stale_path_order():
-    preferred = Path(r"C:\msys64\mingw64\bin")
+    preferred = Path(r"C:\msys64\ucrt64\bin")
     stale = Path(r"C:\Program Files\GTK3-Runtime Win64\bin")
 
     check = dependencies._classify_windows_native_runtime(
@@ -132,7 +132,7 @@ def test_windows_native_runtime_prefers_env_over_stale_path_order():
         check_command="uv run papercrown deps check",
         install_command="install msys2",
         update_command="update msys2",
-        configure_command='setx WEASYPRINT_DLL_DIRECTORIES "C:\\msys64\\mingw64\\bin"',
+        configure_command='setx WEASYPRINT_DLL_DIRECTORIES "C:\\msys64\\ucrt64\\bin"',
     )
 
     assert check.status is dependencies.DependencyStatus.OK
@@ -140,7 +140,7 @@ def test_windows_native_runtime_prefers_env_over_stale_path_order():
 
 
 def test_windows_native_runtime_gtk_glib_warns_with_uwp_explanation():
-    preferred = Path(r"C:\msys64\mingw64\bin")
+    preferred = Path(r"C:\msys64\ucrt64\bin")
     stale = Path(r"C:\Program Files\GTK3-Runtime Win64\bin")
 
     check = dependencies._classify_windows_native_runtime(
@@ -157,7 +157,7 @@ def test_windows_native_runtime_gtk_glib_warns_with_uwp_explanation():
         check_command="uv run papercrown deps check",
         install_command="install msys2",
         update_command="update msys2",
-        configure_command='setx WEASYPRINT_DLL_DIRECTORIES "C:\\msys64\\mingw64\\bin"',
+        configure_command='setx WEASYPRINT_DLL_DIRECTORIES "C:\\msys64\\ucrt64\\bin"',
     )
 
     assert check.status is dependencies.DependencyStatus.WARN
@@ -166,7 +166,7 @@ def test_windows_native_runtime_gtk_glib_warns_with_uwp_explanation():
 
 def test_windows_native_runtime_missing_errors_for_pdf_builds():
     check = dependencies._classify_windows_native_runtime(
-        preferred_dir=Path(r"C:\msys64\mingw64\bin"),
+        preferred_dir=Path(r"C:\msys64\ucrt64\bin"),
         preferred_dir_present=False,
         stale_dirs=(),
         stale_versions=(),
@@ -179,7 +179,7 @@ def test_windows_native_runtime_missing_errors_for_pdf_builds():
         check_command="uv run papercrown deps check",
         install_command="install msys2",
         update_command="update msys2",
-        configure_command='setx WEASYPRINT_DLL_DIRECTORIES "C:\\msys64\\mingw64\\bin"',
+        configure_command='setx WEASYPRINT_DLL_DIRECTORIES "C:\\msys64\\ucrt64\\bin"',
     )
 
     assert check.status is dependencies.DependencyStatus.ERROR

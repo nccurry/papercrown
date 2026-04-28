@@ -18,7 +18,7 @@ function Refresh-Path {
         (Join-Path $HOME ".cargo\bin"),
         (Join-Path $env:LOCALAPPDATA "Microsoft\WinGet\Links"),
         (Join-Path $env:LOCALAPPDATA "Microsoft\WindowsApps"),
-        "C:\msys64\mingw64\bin"
+        "C:\msys64\ucrt64\bin"
     )
     $env:Path = (@($processPath, $userPath, $machinePath) + $extra |
         Where-Object { $_ } |
@@ -111,7 +111,7 @@ function Ensure-ObsidianExport {
 
 function Ensure-WindowsPdfRuntime {
     $msysBash = "C:\msys64\usr\bin\bash.exe"
-    $msysBin = "C:\msys64\mingw64\bin"
+    $msysBin = "C:\msys64\ucrt64\bin"
     $pangoDll = Join-Path $msysBin "libpango-1.0-0.dll"
 
     if (-not (Test-Path $pangoDll)) {
@@ -122,9 +122,9 @@ function Ensure-WindowsPdfRuntime {
             throw "MSYS2 was installed but $msysBash was not found."
         }
 
-        Write-Step "Installing MSYS2 Pango/GLib runtime"
+        Write-Step "Installing MSYS2 UCRT64 Pango/GLib runtime"
         & $msysBash -lc "pacman -Syu --noconfirm"
-        & $msysBash -lc "pacman -S --needed --noconfirm mingw-w64-x86_64-pango"
+        & $msysBash -lc "pacman -S --needed --noconfirm mingw-w64-ucrt-x86_64-pango"
     }
 
     $env:WEASYPRINT_DLL_DIRECTORIES = $msysBin
