@@ -80,27 +80,27 @@ native_pdf_runtime:
     managed_by: MSYS2 pacman + WEASYPRINT_DLL_DIRECTORIES
     check: "uv run papercrown deps check"
     preferred:
-      name: MSYS2 Pango/GLib
-      dll_dir: 'C:\msys64\mingw64\bin'
-      package: mingw-w64-x86_64-pango
+      name: MSYS2 UCRT64 Pango/GLib
+      dll_dir: 'C:\msys64\ucrt64\bin'
+      package: mingw-w64-ucrt-x86_64-pango
       install_commands:
         - "winget install --id MSYS2.MSYS2 -e"
         - 'C:\msys64\usr\bin\bash.exe -lc "pacman -Syu --noconfirm"'
-        - 'C:\msys64\usr\bin\bash.exe -lc "pacman -S --needed --noconfirm mingw-w64-x86_64-pango"'
-        - 'setx WEASYPRINT_DLL_DIRECTORIES "C:\msys64\mingw64\bin"'
-        - 'add C:\msys64\mingw64\bin to User PATH'
+        - 'C:\msys64\usr\bin\bash.exe -lc "pacman -S --needed --noconfirm mingw-w64-ucrt-x86_64-pango"'
+        - 'setx WEASYPRINT_DLL_DIRECTORIES "C:\msys64\ucrt64\bin"'
+        - 'add C:\msys64\ucrt64\bin to User PATH'
       update_commands:
         - 'C:\msys64\usr\bin\bash.exe -lc "pacman -Syu --noconfirm"'
-        - 'C:\msys64\usr\bin\bash.exe -lc "pacman -S --needed --noconfirm mingw-w64-x86_64-pango"'
-        - 'setx WEASYPRINT_DLL_DIRECTORIES "C:\msys64\mingw64\bin"'
-        - 'add C:\msys64\mingw64\bin to User PATH'
+        - 'C:\msys64\usr\bin\bash.exe -lc "pacman -S --needed --noconfirm mingw-w64-ucrt-x86_64-pango"'
+        - 'setx WEASYPRINT_DLL_DIRECTORIES "C:\msys64\ucrt64\bin"'
+        - 'add C:\msys64\ucrt64\bin to User PATH'
     stale_unsupported:
       - name: GTK3-Runtime Win64
         dll_dir: 'C:\Program Files\GTK3-Runtime Win64\bin'
         known_glib_versions:
           - "2.70.2"
         warning: "Old GTK3-Runtime GLib can emit GLib-GIO UWP app-info warnings during WeasyPrint PDF builds."
-        action: 'Remove this directory from PATH or supersede it with WEASYPRINT_DLL_DIRECTORIES="C:\msys64\mingw64\bin" and C:\msys64\mingw64\bin earlier on PATH.'
+        action: 'Remove this directory from PATH or supersede it with WEASYPRINT_DLL_DIRECTORIES="C:\msys64\ucrt64\bin" and C:\msys64\ucrt64\bin earlier on PATH.'
 
 bundled_assets:
   fonts:
