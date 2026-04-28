@@ -312,7 +312,10 @@ def test_typed_blocks_resolve_refs_and_generate_index(tmp_path):
     )
 
     assert prepared.diagnostics == []
-    assert "#npc-mara-voss .npc .ttrpg-block .ttrpg-npc" in prepared.markdown
+    assert (
+        "#npc-mara-voss .pc-component .pc-ttrpg-block .pc-ttrpg-npc"
+        in prepared.markdown
+    )
     assert 'data-ttrpg-id="mara-voss"' in prepared.markdown
     assert f'data-source-file="{source}"' in prepared.markdown
     assert prepared.registry.objects[0].source_file == Path(source)

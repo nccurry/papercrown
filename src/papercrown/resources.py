@@ -31,6 +31,7 @@ LUA_FILTERS: list[Path] = [
     FILTERS_DIR / "internal-links.lua",
     FILTERS_DIR / "strip-links.lua",
     FILTERS_DIR / "callouts.lua",
+    FILTERS_DIR / "rules-widgets.lua",
     FILTERS_DIR / "stat-blocks.lua",
     FILTERS_DIR / "highlight-level-headings.lua",
     FILTERS_DIR / "minor-sections.lua",

@@ -260,7 +260,7 @@
   break-inside: avoid;
 }
 
-.minor-section {
+.pc-section-minor {
   page-break-inside: avoid;
   break-inside: avoid;
 }
@@ -275,16 +275,16 @@ body.section-backgrounds h3,
   margin-top: 0.6em;
 }
 
-.chapter-wrap.section-backgrounds .minor-section > p,
-.chapter-wrap.section-backgrounds .minor-section > ul,
-body.section-backgrounds .minor-section > p,
-body.section-backgrounds .minor-section > ul {
+.chapter-wrap.section-backgrounds .pc-section-minor > p,
+.chapter-wrap.section-backgrounds .pc-section-minor > ul,
+body.section-backgrounds .pc-section-minor > p,
+body.section-backgrounds .pc-section-minor > ul {
   padding-left: 0.14in;
   box-sizing: border-box;
 }
 
-.chapter-wrap.section-backgrounds .minor-section > h3 + p,
-body.section-backgrounds .minor-section > h3 + p {
+.chapter-wrap.section-backgrounds .pc-section-minor > h3 + p,
+body.section-backgrounds .pc-section-minor > h3 + p {
   margin-top: 0.05em;
 }
 
@@ -301,8 +301,8 @@ body.section-ancestries h3 + p,
   margin-top: 0;
 }
 
-body.section-ancestries .minor-section,
-.chapter-wrap.section-ancestries .minor-section {
+body.section-ancestries .pc-section-minor,
+.chapter-wrap.section-ancestries .pc-section-minor {
   page-break-inside: auto;
   break-inside: auto;
 }
@@ -335,8 +335,8 @@ body.section-powers hr,
 /* Equipment chapters contain long price/stat tables. Let those sections and
    tables fragment naturally so a heading or lead image does not strand an
    otherwise usable page while the table waits for a fresh sheet. */
-body.section-equipment .minor-section,
-.chapter-wrap.section-equipment .minor-section,
+body.section-equipment .pc-section-minor,
+.chapter-wrap.section-equipment .pc-section-minor,
 body.section-equipment table,
 .chapter-wrap.section-equipment table {
   break-inside: auto;
@@ -539,8 +539,8 @@ h6.section-divider-title {
 /* Class chapters have many source-file sections like Gadgets, Protocols,
    Orders, and feature lists. Keep them readable as compact tool sections
    instead of letting generic heading chrome dominate the page. */
-body.section-class h2:not(.section-divider-title):not(.level-heading),
-.chapter-wrap.section-class h3:not(.section-divider-title):not(.level-heading) {
+body.section-class h2:not(.section-divider-title):not(.pc-level-heading),
+.chapter-wrap.section-class h3:not(.section-divider-title):not(.pc-level-heading) {
   font-size: 12.8pt;
   letter-spacing: 0;
   text-transform: none;
@@ -553,8 +553,8 @@ body.section-class h2:not(.section-divider-title):not(.level-heading),
   background: none;
 }
 
-body.section-class h3:not(.section-divider-title):not(.level-heading),
-.chapter-wrap.section-class h4:not(.section-divider-title):not(.level-heading) {
+body.section-class h3:not(.section-divider-title):not(.pc-level-heading),
+.chapter-wrap.section-class h4:not(.section-divider-title):not(.pc-level-heading) {
   font-size: 11.4pt;
   letter-spacing: 0;
   margin-top: 0.55em;
@@ -565,7 +565,7 @@ body.section-class h3:not(.section-divider-title):not(.level-heading),
 /* ==========================================================================
    Level headings ("Level N ...") inside class chapters
    ==========================================================================
-   highlight-level-headings.lua tags these with .level-heading regardless
+   highlight-level-headings.lua tags these with .pc-level-heading regardless
    of their actual heading level (they may be h3 in single-chapter PDFs,
    h4/h5 in the combined book after wrapper + child_divider demotion).
    They're the most important navigational landmarks in a class spread,
@@ -573,12 +573,12 @@ body.section-class h3:not(.section-divider-title):not(.level-heading),
    rather than rule-like: dense level lists can stack many of these on a
    single page, and repeated horizontal rules read as accidental dividers. */
 
-h1.level-heading,
-h2.level-heading,
-h3.level-heading,
-h4.level-heading,
-h5.level-heading,
-h6.level-heading {
+h1.pc-level-heading,
+h2.pc-level-heading,
+h3.pc-level-heading,
+h4.pc-level-heading,
+h5.pc-level-heading,
+h6.pc-level-heading {
   font-family: var(--font-head);
   font-size: 12pt;
   font-weight: 700;
@@ -596,9 +596,9 @@ h6.level-heading {
 
 /* Tighten the immediate-after content so the level heading visually
    "owns" the feature(s) that follow */
-.level-heading + p,
-.level-heading + ul,
-.level-heading + .stat-block {
+.pc-level-heading + p,
+.pc-level-heading + ul,
+.pc-level-heading + .pc-stat-block {
   margin-top: 0.2em;
 }
 
@@ -667,8 +667,8 @@ body.section-quick-reference h2,
   break-after: avoid;
 }
 
-body.section-quick-reference .stat-block,
-.chapter-wrap.section-quick-reference .stat-block {
+body.section-quick-reference .pc-stat-block,
+.chapter-wrap.section-quick-reference .pc-stat-block {
   margin: 0.22em 0 0.34em 0;
   padding: 0.32em 0.52em 0.3em 0.52em;
   break-inside: avoid;
@@ -683,11 +683,11 @@ body.section-quick-reference p,
    Internal references (clickable links within the same PDF)
    ========================================================================== */
 
-a.internal-ref {
+a.pc-ref.pc-ref-internal {
   color: var(--accent-deep);
   font-weight: inherit;
 }
-body.mode-print a.internal-ref {
+body.mode-print a.pc-ref.pc-ref-internal {
   /* In print, internal refs render as small-caps text -- visually distinct
      from body text but no underline (since you can't click paper). */
   color: var(--ink);
@@ -695,9 +695,9 @@ body.mode-print a.internal-ref {
   font-variant: small-caps;
   letter-spacing: 0.04em;
 }
-body.mode-digital a.internal-ref,
-body.mode-draft a.internal-ref,
-body.mode-web a.internal-ref {
+body.mode-digital a.pc-ref.pc-ref-internal,
+body.mode-draft a.pc-ref.pc-ref-internal,
+body.mode-web a.pc-ref.pc-ref-internal {
   text-decoration: underline dotted;
   text-decoration-thickness: 0.5pt;
   text-underline-offset: 0.15em;

@@ -12,63 +12,32 @@
 -- Long sections may still split naturally; `break-inside: avoid` is only a
 -- preference when the content can fit.
 
-local function has_class(el, class_name)
-  if not el.classes then return false end
-  for _, c in ipairs(el.classes) do
-    if c == class_name then return true end
-  end
-  return false
-end
+local script_path = PANDOC_SCRIPT_FILE or debug.getinfo(1, "S").source:sub(2)
+local filter_dir = script_path:match("^(.*)[/\\][^/\\]+$") or "."
+local pc = dofile(filter_dir .. "/lib/papercrown.lua")
 
 local function is_minor_header(block)
   if block.t ~= "Header" then return false end
   if block.level < 3 or block.level > 4 then return false end
-  if has_class(block, "section-divider-title") then return false end
+  if pc.class.has(block, "section-divider-title") then return false end
   return true
 end
 
-local function wrap_minor_sections(blocks)
-  local out = pandoc.List()
-  local i = 1
-
-  while i <= #blocks do
-    local block = blocks[i]
-
-    if is_minor_header(block) then
-      local level = block.level
-      local section_blocks = pandoc.List()
-      section_blocks:insert(block)
-      i = i + 1
-
-      while i <= #blocks do
-        local next_block = blocks[i]
-        if next_block.t == "Header" and next_block.level <= level then
-          break
-        end
-        section_blocks:insert(next_block)
-        i = i + 1
-      end
-
-      out:insert(pandoc.Div(
-        section_blocks,
-        pandoc.Attr("", { "minor-section", "minor-section-level-" .. tostring(level) })
-      ))
-    else
-      out:insert(block)
-      i = i + 1
-    end
-  end
-
-  return out
+local function minor_classes(block)
+  return {
+    "pc-section",
+    "pc-section-minor",
+    "pc-section-level-" .. tostring(block.level),
+  }
 end
 
 function Div(el)
-  if has_class(el, "minor-section") then return nil end
-  el.content = wrap_minor_sections(el.content)
+  if pc.class.has(el, "pc-section-minor") then return nil end
+  el.content = pc.section.wrap(el.content, is_minor_header, minor_classes)
   return el
 end
 
 function Pandoc(doc)
-  doc.blocks = wrap_minor_sections(doc.blocks)
+  doc.blocks = pc.section.wrap(doc.blocks, is_minor_header, minor_classes)
   return doc
 end

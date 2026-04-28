@@ -48,22 +48,22 @@
   page-break-inside: avoid;
 }
 
-.ttrpg-block {
+.pc-ttrpg-block {
   margin: 0;
   padding: 0;
   background: transparent;
   border: 0;
 }
 
-.ttrpg-npc,
-.ttrpg-faction,
-.ttrpg-location,
-.ttrpg-encounter,
-.ttrpg-clue,
-.ttrpg-clock,
-.ttrpg-readaloud,
-.ttrpg-handout,
-.ttrpg-sidebar {
+.pc-ttrpg-npc,
+.pc-ttrpg-faction,
+.pc-ttrpg-location,
+.pc-ttrpg-encounter,
+.pc-ttrpg-clue,
+.pc-ttrpg-clock,
+.pc-ttrpg-readaloud,
+.pc-ttrpg-handout,
+.pc-ttrpg-sidebar {
   margin: 0.9em 0;
   padding: 0.65em 0.8em 0.7em;
   background: var(--tint-block);
@@ -73,41 +73,41 @@
   page-break-inside: avoid;
 }
 
-.ttrpg-npc > :first-child,
-.ttrpg-faction > :first-child,
-.ttrpg-location > :first-child,
-.ttrpg-encounter > :first-child,
-.ttrpg-clue > :first-child,
-.ttrpg-clock > :first-child,
-.ttrpg-readaloud > :first-child,
-.ttrpg-handout > :first-child,
-.ttrpg-sidebar > :first-child {
+.pc-ttrpg-npc > :first-child,
+.pc-ttrpg-faction > :first-child,
+.pc-ttrpg-location > :first-child,
+.pc-ttrpg-encounter > :first-child,
+.pc-ttrpg-clue > :first-child,
+.pc-ttrpg-clock > :first-child,
+.pc-ttrpg-readaloud > :first-child,
+.pc-ttrpg-handout > :first-child,
+.pc-ttrpg-sidebar > :first-child {
   margin-top: 0;
 }
 
-.ttrpg-npc > :last-child,
-.ttrpg-faction > :last-child,
-.ttrpg-location > :last-child,
-.ttrpg-encounter > :last-child,
-.ttrpg-clue > :last-child,
-.ttrpg-clock > :last-child,
-.ttrpg-readaloud > :last-child,
-.ttrpg-handout > :last-child,
-.ttrpg-sidebar > :last-child {
+.pc-ttrpg-npc > :last-child,
+.pc-ttrpg-faction > :last-child,
+.pc-ttrpg-location > :last-child,
+.pc-ttrpg-encounter > :last-child,
+.pc-ttrpg-clue > :last-child,
+.pc-ttrpg-clock > :last-child,
+.pc-ttrpg-readaloud > :last-child,
+.pc-ttrpg-handout > :last-child,
+.pc-ttrpg-sidebar > :last-child {
   margin-bottom: 0;
 }
 
-.ttrpg-clue,
-.ttrpg-clock {
+.pc-ttrpg-clue,
+.pc-ttrpg-clock {
   border-left-color: var(--warn);
 }
 
-.ttrpg-readaloud,
-.ttrpg-handout,
-.ttrpg-sidebar {
+.pc-ttrpg-readaloud,
+.pc-ttrpg-handout,
+.pc-ttrpg-sidebar {
   background: var(--tint-callout);
 }
 
-.ttrpg-ref {
+.pc-ttrpg-ref {
   white-space: nowrap;
 }

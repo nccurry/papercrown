@@ -16,10 +16,10 @@ table th {
 }
 
 blockquote,
-.callout {
+.pc-callout {
   border-left-width: 6px;
 }
 
-.stat-block {
+.pc-stat-block {
   box-shadow: 0.05in 0.05in 0 var(--rule-light);
 }

@@ -24,8 +24,8 @@ table th {
   border-bottom-width: 2px;
 }
 
-.callout,
-.stat-block,
+.pc-callout,
+.pc-stat-block,
 .generated-matter {
   border-radius: 0;
 }

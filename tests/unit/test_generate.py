@@ -77,10 +77,21 @@ class TestSlugsForAnchors:
 
 def test_minor_section_filter_is_enabled_after_heading_filters():
     names = [p.name for p in resources.LUA_FILTERS]
+    assert "rules-widgets.lua" in names
     assert "minor-sections.lua" in names
     assert names.index("highlight-level-headings.lua") < names.index(
         "minor-sections.lua"
     )
+
+
+def test_lua_filter_library_is_packaged():
+    assert (resources.FILTERS_DIR / "lib" / "papercrown.lua").is_file()
+    assert "resources/**/*.lua" in _read_project_package_data()
+
+
+def _read_project_package_data() -> str:
+    pyproject = Path(__file__).parents[2] / "pyproject.toml"
+    return pyproject.read_text(encoding="utf-8")
 
 
 def test_book_context_leaves_pandoc_toc_disabled():

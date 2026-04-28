@@ -2,7 +2,7 @@
    Stat blocks
    ========================================================================== */
 
-.stat-block {
+.pc-stat-block {
   background: var(--tint-block);
   border: 1px solid var(--ink);
   border-left: 4px solid var(--ink);
@@ -12,22 +12,22 @@
   break-inside: avoid;
 }
 
-.stat-block > .stat-line {
+.pc-stat-block > .pc-stat-line {
   margin: 0;
 }
-.stat-block > .stat-line + .stat-line {
+.pc-stat-block > .pc-stat-line + .pc-stat-line {
   margin-top: 0.15em;
   padding-top: 0.15em;
   border-top: 1px dashed var(--rule-light);
 }
 
-.stat-block p {
+.pc-stat-block p {
   margin: 0;
   font-size: 0.98em;
 }
 
 /* The leading Strong inside a stat-line is the label -- render monospaced */
-.stat-line p strong:first-child {
+.pc-stat-line p strong:first-child {
   font-family: var(--font-mono);
   font-weight: 400;
   font-size: 0.85em;
@@ -41,7 +41,7 @@
    Callouts
    ========================================================================== */
 
-.callout {
+.pc-callout {
   background: var(--tint-callout);
   border-left: 4px solid var(--accent);
   padding: 0.55em 0.85em 0.6em 0.85em;
@@ -50,7 +50,7 @@
   break-inside: avoid;
 }
 
-.callout-title {
+.pc-callout-title {
   font-family: var(--font-head);
   font-weight: 700;
   text-transform: uppercase;
@@ -60,27 +60,80 @@
   margin-bottom: 0.2em;
 }
 
-.callout-body > *:first-child { margin-top: 0; }
-.callout-body > *:last-child  { margin-bottom: 0; }
-.callout-body p { font-size: 0.96em; }
+.pc-callout-body > *:first-child { margin-top: 0; }
+.pc-callout-body > *:last-child  { margin-bottom: 0; }
+.pc-callout-body p { font-size: 0.96em; }
 
 /* Callout color variants */
-.callout-tip     { border-left-color: var(--accent); }
-.callout-note    { border-left-color: var(--muted); }
-.callout-info    { border-left-color: var(--accent-deep); }
-.callout-example { border-left-color: #4b6f73; }
-.callout-question{ border-left-color: var(--accent); }
-.callout-warning { border-left-color: var(--warn); background: #f7ebe7; }
-.callout-danger  { border-left-color: var(--warn); background: #f3e2dd; }
-.callout-success { border-left-color: var(--success); }
-.callout-abstract{ border-left-color: var(--ink); }
-.callout-quote   { border-left-color: var(--ink-soft); font-style: italic; }
-.callout-todo    { border-left-color: var(--accent-deep); }
-.callout-cue     { border-left-color: var(--accent-deep); }
-.callout-angle   { border-left-color: var(--accent); }
-.callout-pressure{ border-left-color: var(--warn); background: #f8eee8; }
+.pc-callout-tip     { border-left-color: var(--accent); }
+.pc-callout-note    { border-left-color: var(--muted); }
+.pc-callout-info    { border-left-color: var(--accent-deep); }
+.pc-callout-example { border-left-color: #4b6f73; }
+.pc-callout-question{ border-left-color: var(--accent); }
+.pc-callout-warning { border-left-color: var(--warn); background: #f7ebe7; }
+.pc-callout-danger  { border-left-color: var(--warn); background: #f3e2dd; }
+.pc-callout-success { border-left-color: var(--success); }
+.pc-callout-abstract{ border-left-color: var(--ink); }
+.pc-callout-quote   { border-left-color: var(--ink-soft); font-style: italic; }
+.pc-callout-todo    { border-left-color: var(--accent-deep); }
+.pc-callout-cue     { border-left-color: var(--accent-deep); }
+.pc-callout-angle   { border-left-color: var(--accent); }
+.pc-callout-pressure{ border-left-color: var(--warn); background: #f8eee8; }
 
-.callout-warning .callout-title,
-.callout-danger  .callout-title {
+.pc-callout-warning .pc-callout-title,
+.pc-callout-danger  .pc-callout-title {
   color: var(--warn);
 }
+
+/* ==========================================================================
+   Rules widgets
+   ========================================================================== */
+
+.pc-feature,
+.pc-ability,
+.pc-procedure {
+  background: var(--tint-block);
+  border: 1px solid var(--rule-light);
+  border-left: 4px solid var(--accent-deep);
+  padding: 0.65em 0.85em 0.7em;
+  margin: 0.9em 0;
+  page-break-inside: avoid;
+  break-inside: avoid;
+}
+
+.pc-ability {
+  border-left-color: var(--accent);
+}
+
+.pc-procedure {
+  border-left-color: var(--ink);
+}
+
+.pc-component-header {
+  margin-bottom: 0.35em;
+}
+
+.pc-component-title {
+  font-family: var(--font-head);
+  font-weight: 700;
+  color: var(--ink);
+  font-size: 1.02em;
+  line-height: 1.15;
+}
+
+.pc-component-meta {
+  font-family: var(--font-mono);
+  font-size: 0.76em;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--muted);
+  margin-top: 0.12em;
+}
+
+.pc-component-meta-item + .pc-component-meta-item::before {
+  content: " / ";
+  color: var(--rule-dark);
+}
+
+.pc-component-body > *:first-child { margin-top: 0; }
+.pc-component-body > *:last-child  { margin-bottom: 0; }

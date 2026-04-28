@@ -27,68 +27,27 @@
 -- Filter passes are ordered so heading ids are collected BEFORE either
 -- the inline wikilink promoter or the existing-link rewriter run.
 
+local script_path = PANDOC_SCRIPT_FILE or debug.getinfo(1, "S").source:sub(2)
+local filter_dir = script_path:match("^(.*)[/\\][^/\\]+$") or "."
+local pc = dofile(filter_dir .. "/lib/papercrown.lua")
+
 local valid_anchors = {}    -- chapter-level slugs from --metadata valid-anchors
 local heading_ids = {}      -- every Header.identifier seen in this doc
-
-local function url_decode(s)
-  if not s then return "" end
-  -- Decode `%XX` escapes (URL encoding). Bare `+` is left alone (markdown
-  -- paths don't conventionally encode spaces as `+`).
-  s = s:gsub("%%(%x%x)", function(hex) return string.char(tonumber(hex, 16)) end)
-  return s
-end
-
-local function slugify(s)
-  -- KEEP IN SYNC with `slugify` in papercrown/manifest.py.
-  -- Same rule: lowercase; runs of non-(letter/digit/underscore/hyphen)
-  -- collapse to a single hyphen; strip leading/trailing hyphens.
-  if not s then return "" end
-  s = url_decode(s)
-  s = s:lower()
-  s = s:gsub("[^%w%-_]+", "-")
-  s = s:gsub("^-+", ""):gsub("-+$", "")
-  return s
-end
-
-local function strip_md_extension(s)
-  return (s:gsub("%.md$", ""))
-end
-
-local function path_basename(s)
-  -- Handles forward AND back slashes (obsidian-export on Windows emits
-  -- backslashes in URLs).
-  local last = s:match("([^/\\]+)$")
-  return last or s
-end
-
-local function has_url_scheme(url)
-  if not url or url == "" then return false end
-  if url:match("^[%w+%-.]+:") then return true end   -- http://, file://, mailto:
-  if url:match("^#") then return true end             -- already a fragment
-  if url:match("^/") then return true end             -- absolute path
-  return false
-end
-
-local function split_fragment(target)
-  local hash = target:find("#", 1, true)
-  if not hash then return target, nil end
-  return target:sub(1, hash - 1), target:sub(hash + 1)
-end
 
 local function resolve_target(target)
   -- Returns the in-document anchor (without the leading '#') if `target`
   -- can be resolved against the collected heading ids / chapter slugs;
   -- otherwise nil.
   if not target or target == "" then return nil end
-  local path, frag = split_fragment(target)
+  local path, frag = pc.link.split_fragment(target)
   if frag and frag ~= "" then
-    local f = url_decode(frag)
+    local f = pc.link.url_decode(frag)
     if heading_ids[f] or valid_anchors[f] then
       return f
     end
   end
-  local stem = strip_md_extension(path_basename(path or ""))
-  local slug = slugify(stem)
+  local stem = pc.link.strip_md_extension(pc.link.path_basename(path or ""))
+  local slug = pc.link.slugify(stem)
   if slug ~= "" and (heading_ids[slug] or valid_anchors[slug]) then
     return slug
   end
@@ -113,23 +72,6 @@ local function collect_header(el)
     heading_ids[el.identifier] = true
   end
   return nil
-end
-
-local function append_plain_text(out, text)
-  if not text or text == "" then return end
-  local cursor = 1
-  while cursor <= #text do
-    local s, e = text:find("%s+", cursor)
-    if not s then
-      out:insert(pandoc.Str(text:sub(cursor)))
-      break
-    end
-    if s > cursor then
-      out:insert(pandoc.Str(text:sub(cursor, s - 1)))
-    end
-    out:insert(pandoc.Space())
-    cursor = e + 1
-  end
 end
 
 -- Pass 2a: walk Inlines lists looking for raw `[[Target]]` / `[[Target|Display]]`
@@ -157,12 +99,12 @@ local function wikilink_to_link(inlines)
   while cursor <= #all_text do
     local s, e, body = all_text:find("%[%[([^%]]+)%]%]", cursor)
     if not s then
-      append_plain_text(out, all_text:sub(cursor))
+      pc.text.append_plain_text(out, all_text:sub(cursor))
       break
     end
 
     if s > cursor then
-      append_plain_text(out, all_text:sub(cursor, s - 1))
+      pc.text.append_plain_text(out, all_text:sub(cursor, s - 1))
     end
 
     -- Split `target|display` if present.
@@ -176,13 +118,13 @@ local function wikilink_to_link(inlines)
     local anchor = resolve_target(target)
     if anchor then
       local link = pandoc.Link({pandoc.Str(display)}, "#" .. anchor)
-      link.classes:insert("internal-ref")
+      pc.link.mark_internal(link)
       out:insert(link)
       changed = true
     else
       -- Couldn't resolve -- emit just the display text (drop brackets so it
       -- doesn't render as `[[Foo]]` in the final PDF).
-      append_plain_text(out, display)
+      pc.text.append_plain_text(out, display)
       changed = true
     end
     cursor = e + 1
@@ -194,14 +136,11 @@ end
 
 -- Pass 2b: rewrite already-parsed Links to in-document anchors.
 local function rewrite_link(el)
-  if has_url_scheme(el.target) then return nil end
+  if pc.link.has_url_scheme(el.target) then return nil end
   local anchor = resolve_target(el.target)
   if not anchor then return nil end
   el.target = "#" .. anchor
-  if not el.classes:includes("internal-ref") then
-    el.classes:insert("internal-ref")
-  end
-  return el
+  return pc.link.mark_internal(el)
 end
 
 -- Pass 2c: when obsidian-export can't find a target file for a wikilink,
@@ -219,7 +158,7 @@ end
 --     name (rare), they can use raw HTML `<em>...</em>` to bypass us.
 local function emph_to_link(el)
   local text = pandoc.utils.stringify(el.content)
-  local slug = slugify(text)
+  local slug = pc.link.slugify(text)
   if slug == "" then return nil end
   if not (heading_ids[slug] or valid_anchors[slug]) then return nil end
   -- Wrap the original italic content in a Link so the styling is kept
@@ -227,8 +166,7 @@ local function emph_to_link(el)
   -- if you'd rather drop the italics, replace `el.content` with
   -- `pandoc.Inlines{pandoc.Str(text)}` here.
   local link = pandoc.Link(el.content, "#" .. slug)
-  link.classes:insert("internal-ref")
-  return link
+  return pc.link.mark_internal(link)
 end
 
 -- Pass 2d: collapse headings that would otherwise render as
@@ -250,9 +188,7 @@ local function collapse_duplicate_original_heading(el)
   local prefix = full_text:match("^(.-)%s+%(" .. link_text:gsub("([^%w])", "%%%1") .. "%)$")
   if not prefix or prefix ~= link_text then return nil end
 
-  if not link.classes:includes("internal-ref") then
-    link.classes:insert("internal-ref")
-  end
+  pc.link.mark_internal(link)
   el.content = pandoc.List({ link })
   return el
 end

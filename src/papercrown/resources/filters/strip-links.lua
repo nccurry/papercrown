@@ -13,17 +13,12 @@
 -- Also strips any residual raw wikilink text that obsidian-export didn't
 -- touch (e.g. when pointing to nonexistent notes).
 
-local function has_url_scheme(url)
-  if not url or url == "" then return false end
-  -- http://, https://, mailto:, etc
-  if url:match("^[%w+%-.]+:") then return true end
-  if url:match("^#") then return true end   -- internal anchor
-  if url:match("^/") then return true end   -- absolute path
-  return false
-end
+local script_path = PANDOC_SCRIPT_FILE or debug.getinfo(1, "S").source:sub(2)
+local filter_dir = script_path:match("^(.*)[/\\][^/\\]+$") or "."
+local pc = dofile(filter_dir .. "/lib/papercrown.lua")
 
 function Link(el)
-  if has_url_scheme(el.target) then
+  if pc.link.has_url_scheme(el.target) then
     return nil
   end
   -- obsidian-export emits links like [Text](Other Note.md) -- drop the link
@@ -35,11 +30,9 @@ function Image(el)
   -- Keep real images; drop images whose src is clearly a non-resolvable note
   local src = el.src or ""
   if src == "" then return nil end
-  if has_url_scheme(src) then return nil end
+  if pc.link.has_url_scheme(src) then return nil end
   -- Real file paths (ending in common image extensions) are kept
-  local lower = src:lower()
-  if lower:match("%.png$") or lower:match("%.jpg$") or lower:match("%.jpeg$")
-     or lower:match("%.gif$") or lower:match("%.webp$") or lower:match("%.svg$") then
+  if pc.link.is_image_path(src) then
     return nil
   end
   -- Otherwise: drop the image (likely a note reference Obsidian rendered as embed)

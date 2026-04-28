@@ -12,12 +12,12 @@ pre {
   color: #ffffff;
 }
 
-.callout {
+.pc-callout {
   border-left-color: var(--accent);
 }
 
-.ttrpg-block,
-.stat-block {
+.pc-ttrpg-block,
+.pc-stat-block {
   box-shadow: 0.06in 0.06in 0 var(--rule-light);
 }
 

@@ -269,7 +269,7 @@ def _parse_div_attrs(raw: str) -> _DivAttrs:
 
 def _typed_block_class(classes: list[str]) -> str | None:
     for class_name in classes:
-        normalized = class_name.removeprefix("ttrpg-")
+        normalized = class_name.removeprefix("pc-ttrpg-").removeprefix("ttrpg-")
         if normalized in SUPPORTED_BLOCK_TYPES:
             return normalized
     return None
@@ -332,8 +332,24 @@ def _render_typed_opening(
     source_file: Path | None,
     line_no: int,
 ) -> str:
+    typed_classes = {
+        block_type,
+        f"ttrpg-{block_type}",
+        f"pc-ttrpg-{block_type}",
+        "ttrpg-block",
+        "pc-ttrpg-block",
+        "pc-component",
+    }
+    custom_classes = [name for name in attrs.classes if name not in typed_classes]
     classes = list(
-        dict.fromkeys([*attrs.classes, "ttrpg-block", f"ttrpg-{block_type}"])
+        dict.fromkeys(
+            [
+                "pc-component",
+                "pc-ttrpg-block",
+                f"pc-ttrpg-{block_type}",
+                *custom_classes,
+            ]
+        )
     )
     rendered_attrs = {
         **attrs.attrs,
@@ -392,7 +408,7 @@ def _resolve_ttrpg_refs(
             label = html.escape(obj.title)
             href = html.escape(f"#{obj.anchor}", quote=True)
             return (
-                f'<a class="internal-ref ttrpg-ref" href="{href}" '
+                f'<a class="pc-ref pc-ref-internal pc-ttrpg-ref" href="{href}" '
                 f'data-ttrpg-ref="{obj.type}.{obj.id}">{label}</a>'
             )
 

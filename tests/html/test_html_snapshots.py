@@ -9,6 +9,7 @@ To accept new snapshots after intentional changes:
 
 from __future__ import annotations
 
+import re
 import shutil
 import textwrap
 from pathlib import Path
@@ -181,9 +182,9 @@ class TestLuaFilterRendering:
             "- **Easy:** DC 8.\n- **Medium:** DC 12.\n- **Hard:** DC 15.\n",
             _make_ctx_for_book(),
         )
-        assert '<div class="stat-block">' in html
-        assert html.count('<div class="stat-line">') == 3
-        assert '<li><div class="stat-block">' not in html
+        assert '<div class="pc-stat-block">' in html
+        assert html.count('<div class="pc-stat-line">') == 3
+        assert '<li><div class="pc-stat-block">' not in html
         assert "<li>" not in html
 
     def test_adjacent_stat_lines_split_after_bullet_cleanup(self):
@@ -193,9 +194,107 @@ class TestLuaFilterRendering:
             "**Min-Max:** +3, +1, -1, -1\n",
             _make_ctx_for_book(),
         )
-        assert '<div class="stat-block">' in html
-        assert html.count('<div class="stat-line">') == 3
+        assert '<div class="pc-stat-block">' in html
+        assert html.count('<div class="pc-stat-line">') == 3
         assert "<li>" not in html
+
+    def test_callouts_render_pc_contract(self):
+        html = pipeline.render_markdown_to_html(
+            "> [!tip]- Table Hint\n"
+            "> Keep the clue in front of the players.\n",
+            _make_ctx_for_book(),
+        )
+
+        assert 'class="pc-callout pc-callout-tip is-foldable"' in html
+        assert '<div class="pc-callout-title">' in html
+        assert '<div class="pc-callout-body">' in html
+
+    def test_internal_markdown_links_use_pc_ref_contract(self):
+        html = pipeline.render_markdown_to_html(
+            "# Target\n\nSee [Target](Target.md).\n",
+            _make_ctx_for_book(),
+        )
+
+        assert 'href="#target"' in html
+        assert 'class="pc-ref pc-ref-internal"' in html
+
+    def test_unresolved_raw_wikilinks_fall_back_to_display_text(self):
+        html = pipeline.render_markdown_to_html(
+            "See [[Missing Note|missing display]].\n",
+            _make_ctx_for_book(),
+        )
+
+        assert "[[" not in html
+        assert "missing display" in html
+
+    def test_dead_markdown_links_strip_to_plain_text(self):
+        html = pipeline.render_markdown_to_html(
+            "See [Missing](Missing.md).\n",
+            _make_ctx_for_book(),
+        )
+
+        assert "Missing.md" not in html
+        assert "<p>See Missing.</p>" in html
+
+    def test_duplicate_original_heading_links_collapse(self):
+        html = pipeline.render_markdown_to_html(
+            "# Foo ([Foo](#original-foo))\n\nBody.\n",
+            _make_ctx_for_book(),
+        )
+
+        assert "Foo (" not in html
+        assert 'href="#original-foo"' in html
+        assert 'class="pc-ref pc-ref-internal"' in html
+
+    def test_minor_sections_render_pc_section_contract(self):
+        html = pipeline.render_markdown_to_html(
+            "### Minor\n\nBody.\n",
+            _make_ctx_for_book(),
+        )
+
+        assert "pc-section-minor" in html
+        assert "pc-section-level-3" in html
+
+    def test_feature_widget_renders_common_component_shape(self):
+        html = pipeline.render_markdown_to_html(
+            ':::: {.pc-feature title="Sneak Attack" level="1" tags="rogue,damage"}\n'
+            "Once per turn, add extra damage.\n"
+            "::::\n",
+            _make_ctx_for_book(),
+        )
+
+        assert 'class="pc-component pc-feature"' in html
+        assert '<div class="pc-component-header">' in html
+        assert '<div class="pc-component-title">' in html
+        assert '<div class="pc-component-meta">' in html
+        assert '<div class="pc-component-body">' in html
+        assert re.search(r"Level\s+1", html)
+
+    def test_ability_widget_renders_optional_metadata(self):
+        html = pipeline.render_markdown_to_html(
+            ':::: {.pc-ability title="Overcharge" cost="1 Charge" duration="Instant"}\n'
+            "Push the engine past its limit.\n"
+            "::::\n",
+            _make_ctx_for_book(),
+        )
+
+        assert 'class="pc-component pc-ability"' in html
+        assert re.search(r"Cost:\s+1\s+Charge", html)
+        assert re.search(r"Duration:\s+Instant", html)
+
+    def test_procedure_widget_can_use_first_heading_as_title(self):
+        html = pipeline.render_markdown_to_html(
+            ":::: {.pc-procedure usage=\"Downtime\"}\n"
+            "### Recovery Turn\n\n"
+            "1. Clear temporary conditions.\n"
+            "2. Advance clocks.\n"
+            "::::\n",
+            _make_ctx_for_book(),
+        )
+
+        assert 'class="pc-component pc-procedure"' in html
+        assert "Recovery Turn" in html
+        assert re.search(r"Usage:\s+Downtime", html)
 
 
 class TestFillerSlotRendering:

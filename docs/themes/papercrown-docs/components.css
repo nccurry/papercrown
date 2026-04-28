@@ -308,19 +308,19 @@ body.section-field-guide .book-body {
   letter-spacing: 0;
 }
 
-.paper-anthology .ttrpg-block {
+.paper-anthology .pc-ttrpg-block {
   border-radius: 0;
   box-shadow: 0.06in 0.06in 0 rgba(0, 0, 0, 0.08);
 }
 
-.paper-anthology .ttrpg-block h2,
-.paper-anthology .ttrpg-block h3,
-.paper-anthology .ttrpg-block h4 {
+.paper-anthology .pc-ttrpg-block h2,
+.paper-anthology .pc-ttrpg-block h3,
+.paper-anthology .pc-ttrpg-block h4 {
   margin-top: 0;
 }
 
-.paper-anthology .ttrpg-sidebar,
-.paper-anthology .ttrpg-handout {
+.paper-anthology .pc-ttrpg-sidebar,
+.paper-anthology .pc-ttrpg-handout {
   border-left-color: var(--accent);
 }
 

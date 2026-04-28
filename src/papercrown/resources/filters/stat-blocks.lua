@@ -1,7 +1,7 @@
 --[[
   stat-blocks.lua
 
-  Wraps consecutive stat-line paragraphs into a single <div class="stat-block">.
+  Wraps consecutive stat-line paragraphs into a single <div class="pc-stat-block">.
   If a bullet/ordered list is made entirely of stat-line items, unwraps the
   list and emits the same stat block without list markers.
 
@@ -22,37 +22,28 @@
   read as a list visually and should not also carry bullet markers.
 ]]
 
+local script_path = PANDOC_SCRIPT_FILE or debug.getinfo(1, "S").source:sub(2)
+local filter_dir = script_path:match("^(.*)[/\\][^/\\]+$") or "."
+local pc = dofile(filter_dir .. "/lib/papercrown.lua")
+
 local function strong_label_ends_with_colon(strong_el)
   if not strong_el or strong_el.t ~= "Strong" then return false end
-  -- Collect strong's text
-  local text = ""
-  for _, inl in ipairs(strong_el.content) do
-    if inl.t == "Str" then text = text .. inl.text
-    elseif inl.t == "Space" then text = text .. " "
-    end
-  end
+  local text = pc.text.strong_text(strong_el)
   -- Trailing ":" (with optional trailing whitespace which shouldn't happen
   -- inside Strong, but be defensive)
   return text:match(":%s*$") ~= nil
 end
 
 local function stat_line_div(block)
-  return pandoc.Div({ block }, pandoc.Attr("", { "stat-line" }))
+  return pc.block.div({ block }, { "pc-stat-line" })
 end
 
 local function stat_block_div(lines)
-  return pandoc.Div(lines, pandoc.Attr("", { "stat-block" }))
-end
-
-local function same_kind_text_block(original, inlines)
-  if original.t == "Plain" then
-    return pandoc.Plain(inlines)
-  end
-  return pandoc.Para(inlines)
+  return pc.block.div(lines, { "pc-stat-block" })
 end
 
 local function stat_line_divs(block)
-  if block.t ~= "Para" and block.t ~= "Plain" then return nil end
+  if not pc.block.is_text_block(block) then return nil end
 
   local chunks = pandoc.List()
   local current = pandoc.List()
@@ -77,17 +68,9 @@ local function stat_line_divs(block)
     if #chunk == 0 or not strong_label_ends_with_colon(chunk[1]) then
       return nil
     end
-    lines:insert(stat_line_div(same_kind_text_block(block, chunk)))
+    lines:insert(stat_line_div(pc.block.same_kind_text_block(block, chunk)))
   end
   return lines
-end
-
-local function has_class(div, class_name)
-  if not div or div.t ~= "Div" then return false end
-  for _, cls in ipairs(div.classes) do
-    if cls == class_name then return true end
-  end
-  return false
 end
 
 local function append_stat_item_lines(item, lines)
@@ -102,14 +85,14 @@ local function append_stat_item_lines(item, lines)
     return true
   end
 
-  if has_class(block, "stat-line") then
+  if pc.class.has(block, "pc-stat-line") then
     lines:insert(block)
     return true
   end
 
-  if has_class(block, "stat-block") then
+  if pc.class.has(block, "pc-stat-block") then
     for _, child in ipairs(block.content) do
-      if not has_class(child, "stat-line") then return false end
+      if not pc.class.has(child, "pc-stat-line") then return false end
       lines:insert(child)
     end
     return true

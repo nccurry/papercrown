@@ -19,7 +19,7 @@ blockquote {
 }
 
 .generated-matter,
-.ttrpg-block,
-.callout {
+.pc-ttrpg-block,
+.pc-callout {
   border-radius: 0;
 }

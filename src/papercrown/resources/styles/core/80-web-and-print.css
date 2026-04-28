@@ -130,11 +130,11 @@ body.mode-web .chapter-wrap:not(.section-quick-reference) h2:not(.section-divide
   padding-top: 0.7em;
 }
 
-body.mode-web .chapter-wrap:not(.section-quick-reference) h3:not(.section-divider-title):not(.level-heading) {
+body.mode-web .chapter-wrap:not(.section-quick-reference) h3:not(.section-divider-title):not(.pc-level-heading) {
   margin-top: 1.45em;
 }
 
-body.mode-web .chapter-wrap:not(.section-quick-reference) .level-heading {
+body.mode-web .chapter-wrap:not(.section-quick-reference) .pc-level-heading {
   margin-top: 1.2em;
 }
 

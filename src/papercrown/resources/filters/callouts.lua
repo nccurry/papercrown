@@ -9,9 +9,9 @@
       > Body line 2
 
   Output:
-      <div class="callout callout-tip is-foldable">
-        <div class="callout-title">Optional Title</div>
-        <div class="callout-body">
+      <div class="pc-callout pc-callout-tip is-foldable">
+        <div class="pc-callout-title">Optional Title</div>
+        <div class="pc-callout-body">
           <p>Body line 1</p>
           <p>Body line 2</p>
         </div>
@@ -19,11 +19,15 @@
 
   Types recognized: note, tip, info, example, faq, question, warning, caution,
   danger, success, summary, abstract, todo, quote, cue, angle, pressure.
-  Unknown types fall back to a matching "callout-<type>" style.
+  Unknown types fall back to a matching "pc-callout-<type>" style.
 
   The `-` suffix on `[!tip]-` means foldable in Obsidian; we preserve that as
   a class marker in case the CSS wants to style it differently.
 ]]
+
+local script_path = PANDOC_SCRIPT_FILE or debug.getinfo(1, "S").source:sub(2)
+local filter_dir = script_path:match("^(.*)[/\\][^/\\]+$") or "."
+local pc = dofile(filter_dir .. "/lib/papercrown.lua")
 
 local CALLOUT_ALIASES = {
   ["note"]     = "note",
@@ -68,48 +72,16 @@ end
 -- blockquote. Returns (kind, foldable, title_inlines, rest_of_first_para) or
 -- nil if this blockquote is not an Obsidian callout.
 local function parse_header(first_block)
-  if first_block.t ~= "Para" and first_block.t ~= "Plain" then
+  if not pc.block.is_text_block(first_block) then
     return nil
   end
   local inlines = first_block.content
   if #inlines == 0 then return nil end
 
-  -- Collect raw text from the first line only (until first SoftBreak / LineBreak).
-  local header_text = ""
-  local header_end = 0
-  for i, el in ipairs(inlines) do
-    if el.t == "SoftBreak" or el.t == "LineBreak" then
-      header_end = i
-      break
-    end
-    if el.t == "Str" then
-      header_text = header_text .. el.text
-    elseif el.t == "Space" then
-      header_text = header_text .. " "
-    elseif el.t == "Code" then
-      header_text = header_text .. el.text
-    end
-    header_end = i
-  end
+  local header_text, rest = pc.text.first_line_text_and_rest(inlines)
 
   local kind, foldable, title = header_text:match("^%s*%[!([%w_-]+)%]([%+%-]?)%s*(.-)%s*$")
   if not kind then return nil end
-
-  -- Remaining inlines after the header line (skipping the break itself)
-  local rest = {}
-  local start = header_end + 1
-  if inlines[header_end] and (inlines[header_end].t == "SoftBreak" or inlines[header_end].t == "LineBreak") then
-    start = header_end + 1
-  else
-    start = header_end + 1
-  end
-  -- Skip leading break
-  if inlines[start] and (inlines[start].t == "SoftBreak" or inlines[start].t == "LineBreak") then
-    start = start + 1
-  end
-  for i = start, #inlines do
-    table.insert(rest, inlines[i])
-  end
 
   return kind, foldable, title, rest
 end
@@ -121,7 +93,7 @@ function BlockQuote(el)
   if not parsed_kind then return nil end
 
   local kind = normalize_type(parsed_kind)
-  local classes = { "callout", "callout-" .. kind }
+  local classes = { "pc-callout", "pc-callout-" .. kind }
   if foldable == "-" then
     table.insert(classes, "is-foldable")
   elseif foldable == "+" then
@@ -155,12 +127,12 @@ function BlockQuote(el)
   end
   local title_div = pandoc.Div(
     { pandoc.Plain({ pandoc.Str(display_title) }) },
-    pandoc.Attr("", { "callout-title" })
+    pandoc.Attr("", { "pc-callout-title" })
   )
   result:insert(title_div)
 
   if #body_blocks > 0 then
-    local body_div = pandoc.Div(body_blocks, pandoc.Attr("", { "callout-body" }))
+    local body_div = pandoc.Div(body_blocks, pandoc.Attr("", { "pc-callout-body" }))
     result:insert(body_div)
   end
 
