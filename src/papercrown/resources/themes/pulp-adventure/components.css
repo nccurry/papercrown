@@ -1,0 +1,25 @@
+/* Pulp Adventure component overrides give headings and callouts serial punch. */
+.cover-title,
+.section-divider-title,
+h1,
+h2 {
+  text-transform: uppercase;
+}
+
+h2 {
+  color: var(--accent);
+}
+
+table th {
+  background: var(--accent);
+  color: var(--paper);
+}
+
+blockquote,
+.callout {
+  border-left-width: 6px;
+}
+
+.stat-block {
+  box-shadow: 0.05in 0.05in 0 var(--rule-light);
+}

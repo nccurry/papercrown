@@ -1,2 +1,7 @@
 name: Clean SRD
-css: book.css
+description: Clear reference-book styling for rules, SRDs, and table handouts.
+category: reference
+tags: [minimal, rules, accessible]
+css:
+  - tokens.css
+  - components.css

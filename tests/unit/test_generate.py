@@ -369,7 +369,7 @@ def test_page_background_underlay_adds_late_stylesheet():
         pandoc="pandoc",
         weasyprint="weasyprint",
         template=resources.TEMPLATE_FILE,
-        css=resources.CSS_FILE,
+        css_files=[resources.CORE_CSS_FILES[0]],
         lua_filters=[],
         resource_paths=[],
     )
@@ -387,7 +387,7 @@ def test_render_fingerprint_tracks_renderer_source_files(monkeypatch):
         pandoc="pandoc",
         weasyprint="weasyprint",
         template=resources.TEMPLATE_FILE,
-        css=resources.CSS_FILE,
+        css_files=[resources.CORE_CSS_FILES[0]],
         lua_filters=[],
         resource_paths=[],
     )
@@ -424,7 +424,7 @@ def test_folio_frame_uses_late_literal_margin_box_stylesheet(tmp_path):
         pandoc="pandoc",
         weasyprint="weasyprint",
         template=resources.TEMPLATE_FILE,
-        css=resources.CSS_FILE,
+        css_files=[resources.CORE_CSS_FILES[0]],
         lua_filters=[],
         resource_paths=[],
         ornament_folio_frame=folio,
@@ -559,7 +559,7 @@ def test_fast_page_damage_writer_uses_pymupdf_direct_insert(tmp_path, monkeypatc
         pandoc="pandoc",
         weasyprint="weasyprint",
         template=resources.TEMPLATE_FILE,
-        css=resources.CSS_FILE,
+        css_files=[resources.CORE_CSS_FILES[0]],
         lua_filters=[],
         resource_paths=[],
     )

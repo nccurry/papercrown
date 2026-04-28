@@ -1,2 +1,7 @@
 name: Pulp Adventure
-css: book.css
+description: Bold action-adventure styling for expeditions, serials, and campaign zines.
+category: adventure
+tags: [pulp, action, exploration]
+css:
+  - tokens.css
+  - components.css

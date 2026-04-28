@@ -14,10 +14,13 @@ LICENSE_EXPRESSION = "AGPL-3.0-or-later"
 REQUIRED_SUFFIXES = (
     "dist-info/licenses/LICENSE",
     "dist-info/licenses/THIRD_PARTY_LICENSES.md",
-    "papercrown/resources/styles/book.css",
+    "papercrown/resources/styles/core/00-tokens.css",
+    "papercrown/resources/styles/core/50-ttrpg-components.css",
     "papercrown/resources/templates/book.html",
     "papercrown/resources/filters/internal-links.lua",
     "papercrown/resources/themes/clean-srd/theme.yaml",
+    "papercrown/resources/themes/clean-srd/tokens.css",
+    "papercrown/resources/themes/clean-srd/components.css",
     "papercrown/resources/assets/fonts/Rajdhani-Regular.ttf",
     "papercrown/resources/assets/textures/paper-grain.png",
 )

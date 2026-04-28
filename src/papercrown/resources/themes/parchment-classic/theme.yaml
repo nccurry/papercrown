@@ -1,2 +1,7 @@
 name: Parchment Classic
-css: book.css
+description: Warm fantasy-book styling with parchment tones and traditional rules text.
+category: fantasy
+tags: [classic, fantasy, parchment]
+css:
+  - tokens.css
+  - components.css

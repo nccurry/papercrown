@@ -1,0 +1,157 @@
+/* -------- Page setup --------------------------------------------------- */
+
+/* Hidden element at the top of the body whose content is the recipe's
+   title (template injects `$title-prefix$`). The `string-set` makes the
+   text available to `@page @top-right { content: string(book-title); }`
+   so the running header reflects whatever recipe is being built rather
+   than a hardcoded constant.
+   We use position:absolute + visibility:hidden rather than display:none
+   because WeasyPrint skips string-set on display:none elements (they're
+   removed from the box tree before string collection runs). */
+.book-title-stringset {
+  string-set: book-title content();
+  position: absolute;
+  visibility: hidden;
+  pointer-events: none;
+  width: 0;
+  height: 0;
+  overflow: hidden;
+  white-space: nowrap;
+}
+
+/* Print mode (default): asymmetric binding margins, chapter in running header.
+   The page background must be set on @page so the margin/border area picks
+   up the paper tone too -- otherwise WeasyPrint leaves the margins white. */
+@page {
+  size: Letter;
+  margin: 0.85in 0.75in 0.9in 1.0in;  /* top right bottom left (binding=left) */
+  background-color: var(--paper);
+  background-image: var(--paper-grain), var(--page-patina);
+  background-repeat: repeat, no-repeat;
+  background-size: 1.15in 1.15in, 8.5in 11in;
+  background-position: top left, center;
+
+  @top-left {
+    content: string(chapter-name);
+    font-family: var(--font-head);
+    font-size: 9pt;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--muted);
+  }
+  @top-right {
+    /* Pulled from a hidden `.book-title-stringset` element at the top of
+       the body that's populated from the recipe's title via the template's
+       `$title-prefix$` variable. See `templates/book.html`. */
+    content: string(book-title);
+    font-family: var(--font-mono);
+    font-size: 8pt;
+    color: var(--muted);
+    letter-spacing: 0.08em;
+  }
+  @bottom-center {
+    content: counter(page);
+    font-family: var(--font-mono);
+    font-size: 9pt;
+    color: var(--ink-soft);
+    width: 0.92in;
+    background-image: var(--ornament-folio-frame);
+    background-repeat: no-repeat;
+    background-position: center;
+    background-size: 0.64in 0.64in;
+    height: 0.66in;
+    vertical-align: middle;
+  }
+}
+
+/* Right-side pages: mirror the binding margin */
+@page :right {
+  margin-left: 0.75in;
+  margin-right: 1.0in;
+}
+
+/* First page of a chapter: no running header/number */
+@page :first {
+  @top-left { content: none; }
+  @top-right { content: none; }
+  @bottom-center { content: none; }
+}
+
+@page divider-page {
+  size: Letter;
+  margin: 0.85in 0.75in 0.9in 1.0in;
+  background-color: var(--paper);
+  background-image: var(--paper-grain), var(--page-patina);
+  background-repeat: repeat, no-repeat;
+  background-size: 1.15in 1.15in, 8.5in 11in;
+  background-position: top left, center;
+  @top-left { content: none; }
+  @top-right { content: none; }
+  @bottom-center { content: none; }
+}
+
+/* Digital mode: symmetric margins, keep page number but no running header */
+body.mode-digital {
+  /* Digital is mostly read on screen, so margins are symmetric. Override the
+     @page rules via named page. */
+}
+@page digital {
+  size: Letter;
+  margin: 0.8in;
+  background-color: var(--paper);
+  background-image: var(--paper-grain), var(--page-patina);
+  background-repeat: repeat, no-repeat;
+  background-size: 1.15in 1.15in, 8.5in 11in;
+  background-position: top left, center;
+  @top-left { content: none; }
+  @top-right {
+    content: string(chapter-name);
+    font-family: var(--font-head);
+    font-size: 9pt;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--muted);
+  }
+  @bottom-center {
+    content: counter(page);
+    font-family: var(--font-mono);
+    font-size: 9pt;
+    color: var(--ink-soft);
+    width: 0.92in;
+    background-image: var(--ornament-folio-frame);
+    background-repeat: no-repeat;
+    background-position: center;
+    background-size: 0.64in 0.64in;
+    height: 0.66in;
+    vertical-align: middle;
+  }
+}
+body.mode-digital { page: digital; }
+body.mode-draft { page: digital; }
+
+@page digital-divider-page {
+  size: Letter;
+  margin: 0.8in;
+  background-color: var(--paper);
+  background-image: var(--paper-grain), var(--page-patina);
+  background-repeat: repeat, no-repeat;
+  background-size: 1.15in 1.15in, 8.5in 11in;
+  background-position: top left, center;
+  @top-left { content: none; }
+  @top-right { content: none; }
+  @bottom-center { content: none; }
+}
+
+/* Cover pages use a named page with no margins or chrome */
+@page cover-page {
+  size: Letter;
+  margin: 0;
+  background-color: var(--paper);
+  background-image: var(--paper-grain), var(--page-patina);
+  background-repeat: repeat, no-repeat;
+  background-size: 1.15in 1.15in, 8.5in 11in;
+  background-position: top left, center;
+  @top-left { content: none; }
+  @top-right { content: none; }
+  @bottom-center { content: none; }
+}

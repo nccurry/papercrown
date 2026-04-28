@@ -5,7 +5,7 @@ cover_footer: nccurry/papercrown
 output_dir: ../site
 output_name: papercrown-docs
 art_dir: ../assets
-theme: modern-minimal
+theme: clean-srd
 
 metadata:
   authors:

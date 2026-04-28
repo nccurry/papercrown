@@ -1,0 +1,22 @@
+/* Pinlight Industrial component overrides add technical frontier grit. */
+.cover-title,
+.section-divider-title,
+table th,
+.callout-title {
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+table th {
+  background: var(--ink);
+  color: var(--paper);
+}
+
+.stat-block,
+.callout {
+  border-radius: 1px;
+}
+
+.ttrpg-block {
+  border-left-color: var(--accent);
+}

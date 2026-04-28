@@ -1,2 +1,7 @@
 name: Occult Casefile
-css: book.css
+description: Investigative dossier styling for clues, handouts, mysteries, and horror.
+category: mystery
+tags: [casefile, horror, investigation]
+css:
+  - tokens.css
+  - components.css

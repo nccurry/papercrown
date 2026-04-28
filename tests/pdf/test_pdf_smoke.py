@@ -13,7 +13,7 @@ from papercrown import assembly, build, export, pipeline
 from papercrown.manifest import PageDamageAsset, PageDamageCatalog, build_manifest
 from papercrown.options import DraftMode, OutputProfile, PaginationMode
 from papercrown.recipe import load_recipe
-from papercrown.resources import STYLES_DIR, TEMPLATE_FILE
+from papercrown.resources import CORE_CSS_FILES, TEMPLATE_FILE
 
 pytestmark = [
     pytest.mark.usefixtures("require_pandoc"),
@@ -94,7 +94,7 @@ def test_mini_fixture_pdf_smoke(mini_recipe_path, tmp_path):
 
 
 def test_pdf_renderer_embeds_bundled_book_fonts(tmp_path):
-    """The default book CSS should use bundled fonts, not system fallbacks."""
+    """The default core CSS should use bundled fonts, not system fallbacks."""
     try:
         import fitz
     except ImportError:
@@ -105,7 +105,7 @@ def test_pdf_renderer_embeds_bundled_book_fonts(tmp_path):
         pandoc="pandoc",
         weasyprint="weasyprint",
         template=TEMPLATE_FILE,
-        css=STYLES_DIR / "book.css",
+        css_files=list(CORE_CSS_FILES),
         lua_filters=[],
         resource_paths=[],
         clean_pdf=False,
@@ -184,7 +184,9 @@ def test_stringset_element_drives_running_header_css(mini_recipe_path):
     """
     import re
 
-    css_text = (STYLES_DIR / "book.css").read_text(encoding="utf-8")
+    css_text = "\n".join(
+        path.read_text(encoding="utf-8") for path in CORE_CSS_FILES
+    )
     tpl_text = TEMPLATE_FILE.read_text(encoding="utf-8")
 
     # Template injects the stringset element fed from recipe.title.
@@ -258,7 +260,7 @@ def test_weasyprint_api_renders_windows_absolute_image_paths(tmp_path):
         pandoc="pandoc",
         weasyprint="weasyprint",
         template=template,
-        css=css,
+        css_files=[css],
         lua_filters=[],
         resource_paths=[],
     )
@@ -311,7 +313,7 @@ def test_page_art_merge_preserves_pdf_outline(tmp_path):
         pandoc="pandoc",
         weasyprint="weasyprint",
         template=template,
-        css=css,
+        css_files=[css],
         lua_filters=[],
         resource_paths=[],
     )
@@ -357,7 +359,7 @@ def test_fast_page_damage_pass_renders_real_overlay(tmp_path):
         pandoc="pandoc",
         weasyprint="weasyprint",
         template=template,
-        css=css,
+        css_files=[css],
         lua_filters=[],
         resource_paths=[],
         page_damage_mode="fast",
@@ -423,7 +425,7 @@ def test_pdf_render_settings_cap_oversized_embedded_image(tmp_path):
         pandoc="pandoc",
         weasyprint="weasyprint",
         template=template,
-        css=css,
+        css_files=[css],
         lua_filters=[],
         resource_paths=[],
         pdf_settings=pipeline.PdfRenderSettings(
@@ -467,7 +469,7 @@ def test_pagination_report_and_fix_mode_render(tmp_path):
         pandoc="pandoc",
         weasyprint="weasyprint",
         template=template,
-        css=css,
+        css_files=[css],
         lua_filters=[],
         resource_paths=[],
         pagination_mode="fix",

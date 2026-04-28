@@ -1,3 +1,4 @@
+/* Clean SRD: plain rules-reference defaults with restrained blue accents. */
 :root {
   --paper: #ffffff;
   --ink: #171717;
@@ -14,15 +15,4 @@
   --paper-grain: none;
   --page-patina: none;
   --font-head: 'Rajdhani', 'Segoe UI', 'Helvetica Neue', sans-serif;
-}
-
-h1, h2, h3 {
-  text-transform: none;
-  letter-spacing: 0;
-}
-
-.section-divider-text,
-.cover-text {
-  border-top-width: 2px;
-  border-bottom-width: 2px;
 }

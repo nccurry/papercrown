@@ -1,3 +1,4 @@
+/* Occult Casefile: dossier colors for clues, handouts, and investigations. */
 :root {
   --paper: #f4f1ea;
   --ink: #161513;
@@ -11,15 +12,4 @@
   --success: #4a6f45;
   --tint-block: #e9e3d8;
   --tint-callout: #efe7dc;
-}
-
-h2,
-h3 {
-  font-family: var(--font-mono);
-}
-
-.ttrpg-clue,
-.ttrpg-clock,
-.ttrpg-handout {
-  border-style: dashed;
 }

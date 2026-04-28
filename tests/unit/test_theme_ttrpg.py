@@ -5,18 +5,22 @@ from __future__ import annotations
 import textwrap
 from pathlib import Path
 
+import pytest
+
 from papercrown import build as build_mod
 from papercrown import themes, ttrpg
 from papercrown.diagnostics import DiagnosticSeverity
 from papercrown.manifest import Chapter
+from papercrown.options import OutputProfile
 from papercrown.recipe import (
     BookMetadataSpec,
     CoverSpec,
     MatterSpec,
     Recipe,
+    RecipeError,
     load_recipe,
 )
-from papercrown.resources import TEMPLATE_FILE
+from papercrown.resources import CORE_CSS_FILES, TEMPLATE_FILE
 
 
 def _write_recipe(tmp_path: Path, body: str) -> Path:
@@ -93,7 +97,7 @@ def test_bundled_theme_resolves_css_template_and_options(tmp_path):
         tmp_path,
         """
         title: Theme Book
-        theme: illuminated-fantasy
+        theme: pulp-adventure
         theme_options:
           accent: "#775511"
         vaults:
@@ -107,12 +111,146 @@ def test_bundled_theme_resolves_css_template_and_options(tmp_path):
 
     theme = themes.load_theme(recipe)
 
-    assert theme.name == "illuminated-fantasy"
-    assert theme.css_files[0].name == "book.css"
+    assert theme.name == "pulp-adventure"
+    assert theme.display_name == "Pulp Adventure"
+    assert theme.category == "adventure"
+    assert "pulp" in theme.tags
+    assert [path.name for path in theme.css_files] == [
+        "tokens.css",
+        "components.css",
+    ]
     assert theme.template == TEMPLATE_FILE
     assert theme.inline_css is not None
     assert "--accent: #775511;" in theme.inline_css
     assert theme.fingerprint_paths
+
+
+def test_theme_css_list_can_use_arbitrary_source_filenames(tmp_path):
+    theme_root = tmp_path / "themes" / "my-theme"
+    theme_root.mkdir(parents=True)
+    (theme_root / "theme.yaml").write_text(
+        textwrap.dedent(
+            """
+            name: My Theme
+            css:
+              - base.css
+              - print-polish.css
+            """
+        ).lstrip(),
+        encoding="utf-8",
+    )
+    (theme_root / "base.css").write_text(
+        ":root { --accent: red; }\n",
+        encoding="utf-8",
+    )
+    (theme_root / "print-polish.css").write_text(
+        "table { width: 100%; }\n",
+        encoding="utf-8",
+    )
+    recipe_path = _write_recipe(
+        tmp_path,
+        """
+        title: Local Theme Book
+        theme_dir: themes
+        theme: my-theme
+        vaults:
+          v: vault
+        chapters:
+          - kind: file
+            source: v:Book.md
+        """,
+    )
+    recipe = load_recipe(recipe_path)
+
+    theme = themes.load_theme(recipe)
+
+    assert [path.name for path in theme.css_files] == ["base.css", "print-polish.css"]
+
+
+def test_theme_css_list_is_required(tmp_path):
+    theme_root = tmp_path / "themes" / "my-theme"
+    theme_root.mkdir(parents=True)
+    (theme_root / "theme.yaml").write_text("name: My Theme\n", encoding="utf-8")
+    recipe_path = _write_recipe(
+        tmp_path,
+        """
+        title: Local Theme Book
+        theme_dir: themes
+        theme: my-theme
+        vaults:
+          v: vault
+        chapters:
+          - kind: file
+            source: v:Book.md
+        """,
+    )
+    recipe = load_recipe(recipe_path)
+
+    with pytest.raises(RecipeError, match="theme.yaml must declare css"):
+        themes.load_theme(recipe)
+
+
+def test_core_css_files_are_ordered_runtime_modules():
+    """Paper Crown consumes modular core CSS directly."""
+    assert [path.name for path in CORE_CSS_FILES] == [
+        "00-tokens.css",
+        "10-paged-media.css",
+        "20-document.css",
+        "30-reference-elements.css",
+        "40-art.css",
+        "50-ttrpg-components.css",
+        "60-book-structure.css",
+        "70-generated-matter.css",
+        "80-web-and-print.css",
+    ]
+    assert all(path.is_file() for path in CORE_CSS_FILES)
+    assert not (CORE_CSS_FILES[0].parent.parent / "book.css").exists()
+
+
+def test_base_context_layers_core_css_before_theme_css(tmp_path):
+    recipe_path = _write_recipe(
+        tmp_path,
+        """
+        title: Layered Theme Book
+        theme: pulp-adventure
+        vaults:
+          v: vault
+        chapters:
+          - kind: file
+            source: v:Book.md
+        """,
+    )
+    recipe = load_recipe(recipe_path)
+    tools = build_mod.Tools(
+        pandoc="pandoc",
+        obsidian_export="obsidian-export",
+        weasyprint="weasyprint",
+    )
+
+    ctx = build_mod.make_base_context(tools, recipe, profile=OutputProfile.PRINT)
+
+    assert ctx.css_files[: len(CORE_CSS_FILES)] == CORE_CSS_FILES
+    assert [path.name for path in ctx.css_files[-2:]] == [
+        "tokens.css",
+        "components.css",
+    ]
+    assert ctx.css_files[-1].parent.name == "pulp-adventure"
+
+
+def test_bundled_theme_catalog_is_curated_and_described():
+    summaries = themes.bundled_theme_summaries()
+
+    assert [summary.name for summary in summaries] == [
+        "clean-srd",
+        "occult-casefile",
+        "parchment-classic",
+        "pinlight-industrial",
+        "pulp-adventure",
+        "risograph-zine",
+    ]
+    assert all(summary.display_name for summary in summaries)
+    assert all(summary.category for summary in summaries)
+    assert all(summary.description for summary in summaries)
 
 
 def test_typed_blocks_resolve_refs_and_generate_index(tmp_path):
