@@ -29,6 +29,7 @@ $endif$
 $for(css)$
   <link rel="stylesheet" href="$css$" />
 $endfor$
+$-- Page-damage underlays are composited outside @page backgrounds.
 $if(page-background-underlay)$
   <style>
     @page {
@@ -53,6 +54,7 @@ $if(page-background-underlay)$
     }
   </style>
 $endif$
+$-- Ornament paths become CSS variables consumed by paged-media rules.
 $if(ornament-folio-frame)$
   <style>
     :root { --ornament-folio-frame: url("$ornament-folio-frame$"); }
@@ -67,8 +69,10 @@ $for(header-includes)$
   $header-includes$
 $endfor$
 </head>
+$-- Body classes are the contract between render metadata and theme CSS.
 <body class="$if(output-profile)$mode-$output-profile$$else$$if(digital)$mode-digital$else$mode-print$endif$$endif$$if(section-kind)$ section-$section-kind$$endif$">
 
+$-- Hidden string-set source for running headers in paged output.
 $if(title-prefix)$
 <div class="book-title-stringset" aria-hidden="true">$title-prefix$</div>
 $endif$
@@ -79,6 +83,7 @@ $if(cover)$
 $if(cover-art)$
     <img class="cover-art" src="$cover-art$" alt="" />
 $endif$
+$-- Draft placeholders preserve layout when art generation is skipped.
 $if(draft-placeholders)$
 $if(cover-art)$$else$
     <div class="draft-art-placeholder draft-cover-placeholder">Cover art omitted in fast draft</div>
@@ -105,6 +110,7 @@ $if(toc)$
 </nav>
 $endif$
 
+$-- Chapter openers sit before the converted Markdown body for each render unit.
 $if(chapter-opener)$
 <section class="chapter-opener">
   <div class="chapter-art-wrap">
@@ -124,6 +130,7 @@ $endif$
 </section>
 $endif$
 
+$-- Pandoc injects converted Markdown here after Lua filters have shaped it.
 <main class="book-body">
 $body$
 </main>
