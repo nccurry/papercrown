@@ -55,9 +55,7 @@ class ArtAssetClassification:
 
 
 ROLE_REGISTRY: dict[str, ArtRoleSpec] = {
-    "cover-front": ArtRoleSpec(
-        "cover-front", "covers", 5.5, 7.113, transparent=False
-    ),
+    "cover-front": ArtRoleSpec("cover-front", "covers", 5.5, 7.113, transparent=False),
     "cover-back": ArtRoleSpec("cover-back", "covers", 5.5, 7.113, transparent=False),
     "cover": ArtRoleSpec("cover", "covers", 5.5, 7.113, transparent=False),
     "chapter-divider": ArtRoleSpec(

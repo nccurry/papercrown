@@ -239,15 +239,13 @@ task lint
 task test
 task package
 task package:verify
-task audit:public
 task check
 ```
 
 `task docker:check` runs `task check` inside `Dockerfile.ci`.
 
 Tag pushes matching `v*` run the release workflow, which builds the package,
-verifies runtime resources, audits the public tree, and creates a GitHub
-Release from `dist/`.
+verifies runtime resources, and creates a GitHub Release from `dist/`.
 
 ## Dependency Tracking
 

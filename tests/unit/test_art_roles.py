@@ -109,12 +109,8 @@ def test_art_audit_warns_about_duplicates_sparse_art_and_backgrounds(
     sparse = Image.new("RGBA", (512, 512), (0, 0, 0, 0))
     draw = ImageDraw.Draw(sparse)
     draw.rectangle((240, 240, 272, 272), fill=(0, 0, 0, 255))
-    sparse.save(
-        art / "fillers" / "page-finish" / "page-finish-sparse-one-01.png"
-    )
-    sparse.save(
-        art / "fillers" / "page-finish" / "page-finish-sparse-two-01.png"
-    )
+    sparse.save(art / "fillers" / "page-finish" / "page-finish-sparse-one-01.png")
+    sparse.save(art / "fillers" / "page-finish" / "page-finish-sparse-two-01.png")
     Image.new("RGB", (128, 128), (60, 50, 45)).save(
         art / "fillers" / "spot" / "filler-spot-bad-edge-01.png"
     )
@@ -158,9 +154,7 @@ def test_art_audit_warns_about_bottom_band_slot_and_top_safety(
     bottom_band = Image.new("RGBA", (1800, 620), (0, 0, 0, 0))
     draw = ImageDraw.Draw(bottom_band)
     draw.rectangle((0, 0, 1800, 500), fill=(40, 35, 30, 255))
-    bottom_band.save(
-        art / "fillers" / "bottom" / "filler-bottom-general-dock-01.png"
-    )
+    bottom_band.save(art / "fillers" / "bottom" / "filler-bottom-general-dock-01.png")
 
     recipe_path = tmp_path / "recipe.yaml"
     recipe_path.write_text(
@@ -353,7 +347,9 @@ def test_art_audit_allows_namespaced_art_packs_and_filler_art_dir(
     manifest = build_manifest(recipe)
 
     result = audit_recipe_art(recipe, manifest)
-    diagnostic_codes = {diagnostic.code for diagnostic in result.diagnostics.diagnostics}
+    diagnostic_codes = {
+        diagnostic.code for diagnostic in result.diagnostics.diagnostics
+    }
 
     assert "art.reference-missing" not in diagnostic_codes
     assert "art.folder-mismatch" not in diagnostic_codes

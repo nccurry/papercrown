@@ -23,13 +23,12 @@ task lint
 task test
 task package
 task package:verify
-task audit:public
 task check
 ```
 
 `task check` is the local quality gate mirrored by CI. It checks dependency
-state, linting, formatting, type checking, tests, packaging, package contents,
-and the public tree audit.
+state, linting, formatting, type checking, tests, packaging, and package
+contents.
 
 :::: {.clock #release-gate title="Release Gate" tags="docs,maintenance,release"}
 ### Release Gate

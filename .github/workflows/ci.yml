@@ -33,7 +33,7 @@ jobs:
             exit 0
           fi
           files="$(git diff --name-only "$base" "${{ github.sha }}")"
-          if grep -Eq '^(versions.env|Dockerfile\.ci|dependencies\.yaml|scripts/(deps-install\.sh|deps-install\.ps1|bootstrap\.sh|bootstrap\.ps1)|tools/sync_dependencies\.py|\.github/workflows/(ci|ci-image)\.yml)$' <<< "$files"; then
+          if grep -Eq '^(versions.env|Dockerfile\.ci|dependencies\.yaml|scripts/(deps-install\.sh|deps-install\.ps1|bootstrap\.sh|bootstrap\.ps1|sync_dependencies\.py)|\.github/workflows/(ci|ci-image)\.yml)$' <<< "$files"; then
             echo "changed=true" >> "$GITHUB_OUTPUT"
           else
             echo "changed=false" >> "$GITHUB_OUTPUT"

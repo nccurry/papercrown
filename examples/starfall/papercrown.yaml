@@ -1,8 +1,21 @@
+# Starfall's project config. Paper Crown reads this file when commands run from
+# this directory, or when callers pass `--config examples/starfall/papercrown.yaml`.
+#
+# Paths here are resolved relative to this config file. If a command does not
+# pass an explicit recipe path, Paper Crown builds this recipe by default.
 default_recipe: recipes/starfall-field-guide.yaml
 
+# Build defaults mirror the `papercrown build` CLI flags. Command-line options
+# can still override these values for one-off builds.
 build:
+  # Build PDF output. Use `web` for the static HTML exporter.
   target: pdf
+  # Render the complete book as one file. Other scopes can build section or
+  # individual-file outputs when you need smaller artifacts.
   scope: book
+  # Use final print-oriented PDF settings. `draft` trades fidelity for speed.
   profile: print
+  # Let Paper Crown choose a sensible parallel worker count for this machine.
   jobs: auto
+  # Print pagination diagnostics after building so layout drift is visible.
   pagination: report

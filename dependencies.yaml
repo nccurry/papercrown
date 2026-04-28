@@ -25,7 +25,7 @@ python_groups:
       - uv.lock
     tools:
       ruff:
-        check: "uv run ruff check src tests tools"
+        check: "uv run ruff check src tests scripts"
       mypy:
         check: "uv run mypy"
       pytest:

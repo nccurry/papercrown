@@ -388,12 +388,16 @@ def _add_metadata_diagnostics(result: ArtAuditResult, asset: AuditedArtAsset) ->
     _add_print_size_diagnostic(result, asset)
     aspect = metadata.width / max(1, metadata.height)
     role = classification.role
-    if role in {
-        "filler-wide",
-        "filler-plate",
-        "filler-bottom",
-        "page-finish",
-    } and aspect < 1.15:
+    if (
+        role
+        in {
+            "filler-wide",
+            "filler-plate",
+            "filler-bottom",
+            "page-finish",
+        }
+        and aspect < 1.15
+    ):
         result.diagnostics.add(
             Diagnostic(
                 code="art.aspect-mismatch",

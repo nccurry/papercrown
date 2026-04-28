@@ -5,7 +5,7 @@ from __future__ import annotations
 from pathlib import Path
 
 from papercrown import dependencies
-from tools import sync_dependencies
+from scripts import sync_dependencies
 
 
 def test_manifest_tracks_python_sources_without_transitive_packages(papercrown_root):

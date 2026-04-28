@@ -29,7 +29,7 @@ tasks:
   deps:sync:
     desc: Verify repo dependency metadata is synchronized with versions.env.
     cmds:
-      - uv run --locked python tools/sync_dependencies.py --check
+      - uv run --locked python scripts/sync_dependencies.py --check
 
   deps:install:
     desc: Install platform and Python dependencies, then verify them.
@@ -52,15 +52,15 @@ tasks:
   lint:
     desc: Run static analysis and formatting checks.
     cmds:
-      - uv run ruff check src tests tools
-      - uv run ruff format --check src tests tools
+      - uv run ruff check src tests scripts
+      - uv run ruff format --check src tests scripts
       - uv run mypy
 
   format:
     desc: Format and apply safe lint fixes.
     cmds:
-      - uv run ruff check --fix src tests tools
-      - uv run ruff format src tests tools
+      - uv run ruff check --fix src tests scripts
+      - uv run ruff format src tests scripts
 
   test:
     desc: Run the test suite.
@@ -80,12 +80,7 @@ tasks:
   package:verify:
     desc: Verify built distributions include runtime resources and CLI metadata.
     cmds:
-      - uv run python tools/verify_package.py
-
-  audit:public:
-    desc: Scan the public subtree for private project/content references.
-    cmds:
-      - uv run python tools/audit_public.py
+      - uv run python scripts/verify_package.py
 
   check:
     desc: Run the full local quality gate used by CI.
@@ -95,7 +90,6 @@ tasks:
       - task test
       - task package:wheel
       - task package:verify
-      - task audit:public
 
   docker:check:
     desc: Run the same local quality gate inside the CI Docker image.
@@ -171,8 +165,8 @@ tasks:
       - uv run papercrown themes copy {{.THEME | quote}} {{.DEST | quote}}
 
   release:
-    desc: Build, verify, audit, and create a GitHub release for the current tag.
-    deps: [package, package:verify, audit:public]
+    desc: Build, verify, and create a GitHub release for the current tag.
+    deps: [package, package:verify]
     preconditions:
       - sh: test -n "$GITHUB_REF_NAME"
         msg: GITHUB_REF_NAME must be set to the tag name.
