@@ -17,6 +17,7 @@ from .art_audit import (
     audit_recipe_art,
     format_art_audit_markdown,
     format_art_audit_text,
+    write_art_contact_sheet,
 )
 from .build import BuildRequest, BuildResult, build_outputs
 from .config import (
@@ -258,6 +259,13 @@ def build_command(
         PageDamageMode | None,
         typer.Option("--page-damage", help="Page damage application mode."),
     ] = None,
+    filler_debug_overlay: Annotated[
+        bool,
+        typer.Option(
+            "--filler-debug-overlay",
+            help="Write a sibling PDF annotated with filler decisions.",
+        ),
+    ] = False,
     timings: Annotated[
         bool | None,
         typer.Option("--timings/--no-timings", help="Print stage timing logs."),
@@ -322,6 +330,7 @@ def build_command(
         pagination_mode=build_config.pagination_mode,
         draft_mode=build_config.draft_mode,
         page_damage_mode=build_config.page_damage_mode,
+        filler_debug_overlay=filler_debug_overlay,
         timings=build_config.timings,
     )
     result = build_outputs(tools, request, log=print)
@@ -379,6 +388,30 @@ def art_audit_command(
     else:
         print(format_art_audit_text(result))
     raise typer.Exit(result.exit_code(strict=strict))
+
+
+@art_app.command("contact-sheet")
+def art_contact_sheet_command(
+    recipe: RecipeArg = None,
+    output: Annotated[
+        Path | None,
+        typer.Option("--output", help="HTML contact sheet path."),
+    ] = None,
+    config: ConfigOpt = None,
+    no_config: NoConfigOpt = False,
+) -> None:
+    """Write an HTML visual inventory of the recipe art library."""
+    build_config = _resolve_config(
+        recipe,
+        config=config,
+        no_config=no_config,
+        cli_patch=BuildConfigPatch(),
+    )
+    recipe_obj, manifest = _load_recipe_and_manifest(build_config)
+    result = audit_recipe_art(recipe_obj, manifest)
+    out = output or (recipe_obj.generated_root / "art-contact-sheet.html")
+    write_art_contact_sheet(result, out)
+    print(out)
 
 
 @app.command("doctor")

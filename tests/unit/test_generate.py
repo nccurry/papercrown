@@ -10,13 +10,16 @@ import textwrap
 from pathlib import Path
 from types import SimpleNamespace
 
+import pytest
 from PIL import Image
 
 from papercrown import build, paths, resources
 from papercrown import export as export_mod
 from papercrown.cache import ArtifactCache
+from papercrown.fillers import FillerDecision, FillerMeasurement, FillerPlacement
 from papercrown.manifest import (
     Chapter,
+    FillerAsset,
     PageDamageAsset,
     PageDamageCatalog,
     Splash,
@@ -908,6 +911,86 @@ def test_bottom_bleed_display_size_caps_large_art_without_distortion(tmp_path):
 
     assert round(width_pt, 3) == 612.0
     assert round(height_pt, 3) == 172.8
+
+
+def test_bottom_bleed_stamp_uses_placement_render_height(tmp_path, monkeypatch):
+    asset_path = tmp_path / "large-page.png"
+    Image.new("RGB", (2550, 1575), color="red").save(asset_path)
+    placement = FillerPlacement(
+        "slot-page",
+        FillerAsset("page", asset_path, "bottom-band", 5.25),
+        page_number=7,
+        slot_name="chapter-end",
+        render_height_in=4.0,
+    )
+    captured = {}
+
+    def fake_display_size(path, *, max_width_pt, max_height_pt):
+        captured["path"] = path
+        captured["max_width_pt"] = max_width_pt
+        captured["max_height_pt"] = max_height_pt
+        return (300.0, max_height_pt)
+
+    class FakePage:
+        rect = SimpleNamespace(x0=0.0, y1=792.0, x1=612.0, width=612.0)
+
+        def draw_rect(self, rect, **kwargs):
+            captured["mask_rect"] = rect
+            captured["mask_kwargs"] = kwargs
+
+        def insert_image(self, rect, **kwargs):
+            captured["image_rect"] = rect
+            captured["image_kwargs"] = kwargs
+
+    class FakeFitz:
+        @staticmethod
+        def Rect(*args):
+            return args
+
+    monkeypatch.setattr(
+        build.pipeline,
+        "_bottom_bleed_display_size_pt",
+        fake_display_size,
+    )
+
+    build.pipeline._stamp_bottom_bleed_fitz(FakePage(), placement, FakeFitz)
+
+    assert captured["path"] == asset_path
+    assert captured["max_width_pt"] == 612.0
+    assert captured["max_height_pt"] == pytest.approx(279.36)
+    assert captured["mask_rect"] == (0.0, 486.0, 612.0, 792.0)
+    assert captured["image_rect"] == pytest.approx((156.0, 504.0, 456.0, 783.36))
+
+
+def test_filler_debug_overlay_writes_separate_pdf(tmp_path):
+    fitz = build.pipeline.importlib.import_module("fitz")
+    source = tmp_path / "source.pdf"
+    debug = tmp_path / "source.filler-debug.pdf"
+    doc = fitz.open()
+    try:
+        doc.new_page(width=612, height=792)
+        doc.save(source)
+    finally:
+        doc.close()
+    before = source.read_bytes()
+    decision = FillerDecision(
+        measurement=FillerMeasurement(
+            slot_id="slot-a",
+            slot_name="chapter-end",
+            chapter_slug="intro",
+            page_number=1,
+            available_in=3.0,
+            slot_y_in=2.0,
+            content_bottom_in=5.0,
+        ),
+        asset=None,
+        reason="no fitting context-matched asset",
+    )
+
+    build.pipeline._write_filler_debug_overlay(source, debug, [decision], [])
+
+    assert debug.is_file()
+    assert source.read_bytes() == before
 
 
 def test_draft_page_damage_catalog_is_boosted_for_inspection(tmp_path):

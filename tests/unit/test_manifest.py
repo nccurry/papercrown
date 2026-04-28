@@ -251,6 +251,126 @@ class TestKindFile:
         assert m.chapters[2].slug.startswith("original-")
         assert m.chapters[2].filler_slots == []
 
+    def test_fillers_attach_reference_terminals_and_sequence_boundaries(
+        self,
+        mini_workspace,
+    ):
+        ws, base, _ = mini_workspace
+        (base / "Combat.md").write_text("# Combat\nIntro.\n", encoding="utf-8")
+        rp = _write_recipe(
+            ws,
+            """
+            title: Test
+            vaults:
+              base: base
+            fillers:
+              enabled: true
+              slots:
+                chapter-end:
+                  min_space: 0.65in
+                  max_space: 8.5in
+                  shapes: [spot, small-wide, bottom-band]
+                section-end:
+                  min_space: 1.2in
+                  max_space: 8.5in
+                  shapes: [spot, small-wide, bottom-band]
+            chapters:
+              - kind: group
+                title: Original Rules
+                child_style: rules
+                children:
+                  - kind: file
+                    title: Conditions
+                    slug: original-conditions
+                    source: base:Setting.md
+              - kind: group
+                title: Original Backgrounds
+                child_style: backgrounds
+                children:
+                  - kind: file
+                    title: Backgrounds
+                    slug: original-backgrounds
+                    source: base:Backgrounds.md
+              - kind: sequence
+                style: equipment
+                title: Combat
+                sources:
+                  - base:Combat.md
+                  - title: Weapons & Armor
+                    source: base:Backgrounds.md
+            """,
+        )
+
+        m = build_manifest(load_recipe(rp))
+
+        original_rules = m.find_chapter("original-conditions")
+        assert original_rules is not None
+        assert len(original_rules.filler_slots) == 1
+        assert original_rules.filler_slots[0].slot == "chapter-end"
+        assert original_rules.filler_slots[0].context == "reference"
+        original_backgrounds = m.find_chapter("original-backgrounds")
+        assert original_backgrounds is not None
+        assert original_backgrounds.filler_slots == []
+        combat = m.find_chapter("combat")
+        assert combat is not None
+        assert combat.source_boundary_filler_slot == "section-end"
+        assert combat.filler_slots[0].context == "combat"
+
+    def test_filler_marker_policy_can_disable_generated_markers(
+        self,
+        mini_workspace,
+    ):
+        ws, base, _ = mini_workspace
+        (base / "Combat.md").write_text("# Combat\nIntro.\n", encoding="utf-8")
+        rp = _write_recipe(
+            ws,
+            """
+            title: Test
+            vaults:
+              base: base
+            fillers:
+              enabled: true
+              slots:
+                chapter-end:
+                  min_space: 0.65in
+                  max_space: 8.5in
+                  shapes: [spot, plate, page-finish]
+                section-end:
+                  min_space: 1.2in
+                  max_space: 8.5in
+                  shapes: [spot, plate, page-finish]
+              markers:
+                terminal: false
+                source_boundary: false
+                subclass: false
+                headings: []
+            chapters:
+              - kind: file
+                title: Setting
+                source: base:Setting.md
+              - kind: sequence
+                style: equipment
+                title: Combat
+                sources:
+                  - source: base:Combat.md
+                    filler: false
+                  - title: Weapons & Armor
+                    source: base:Backgrounds.md
+            """,
+        )
+
+        m = build_manifest(load_recipe(rp))
+
+        setting = m.find_chapter("setting")
+        combat = m.find_chapter("combat")
+        assert setting is not None
+        assert combat is not None
+        assert setting.filler_slots == []
+        assert combat.filler_slots == []
+        assert combat.source_boundary_filler_slot is None
+        assert combat.source_filler_enabled == [False, True]
+        assert combat.heading_filler_markers == []
+
     def test_page_damage_assets_resolve_from_filename_conventions(self, mini_workspace):
         ws, base, _ = mini_workspace
         art = ws / "art"
@@ -367,7 +487,7 @@ class TestKindFile:
         assert spot.shape == "spot"
         assert spot.auto_selectable is True
         assert page.category == "filler-page"
-        assert page.shape == "bottom-band"
+        assert page.shape == "page-finish"
         assert page.height_in == 5.25
         assert page.auto_selectable is True
         assert cover.category == "cover-art"

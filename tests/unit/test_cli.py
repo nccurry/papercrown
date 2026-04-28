@@ -195,6 +195,7 @@ def test_build_command_applies_config_recipe_and_cli_precedence(
             "auto",
             "--no-art",
             "--no-clean-pdf",
+            "--filler-debug-overlay",
             "--timings",
         ],
     )
@@ -210,6 +211,7 @@ def test_build_command_applies_config_recipe_and_cli_precedence(
     assert 1 <= request.jobs <= 4
     assert request.include_art is False
     assert request.clean_pdf is False
+    assert request.filler_debug_overlay is True
     assert request.timings is True
 
 
@@ -274,13 +276,42 @@ def test_art_audit_command_reports_role_counts(tmp_path):
     )
     filler = tmp_path / "art" / "fillers" / "spot" / "filler-spot-general-01.png"
     filler.parent.mkdir(parents=True)
-    Image.new("RGBA", (128, 128), (0, 0, 0, 0)).save(filler)
+    Image.new("RGBA", (450, 405), (0, 0, 0, 0)).save(filler)
 
     result = runner.invoke(cli.app, ["art", "audit", str(recipe), "--strict"])
 
     assert result.exit_code == 0, result.output
     assert "papercrown art audit" in result.output
     assert "filler-spot: 1" in result.output
+
+
+def test_art_contact_sheet_command_writes_html(tmp_path):
+    recipe = _write_recipe(
+        tmp_path,
+        """
+        title: Art Contact Sheet Book
+        art_dir: art
+        vaults:
+          v: vault
+        chapters:
+          - kind: file
+            title: Foo
+            source: v:Foo.md
+        """,
+    )
+    filler = tmp_path / "art" / "fillers" / "spot" / "filler-spot-general-01.png"
+    filler.parent.mkdir(parents=True)
+    Image.new("RGBA", (450, 405), (0, 0, 0, 0)).save(filler)
+    out = tmp_path / "sheet.html"
+
+    result = runner.invoke(
+        cli.app,
+        ["art", "contact-sheet", str(recipe), "--output", str(out)],
+    )
+
+    assert result.exit_code == 0, result.output
+    assert out.is_file()
+    assert "filler-spot" in out.read_text(encoding="utf-8")
 
 
 def test_init_command_accepts_new_book_options(tmp_path):

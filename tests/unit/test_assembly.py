@@ -700,6 +700,60 @@ class TestAssembleChapterMarkdown:
 
         assert "filler-subclass-end" not in out
 
+    def test_sequence_source_boundaries_emit_contextual_section_end_slots(
+        self,
+        tmp_path,
+    ):
+        combat = _write(tmp_path / "System" / "Combat.md", "# Combat\nIntro.\n")
+        weapons = _write(
+            tmp_path / "Items" / "Weapons & Armor.md",
+            "# Weapons & Armor\nGear.\n",
+        )
+        artifacts = _write(
+            tmp_path / "Items" / "Prototype Artifacts.md",
+            "# Prototype Artifacts\nRare gear.\n",
+        )
+        ch = Chapter(
+            title="Combat",
+            slug="combat",
+            style="equipment",
+            source_files=[combat, weapons, artifacts],
+            source_titles=[None, "Weapons & Armor", "Prototype Artifacts"],
+            source_boundary_filler_slot="section-end",
+        )
+
+        out = assembly.assemble_chapter_markdown(ch)
+
+        assert "#filler-section-end-combat-system-combat" in out
+        assert "#filler-section-end-combat-items-weapons-armor" in out
+        assert out.count('data-slot="section-end"') == 2
+        assert out.count('data-slot-kind="source-boundary"') == 2
+        assert 'data-filler-context="combat"' in out
+        assert 'data-filler-context="equipment"' in out
+        assert "filler-section-end-combat-prototype-artifacts" not in out
+
+    def test_sequence_source_boundary_filler_can_be_disabled_per_source(
+        self,
+        tmp_path,
+    ):
+        first = _write(tmp_path / "first.md", "# First\nIntro.\n")
+        second = _write(tmp_path / "second.md", "# Second\nMore.\n")
+        third = _write(tmp_path / "third.md", "# Third\nDone.\n")
+        ch = Chapter(
+            title="Combat",
+            slug="combat",
+            style="equipment",
+            source_files=[first, second, third],
+            source_filler_enabled=[False, True, True],
+            source_boundary_filler_slot="section-end",
+        )
+
+        out = assembly.assemble_chapter_markdown(ch)
+
+        assert "#filler-section-end-combat-first" not in out
+        assert out.count('data-slot="section-end"') == 1
+        assert 'data-section-title="Second"' in out
+
     def test_sequence_wrapper_heading_can_be_removed_to_avoid_orphan_page(
         self,
         tmp_path,
@@ -881,8 +935,16 @@ class TestAssembleCombinedBookMarkdown:
             splashes=[splash],
         )
         assert ".splash-back-cover" in out
+        assert ".cover-back-page" in out
+        assert ".cover-back-art" in out
         assert "#splash-back" in out
         assert ".splash-back-cover" not in draft
+        terminal = assembly.assemble_combined_book_markdown(
+            [ch],
+            splashes=[splash],
+            include_back_cover_splashes=False,
+        )
+        assert ".splash-back-cover" not in terminal
 
     def test_top_level_non_wrapper_body_is_rendered(self, tmp_path):
         # Regression: a previous revision unconditionally skipped the top

@@ -280,6 +280,11 @@ figcaption {
   max-width: 4.6in;
 }
 
+.filler-plate {
+  width: 88%;
+  max-width: 5.5in;
+}
+
 .filler-bottom-band {
   width: 100%;
 }
@@ -288,6 +293,24 @@ figcaption {
   width: auto;
   height: auto;
   object-fit: contain;
+}
+
+.filler-page-finish {
+  width: 100%;
+}
+
+.art-diagram img,
+.art-screenshot img,
+.art-map img,
+.art-logo img,
+.art-icon img,
+.diagram img,
+.screenshot img,
+.map img,
+.logo img,
+.icon img {
+  mix-blend-mode: normal;
+  filter: none;
 }
 
 .art-triptych .art-card img {

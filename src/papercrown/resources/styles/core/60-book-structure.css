@@ -472,6 +472,11 @@ body.mode-draft .section-divider-eyebrow a {
   padding-bottom: 0.72in;
 }
 
+.cover-back-page .cover-back-art {
+  filter: none;
+  mix-blend-mode: normal;
+}
+
 /* When the divider title is a real heading (wrappers needing a TOC entry,
    or per-child dividers triggered by `child_divider: true` in a recipe),
    strip the per-level heading chrome -- no border, no extra margins, no
@@ -552,7 +557,9 @@ body.section-class h3:not(.section-divider-title):not(.level-heading),
    of their actual heading level (they may be h3 in single-chapter PDFs,
    h4/h5 in the combined book after wrapper + child_divider demotion).
    They're the most important navigational landmarks in a class spread,
-   so we style them identically at every level. */
+   so we style them identically at every level. Keep them typographic
+   rather than rule-like: dense level lists can stack many of these on a
+   single page, and repeated horizontal rules read as accidental dividers. */
 
 h1.level-heading,
 h2.level-heading,
@@ -568,9 +575,8 @@ h6.level-heading {
   color: var(--ink);
   margin-top: 0.72em;
   margin-bottom: 0.18em;
-  padding: 0 0 0.08em 0;
+  padding: 0;
   border: 0;
-  border-bottom: 1px solid var(--rule-light);
   background: none;
   page-break-after: avoid;
   break-after: avoid;
@@ -582,6 +588,13 @@ h6.level-heading {
 .level-heading + ul,
 .level-heading + .stat-block {
   margin-top: 0.2em;
+}
+
+/* Original/reference chapters inherit source-file horizontal rules that are
+   useful in raw Markdown but noisy in the compiled appendix. These often land
+   as repeated full-width dividers at the bottoms of dense pages. */
+.chapter-wrap[id^="ch-original-"] hr {
+  display: none;
 }
 
 /* ==========================================================================

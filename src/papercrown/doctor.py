@@ -21,11 +21,13 @@ from .options import BuildTarget
 from .recipe import PAGE_DAMAGE_FAMILIES, PAGE_DAMAGE_SIZES, ChapterSpec, Recipe
 
 LogFn = Callable[[str], None]
-_TRANSPARENT_FILLER_SHAPES = {"spot", "small-wide", "bottom-band"}
+_TRANSPARENT_FILLER_SHAPES = {"spot", "small-wide", "plate", "bottom-band"}
 _EXPECTED_FILLER_CATEGORIES = {
     "spot": {"filler-spot"},
     "small-wide": {"filler-wide"},
+    "plate": {"filler-plate"},
     "bottom-band": {"filler-bottom", "filler-page"},
+    "page-finish": {"filler-page"},
     "tailpiece": {"tailpiece"},
 }
 _OPAQUE_ALPHA = 245
@@ -198,8 +200,8 @@ def _add_filler_asset_diagnostics(
                     ),
                     path=asset.art_path,
                     hint=(
-                        "use filler-spot-*, filler-wide-*, filler-bottom-*, "
-                        "filler-page-*, or ornament-tailpiece-*"
+                        "use filler-spot-*, filler-wide-*, filler-plate-*, "
+                        "filler-bottom-*, filler-page-*, or ornament-tailpiece-*"
                     ),
                 )
             )

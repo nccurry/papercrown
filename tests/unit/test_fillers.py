@@ -61,6 +61,83 @@ def test_selection_chooses_largest_fitting_asset(tmp_path):
     assert chosen.id == "large"
 
 
+def test_page_finish_uses_flow_mode_and_legacy_bottom_band_slots(tmp_path):
+    asset = FillerAsset(
+        id="page",
+        art_path=tmp_path / "filler-page-general-finale-01.png",
+        shape="page-finish",
+        height_in=5.25,
+    )
+    catalog = FillerCatalog(
+        enabled=True,
+        slots={
+            "chapter-end": FillerSlot(
+                name="chapter-end",
+                min_space_in=0.65,
+                max_space_in=6.0,
+                shapes=["bottom-band"],
+            )
+        },
+        assets=[asset],
+    )
+
+    chosen = select_filler(
+        catalog,
+        FillerMeasurement(
+            slot_id="slot-a",
+            slot_name="chapter-end",
+            chapter_slug="setting-primer",
+            page_number=3,
+            available_in=5.8,
+        ),
+        recipe_title="Book",
+    )
+
+    assert chosen is asset
+    assert fillers_mod._placement_mode(asset) == "flow"
+
+
+def test_plate_is_preferred_for_medium_large_gap(tmp_path):
+    plate = FillerAsset(
+        id="plate",
+        art_path=tmp_path / "filler-plate-general-market-01.png",
+        shape="plate",
+        height_in=3.5,
+    )
+    bottom = FillerAsset(
+        id="bottom",
+        art_path=tmp_path / "filler-bottom-general-band-01.png",
+        shape="bottom-band",
+        height_in=3.5,
+    )
+    catalog = FillerCatalog(
+        enabled=True,
+        slots={
+            "chapter-end": FillerSlot(
+                name="chapter-end",
+                min_space_in=0.65,
+                max_space_in=4.5,
+                shapes=["plate", "bottom-band"],
+            )
+        },
+        assets=[bottom, plate],
+    )
+
+    chosen = select_filler(
+        catalog,
+        FillerMeasurement(
+            slot_id="slot-a",
+            slot_name="chapter-end",
+            chapter_slug="setting-primer",
+            page_number=3,
+            available_in=4.1,
+        ),
+        recipe_title="Book",
+    )
+
+    assert chosen is plate
+
+
 def test_selection_returns_none_when_space_is_insufficient(tmp_path):
     chosen = select_filler(
         _catalog(tmp_path),
@@ -312,6 +389,109 @@ def test_purpose_named_fillers_match_only_their_layout_context(tmp_path):
     assert language_chosen is None
 
 
+def test_explicit_filler_context_selects_reference_assets_for_original_slots(
+    tmp_path,
+):
+    catalog = FillerCatalog(
+        enabled=True,
+        slots={
+            "chapter-end": FillerSlot(
+                name="chapter-end",
+                min_space_in=1.2,
+                max_space_in=8.5,
+                shapes=["bottom-band"],
+            )
+        },
+        assets=[
+            FillerAsset(
+                "reference",
+                tmp_path / "filler-page-reference-archive-terminal-01.png",
+                "bottom-band",
+                5.25,
+            ),
+            FillerAsset(
+                "combat",
+                tmp_path / "filler-page-combat-airlock-aftermath-01.png",
+                "bottom-band",
+                5.25,
+            ),
+            FillerAsset(
+                "general",
+                tmp_path / "filler-page-general-observation-deck-01.png",
+                "bottom-band",
+                5.25,
+            ),
+        ],
+    )
+
+    chosen = select_filler(
+        catalog,
+        FillerMeasurement(
+            slot_id="slot-original",
+            slot_name="chapter-end",
+            chapter_slug="original-conditions",
+            page_number=12,
+            available_in=7.0,
+            context="reference",
+        ),
+        recipe_title="Book",
+    )
+
+    assert chosen is not None
+    assert chosen.id == "reference"
+
+
+def test_explicit_filler_context_distinguishes_equipment_from_combat(tmp_path):
+    catalog = FillerCatalog(
+        enabled=True,
+        slots={
+            "section-end": FillerSlot(
+                name="section-end",
+                min_space_in=1.2,
+                max_space_in=8.5,
+                shapes=["bottom-band"],
+            )
+        },
+        assets=[
+            FillerAsset(
+                "combat",
+                tmp_path / "filler-page-combat-airlock-aftermath-01.png",
+                "bottom-band",
+                5.25,
+            ),
+            FillerAsset(
+                "equipment",
+                tmp_path / "filler-page-equipment-cargo-lockers-01.png",
+                "bottom-band",
+                5.25,
+            ),
+            FillerAsset(
+                "general",
+                tmp_path / "filler-page-general-service-corridor-01.png",
+                "bottom-band",
+                5.25,
+            ),
+        ],
+    )
+
+    chosen = select_filler(
+        catalog,
+        FillerMeasurement(
+            slot_id="slot-weapons",
+            slot_name="section-end",
+            chapter_slug="combat",
+            page_number=24,
+            available_in=7.0,
+            section_slug="weapons-armor",
+            context="equipment",
+        ),
+        recipe_title="Book",
+    )
+
+    assert chosen is not None
+    assert chosen.id == "equipment"
+
+
 def test_selection_is_deterministic_for_same_seed(tmp_path):
     catalog = FillerCatalog(
         enabled=True,
@@ -480,6 +660,49 @@ def test_medium_gap_can_use_spot_object_filler(tmp_path):
     assert chosen.id == "spot"
 
 
+def test_bottom_gap_prefers_bottom_band_over_small_wide_asset(tmp_path):
+    catalog = FillerCatalog(
+        enabled=True,
+        slots={
+            "class-end": FillerSlot(
+                name="class-end",
+                min_space_in=1.2,
+                max_space_in=8.5,
+                shapes=["small-wide", "bottom-band"],
+            )
+        },
+        assets=[
+            FillerAsset(
+                "wide",
+                tmp_path / "filler-wide-class-helmet.png",
+                "small-wide",
+                1.25,
+            ),
+            FillerAsset(
+                "bottom",
+                tmp_path / "filler-bottom-class-dock.png",
+                "bottom-band",
+                2.4,
+            ),
+        ],
+    )
+
+    chosen = select_filler(
+        catalog,
+        FillerMeasurement(
+            slot_id="slot-class",
+            slot_name="class-end",
+            chapter_slug="shepherd",
+            page_number=10,
+            available_in=4.0,
+        ),
+        recipe_title="Book",
+    )
+
+    assert chosen is not None
+    assert chosen.id == "bottom"
+
+
 def test_large_gap_rejects_small_spot_art(tmp_path):
     catalog = FillerCatalog(
         enabled=True,
@@ -554,6 +777,44 @@ def test_huge_gap_requires_page_finisher_art(tmp_path):
     assert reason == "no size-matched context asset"
 
 
+def test_page_filler_is_rejected_when_it_would_render_too_small(tmp_path):
+    catalog = FillerCatalog(
+        enabled=True,
+        slots={
+            "chapter-end": FillerSlot(
+                name="chapter-end",
+                min_space_in=1.2,
+                max_space_in=8.5,
+                shapes=["bottom-band"],
+            )
+        },
+        assets=[
+            FillerAsset(
+                "page",
+                tmp_path / "filler-page-reference-terminal.png",
+                "bottom-band",
+                5.25,
+            )
+        ],
+    )
+
+    chosen, reason = _select_filler_with_reason(
+        catalog,
+        FillerMeasurement(
+            slot_id="slot-reference",
+            slot_name="chapter-end",
+            chapter_slug="original-conditions",
+            page_number=12,
+            available_in=2.9,
+            context="reference",
+        ),
+        recipe_title="Book",
+    )
+
+    assert chosen is None
+    assert reason == "no size-matched context asset"
+
+
 def test_page_filler_context_and_height_can_win_for_huge_gap(tmp_path):
     catalog = FillerCatalog(
         enabled=True,
@@ -617,6 +878,63 @@ def test_page_filler_context_and_height_can_win_for_huge_gap(tmp_path):
     )
 
 
+def test_page_gap_uses_page_filler_and_downscales_to_usable_height(
+    tmp_path,
+    monkeypatch,
+):
+    catalog = FillerCatalog(
+        enabled=True,
+        slots={
+            "frame-family-end": FillerSlot(
+                name="frame-family-end",
+                min_space_in=1.2,
+                max_space_in=8.5,
+                shapes=["small-wide", "bottom-band"],
+            )
+        },
+        assets=[
+            FillerAsset(
+                "wide",
+                tmp_path / "filler-wide-frame-toolkit.png",
+                "small-wide",
+                1.25,
+            ),
+            FillerAsset(
+                "bottom",
+                tmp_path / "filler-bottom-frame-cradle.png",
+                "bottom-band",
+                2.4,
+            ),
+            FillerAsset(
+                "page",
+                tmp_path / "filler-page-frame-vault.png",
+                "bottom-band",
+                5.25,
+            ),
+        ],
+    )
+    monkeypatch.setattr(
+        fillers_mod,
+        "measure_slots",
+        lambda document: [
+            FillerMeasurement(
+                slot_id="slot-frame",
+                slot_name="frame-family-end",
+                chapter_slug="frames",
+                page_number=2,
+                available_in=5.2,
+            )
+        ],
+    )
+
+    placements = plan_fillers(object(), catalog, recipe_title="Book")
+
+    assert len(placements) == 1
+    assert placements[0].asset.id == "page"
+    assert round(placements[0].render_height_in, 2) == 4.93
+    assert placements[0].fill_ratio == 1.0
+
+
 def test_one_filler_max_per_page_is_enforced(tmp_path, monkeypatch):
     catalog = FillerCatalog(
         enabled=True,
@@ -670,6 +988,149 @@ def test_one_filler_max_per_page_is_enforced(tmp_path, monkeypatch):
     assert placements[0].page_number == 4
 
 
+def test_reuse_is_marked_and_warned_only_when_unavoidable(tmp_path, monkeypatch):
+    catalog = FillerCatalog(
+        enabled=True,
+        slots={
+            "chapter-end": FillerSlot(
+                name="chapter-end",
+                min_space_in=0.65,
+                max_space_in=2.0,
+                shapes=["tailpiece"],
+            )
+        },
+        assets=[
+            FillerAsset(
+                "only",
+                tmp_path / "ornament-tailpiece-only.png",
+                "tailpiece",
+                0.65,
+            )
+        ],
+    )
+    monkeypatch.setattr(
+        fillers_mod,
+        "measure_slots",
+        lambda document: [
+            FillerMeasurement(
+                slot_id="slot-a",
+                slot_name="chapter-end",
+                chapter_slug="languages",
+                page_number=3,
+                available_in=1.4,
+            ),
+            FillerMeasurement(
+                slot_id="slot-b",
+                slot_name="chapter-end",
+                chapter_slug="languages",
+                page_number=4,
+                available_in=1.4,
+            ),
+        ],
+    )
+
+    placements = plan_fillers(object(), catalog, recipe_title="Book")
+    warnings = fillers_mod.filler_warnings(placements)
+
+    assert len(placements) == 2
+    assert placements[0].reused_from is None
+    assert placements[1].reused_from is not None
+    assert warnings == [
+        "filler warning: reused only on p4 slot-b; first used on p3 slot-a"
+    ]
+
+
+def test_prominent_reuse_is_skipped_when_used_recently(tmp_path, monkeypatch):
+    catalog = FillerCatalog(
+        enabled=True,
+        slots={
+            "chapter-end": FillerSlot(
+                name="chapter-end",
+                min_space_in=1.2,
+                max_space_in=8.5,
+                shapes=["bottom-band"],
+            )
+        },
+        assets=[
+            FillerAsset(
+                "only",
+                tmp_path / "filler-bottom-general-only.png",
+                "bottom-band",
+                2.4,
+            )
+        ],
+    )
+    monkeypatch.setattr(
+        fillers_mod,
+        "measure_slots",
+        lambda document: [
+            FillerMeasurement(
+                slot_id="slot-a",
+                slot_name="chapter-end",
+                chapter_slug="languages",
+                page_number=3,
+                available_in=3.4,
+            ),
+            FillerMeasurement(
+                slot_id="slot-b",
+                slot_name="chapter-end",
+                chapter_slug="languages",
+                page_number=4,
+                available_in=3.4,
+            ),
+        ],
+    )
+
+    placements, decisions = fillers_mod.plan_filler_decisions(
+        object(),
+        catalog,
+        recipe_title="Book",
+    )
+
+    assert len(placements) == 1
+    assert placements[0].slot_id == "slot-a"
+    assert decisions[1].reason == "matching filler already used recently"
+
+
+def test_source_boundary_page_finishers_are_skipped_for_short_sections(tmp_path):
+    catalog = FillerCatalog(
+        enabled=True,
+        slots={
+            "section-end": FillerSlot(
+                name="section-end",
+                min_space_in=1.2,
+                max_space_in=8.5,
+                shapes=["bottom-band"],
+            )
+        },
+        assets=[
+            FillerAsset(
+                "page",
+                tmp_path / "filler-page-powers-chaos-table-01.png",
+                "page-finish",
+                5.25,
+            )
+        ],
+    )
+
+    chosen, reason = _select_filler_with_reason(
+        catalog,
+        FillerMeasurement(
+            slot_id="slot-small-source",
+            slot_name="section-end",
+            chapter_slug="powers",
+            page_number=12,
+            available_in=7.0,
+            slot_kind="source-boundary",
+            context="powers",
+        ),
+        recipe_title="Book",
+    )
+
+    assert chosen is None
+    assert reason == "not enough intervening content"
+
+
 def test_missing_art_report_summarizes_unfilled_slots(tmp_path, monkeypatch):
     catalog = FillerCatalog(
         enabled=True,
@@ -713,6 +1174,74 @@ def test_missing_art_report_summarizes_unfilled_slots(tmp_path, monkeypatch):
     assert "recommended=wide transparent filler" in text
     assert "`filler-wide-frame-baseline-human-01.png`" in text
     assert "transparent background" in text
+
+
+def test_filler_report_lists_reuse_and_undersized_opportunities(
+    tmp_path,
+    monkeypatch,
+):
+    catalog = FillerCatalog(
+        enabled=True,
+        slots={
+            "chapter-end": FillerSlot(
+                name="chapter-end",
+                min_space_in=1.2,
+                max_space_in=8.5,
+                shapes=["spot", "bottom-band"],
+            )
+        },
+        assets=[
+            FillerAsset(
+                "reused",
+                tmp_path / "filler-bottom-general-reused.png",
+                "bottom-band",
+                2.4,
+            )
+        ],
+    )
+    monkeypatch.setattr(
+        fillers_mod,
+        "measure_slots",
+        lambda document: [
+            FillerMeasurement(
+                slot_id="slot-a",
+                slot_name="chapter-end",
+                chapter_slug="languages",
+                page_number=3,
+                available_in=3.4,
+            ),
+            FillerMeasurement(
+                slot_id="slot-b",
+                slot_name="chapter-end",
+                chapter_slug="languages",
+                page_number=50,
+                available_in=3.4,
+            ),
+            FillerMeasurement(
+                slot_id="slot-c",
+                slot_name="chapter-end",
+                chapter_slug="languages",
+                page_number=51,
+                available_in=7.0,
+            ),
+        ],
+    )
+    out = tmp_path / "book.filler-report.md"
+
+    fillers_mod.write_filler_report(
+        out,
+        object(),
+        catalog,
+        recipe_title="Book",
+    )
+
+    text = out.read_text(encoding="utf-8")
+    assert "## Warnings" in text
+    assert "reused reused on p50 slot-b" in text
+    assert "render=2.40in, fill=77%" in text
+    assert "## Undersized Opportunities" in text
+    assert "recommended=page-finisher filler" in text
+    assert "`filler-page-languages-languages-01.png`" in text
 
 
 def test_inject_fillers_replaces_marker_with_fixed_block(tmp_path):

@@ -55,7 +55,11 @@ class ArtAssetClassification:
 
 
 ROLE_REGISTRY: dict[str, ArtRoleSpec] = {
-    "cover": ArtRoleSpec("cover", "covers", 6.0, 9.0, transparent=False),
+    "cover-front": ArtRoleSpec(
+        "cover-front", "covers", 8.5, 5.75, transparent=False
+    ),
+    "cover-back": ArtRoleSpec("cover-back", "covers", 8.5, 5.75, transparent=False),
+    "cover": ArtRoleSpec("cover", "covers", 8.5, 5.75, transparent=False),
     "chapter-divider": ArtRoleSpec(
         "chapter-divider", "dividers", 6.0, 4.0, transparent=False
     ),
@@ -68,6 +72,7 @@ ROLE_REGISTRY: dict[str, ArtRoleSpec] = {
     "class-opening-spot": ArtRoleSpec("class-opening-spot", "classes/spots", 2.0, 2.0),
     "frame-divider": ArtRoleSpec("frame-divider", "frames/dividers", 6.0, 3.0),
     "splash": ArtRoleSpec("splash", "splashes", 6.0, 3.0, transparent=False),
+    "spread": ArtRoleSpec("spread", "spreads", 12.0, 9.0, transparent=False),
     "ornament-headpiece": ArtRoleSpec(
         "ornament-headpiece", "ornaments/headpieces", 4.0, 0.8
     ),
@@ -78,6 +83,12 @@ ROLE_REGISTRY: dict[str, ArtRoleSpec] = {
         2.0,
         0.65,
         shape="tailpiece",
+    ),
+    "ornament-corner": ArtRoleSpec(
+        "ornament-corner", "ornaments/corners", 1.0, 1.0, transparent=True
+    ),
+    "ornament-folio": ArtRoleSpec(
+        "ornament-folio", "ornaments/folios", 0.65, 0.65, transparent=True
     ),
     "filler-spot": ArtRoleSpec(
         "filler-spot",
@@ -95,6 +106,14 @@ ROLE_REGISTRY: dict[str, ArtRoleSpec] = {
         shape="small-wide",
         auto_placeable=True,
     ),
+    "filler-plate": ArtRoleSpec(
+        "filler-plate",
+        "fillers/plate",
+        5.0,
+        3.6,
+        shape="plate",
+        auto_placeable=True,
+    ),
     "filler-bottom": ArtRoleSpec(
         "filler-bottom",
         "fillers/bottom",
@@ -108,7 +127,7 @@ ROLE_REGISTRY: dict[str, ArtRoleSpec] = {
         "fillers/page",
         6.0,
         5.25,
-        shape="bottom-band",
+        shape="page-finish",
         auto_placeable=True,
     ),
     "page-wear": ArtRoleSpec(
@@ -122,6 +141,10 @@ ROLE_REGISTRY: dict[str, ArtRoleSpec] = {
     "spot": ArtRoleSpec("spot", None, 2.0, 2.0),
     "portrait": ArtRoleSpec("portrait", "content/portraits", 2.0, 3.0),
     "map": ArtRoleSpec("map", "content/maps", 6.0, 4.0),
+    "diagram": ArtRoleSpec("diagram", "content/diagrams", 6.0, 3.5),
+    "screenshot": ArtRoleSpec("screenshot", "content/screenshots", 6.0, 3.5),
+    "icon": ArtRoleSpec("icon", "icons", 0.5, 0.5, transparent=True),
+    "logo": ArtRoleSpec("logo", "logos", 2.0, 1.0, transparent=True),
     "item": ArtRoleSpec("item", "content/items", 2.0, 2.0),
     "npc": ArtRoleSpec("npc", "content/npcs", 2.0, 3.0),
     "location": ArtRoleSpec("location", "content/locations", 6.0, 3.0),
@@ -147,11 +170,18 @@ def classify_art_path(
     if "campaign" in dirs:
         return _classification("excluded")
 
-    cover_prefixes = ("cover-front", "cover-back")
-    if _in_folder(dirs, "covers") or stem in {"cover", "cover-front", "cover-back"}:
-        return _classification("cover", **_parse_prefix(stem, cover_prefixes))
-    if stem.startswith("cover-front-") or stem.startswith("cover-back-"):
-        return _classification("cover", **_parse_prefix(stem, cover_prefixes))
+    if stem == "cover-back" or stem.startswith("cover-back-"):
+        return _classification(
+            "cover-back", **_parse_prefix(stem, ("cover-back",))
+        )
+    if stem in {"cover", "cover-front"} or stem.startswith("cover-front-"):
+        role = "cover-front" if stem.startswith("cover-front") else "cover"
+        convention = "canonical" if role == "cover-front" else "legacy"
+        return _classification(
+            role,
+            matched_convention=convention,
+            **_parse_prefix(stem, ("cover-front", "cover")),
+        )
 
     if _in_nested_folder(dirs, "classes", "dividers"):
         return _classification("class-divider", **_parse_prefix(stem, ("class",)))
@@ -202,6 +232,9 @@ def classify_art_path(
             **_parse_prefix(stem, ("frame",)),
         )
 
+    if _in_folder(dirs, "spreads") or stem.startswith("spread-"):
+        return _classification("spread", **_parse_prefix(stem, ("spread",)))
+
     if _in_folder(dirs, "splashes") or stem.startswith(
         ("splash-", "opening-", "closing-")
     ):
@@ -247,7 +280,13 @@ def classify_art_path(
             matched_convention=convention,
             **_parse_prefix(
                 stem,
-                ("filler-spot", "filler-wide", "filler-bottom", "filler-page"),
+                (
+                    "filler-spot",
+                    "filler-wide",
+                    "filler-plate",
+                    "filler-bottom",
+                    "filler-page",
+                ),
             ),
         )
 
@@ -353,6 +392,14 @@ def _classify_ornament(dirs: list[str], stem: str) -> tuple[str, str] | None:
         "ornament-tailpiece-"
     ):
         return ("ornament-tailpiece", "canonical")
+    if _in_nested_folder(dirs, "ornaments", "corners") or stem.startswith(
+        "ornament-corner-"
+    ):
+        return ("ornament-corner", "canonical")
+    if _in_nested_folder(dirs, "ornaments", "folios") or stem.startswith(
+        "ornament-folio-"
+    ):
+        return ("ornament-folio", "canonical")
     if "ornaments" in dirs and stem.startswith("ornament-"):
         return ("ornament-break", "legacy")
     return None
@@ -362,6 +409,7 @@ def _classify_filler(dirs: list[str], stem: str) -> tuple[str, str] | None:
     folder_roles = {
         "spot": "filler-spot",
         "wide": "filler-wide",
+        "plate": "filler-plate",
         "bottom": "filler-bottom",
         "page": "filler-page",
     }
@@ -369,7 +417,13 @@ def _classify_filler(dirs: list[str], stem: str) -> tuple[str, str] | None:
         for folder, role in folder_roles.items():
             if folder in dirs and stem.startswith(f"{role}-"):
                 return (role, "canonical")
-    for role in ("filler-spot", "filler-wide", "filler-bottom", "filler-page"):
+    for role in (
+        "filler-spot",
+        "filler-wide",
+        "filler-plate",
+        "filler-bottom",
+        "filler-page",
+    ):
         if stem.startswith(f"{role}-"):
             return (role, "legacy" if "fillers" in dirs else "canonical")
     return None
@@ -384,10 +438,15 @@ def _classify_content(
         "factions": "faction",
         "gear": "gear",
         "vistas": "vista",
+        "spreads": "spread",
         "spots": "spot",
         "background-spots": "spot",
         "portraits": "portrait",
         "maps": "map",
+        "diagrams": "diagram",
+        "screenshots": "screenshot",
+        "icons": "icon",
+        "logos": "logo",
         "items": "item",
         "npcs": "npc",
         "locations": "location",
@@ -404,14 +463,16 @@ def _classify_content(
         "spot": "spot",
         "portrait": "portrait",
         "map": "map",
+        "diagram": "diagram",
+        "screenshot": "screenshot",
+        "icon": "icon",
+        "logo": "logo",
         "item": "item",
         "npc": "npc",
         "location": "location",
         "handout": "handout",
         "stamp": "spot",
         "label": "spot",
-        "diagram": "handout",
-        "icon": "item",
         "ship": "handout",
         "vehicle": "handout",
     }
