@@ -1,12 +1,14 @@
-# Art Contract
+# Art
 
 Paper Crown treats `art_dir` as a named art library. The book owns the files;
 Paper Crown classifies them by role, validates the names, and only auto-places
 art from roles that are explicitly safe for automatic layout.
 
-Use `papercrown art audit book.yaml` when adding or moving art.
+Art is recipe-driven for the same reason chapters are: finished books need
+repeatable references, predictable naming, and checks that catch missing or
+mis-sized assets before a release build.
 
-:::: {.sidebar #art-library title="Art Library Contract" tags="docs,art,authoring"}
+:::: {.sidebar #art-library title="Art Library Contract" tags="docs,art"}
 ### Art Library Contract
 
 Keep art under the recipe's `art_dir`, use role-shaped filenames, and reserve
@@ -14,6 +16,26 @@ transparent PNGs for assets that should float on paper instead of carrying
 their own rectangular background. Art can either live in the canonical role
 folders below or directly in `art_dir` when filenames are globally unique.
 ::::
+
+## How to Use It
+
+Set `art_dir` in the recipe, put finished images in role-shaped folders, and
+reference chapter dividers, covers, splashes, and ornaments explicitly from the
+recipe. Use `papercrown art audit book.yaml` when adding or moving art.
+
+## How to Adapt It
+
+Use opaque images for covers, splashes, dividers, screenshots, maps, and
+diagrams that need to carry their own rectangular composition. Use transparent
+PNGs for ornaments, spots, page wear, and decorative fillers that should sit on
+the paper surface.
+
+## How It Works
+
+The art audit classifies filenames, checks image metadata, verifies recipe
+references, and reports assets that do not match the role contract. Automatic
+filler placement only considers roles that are safe to place without explicit
+source Markdown references.
 
 ## Canonical Roles
 

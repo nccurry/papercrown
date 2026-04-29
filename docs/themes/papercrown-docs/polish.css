@@ -1,5 +1,5 @@
 /* Late web-only polish layer. Keeping this separate gives the dev browser a
-   fresh CSS URL when iterating on the anthology look. */
+   fresh CSS URL when iterating on the docs look. */
 
 body.mode-web.paper-anthology {
   --docs-reader-grain: url("assets/reader-grain.png");
@@ -73,13 +73,8 @@ body.mode-web.paper-anthology .section-divider-text {
   min-width: min(12.5rem, 58%);
   max-width: min(68%, 23rem);
   margin: 0;
-  background:
-    linear-gradient(90deg, rgba(18, 14, 10, 0.6), rgba(18, 14, 10, 0.36)),
-    var(--docs-reader-grain);
-  background-size: auto, 256px 256px;
-  box-shadow:
-    0 0.8rem 2rem rgba(0, 0, 0, 0.26),
-    inset 0 0 0 1px rgba(255, 247, 218, 0.11);
+  background: rgba(18, 14, 10, 0.74);
+  box-shadow: inset 0 0 0 1px rgba(255, 247, 218, 0.16);
 }
 
 body.mode-web.paper-anthology .section-divider-title {
@@ -98,61 +93,101 @@ body.mode-web.paper-anthology .section-divider-art {
   object-fit: cover;
   mix-blend-mode: normal;
   opacity: 1;
-  filter: saturate(1.06) contrast(1.08) brightness(0.94);
+  filter: none;
+}
+
+body.mode-web.paper-anthology #div-overview,
+body.mode-web.paper-anthology #div-architecture {
+  color: #f0bd4f;
+  background: #2a1b12;
+}
+
+body.mode-web.paper-anthology #div-architecture .section-divider-art {
+  object-position: center;
+  opacity: 1;
+  filter: none;
+}
+
+body.mode-web.paper-anthology #div-architecture .section-divider-text {
+  background: rgba(55, 31, 15, 0.74);
 }
 
 body.mode-web.paper-anthology #div-overview {
-  color: #f0bd4f;
-  background: #2a1b12;
+  color: #d7aa4d;
+  background: #241b13;
 }
 
 body.mode-web.paper-anthology #div-overview .section-divider-art {
   object-position: center;
   opacity: 1;
-  filter: saturate(1.08) contrast(1.08) brightness(0.96);
+  filter: none;
 }
 
 body.mode-web.paper-anthology #div-overview .section-divider-text {
-  background:
-    linear-gradient(90deg, rgba(55, 31, 15, 0.6), rgba(55, 31, 15, 0.36)),
-    var(--docs-reader-grain);
+  background: rgba(39, 27, 17, 0.78);
 }
 
 body.mode-web.paper-anthology #div-quick-start,
-body.mode-web.paper-anthology #div-setup {
+body.mode-web.paper-anthology #div-developer-guide {
   color: #51d2c4;
   background: #0c1a22;
 }
 
 body.mode-web.paper-anthology #div-quick-start .section-divider-art,
-body.mode-web.paper-anthology #div-setup .section-divider-art {
+body.mode-web.paper-anthology #div-developer-guide .section-divider-art {
   object-position: center;
-  filter: saturate(1) contrast(1.12) brightness(0.88);
+  filter: none;
 }
 
-body.mode-web.paper-anthology #div-authoring {
+body.mode-web.paper-anthology #div-recipes,
+body.mode-web.paper-anthology #div-art {
   color: #d7b35e;
   background: #241622;
 }
 
-body.mode-web.paper-anthology #div-authoring .section-divider-art {
+body.mode-web.paper-anthology #div-recipes .section-divider-art,
+body.mode-web.paper-anthology #div-art .section-divider-art {
   object-position: center;
-  filter: saturate(1.06) contrast(1.1) brightness(0.92);
+  filter: none;
 }
 
-body.mode-web.paper-anthology #div-maintaining-paper-crown {
+body.mode-web.paper-anthology #div-vaults-and-markdown {
+  color: #83c8a5;
+  background: #11251d;
+}
+
+body.mode-web.paper-anthology #div-vaults-and-markdown .section-divider-art {
+  object-position: center;
+  filter: none;
+}
+
+body.mode-web.paper-anthology #div-vaults-and-markdown .section-divider-text {
+  background: rgba(15, 34, 29, 0.78);
+}
+
+body.mode-web.paper-anthology #div-themes {
+  color: #e780b7;
+  background: #23142b;
+}
+
+body.mode-web.paper-anthology #div-themes .section-divider-text {
+  background: rgba(35, 20, 43, 0.78);
+}
+
+body.mode-web.paper-anthology #div-builds-and-publishing {
   color: #ffc15e;
   background: #321a12;
 }
 
-body.mode-web.paper-anthology #div-maintaining-paper-crown .section-divider-art {
+body.mode-web.paper-anthology #div-builds-and-publishing .section-divider-art {
   object-position: center;
-  filter: saturate(1.05) contrast(1.1) brightness(0.9);
+  filter: none;
 }
 
 body.mode-web.paper-anthology #div-quick-start .section-divider-title,
-body.mode-web.paper-anthology #div-setup .section-divider-title,
-body.mode-web.paper-anthology #div-authoring .section-divider-title {
+body.mode-web.paper-anthology #div-developer-guide .section-divider-title,
+body.mode-web.paper-anthology #div-recipes .section-divider-title,
+body.mode-web.paper-anthology #div-art .section-divider-title {
   color: #fff7de;
 }
 

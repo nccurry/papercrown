@@ -6,8 +6,12 @@ Install the CLI once:
 uv tool install https://github.com/nccurry/papercrown/releases/download/v1.0.0/papercrown-1.0.0-py3-none-any.whl
 ```
 
-Replace `1.0.0` with the release version you want. Paper Crown release artifacts
-live on GitHub Releases, not PyPI.
+Replace `1.0.0` with the release version you want. Paper Crown release
+artifacts live on GitHub Releases, not PyPI. If your shell cannot find
+`papercrown` after installation, run `uv tool update-shell` and open a new
+terminal.
+
+<div class="art-rule art-rule-launch" aria-hidden="true"></div>
 
 Create a new Paper Crown project:
 
@@ -20,10 +24,14 @@ papercrown build
 papercrown verify
 ```
 
-> [!tip] First useful loop
-> Run the commands in this order the first time through. `manifest` explains
-> the resolved book shape before rendering, and `doctor` catches missing tools
-> before a PDF build has to fail noisily.
+## Core Flow
+
+1. Write Markdown in a vault.
+2. Describe the book in a recipe YAML file.
+3. Run `papercrown manifest` to inspect the resolved book.
+4. Run `papercrown doctor` to catch missing tools, paths, and content issues.
+5. Run `papercrown build` for PDFs, or add `--target web` for static HTML.
+6. Run `papercrown verify` before publishing PDFs.
 
 :::: {.rule #first-build-loop title="First Build Loop" tags="docs,build,quickstart"}
 ### First Build Loop
@@ -33,15 +41,14 @@ machine and content, `build` to render outputs, and `verify` to check PDFs
 after rendering.
 ::::
 
-**Manifest:** Inspect the recipe, vault roots, chapter order, theme, and art references.
-**Doctor:** Validate the machine, content, recipe paths, images, and external render tools.
-**Build:** Render PDF or web output into the configured caller-owned output folder.
-**Verify:** Check generated PDFs after rendering, especially before publishing or release.
-
+:::: {.flourish-note .flourish-launch}
 Paper Crown reads `papercrown.yaml` in the current directory when no recipe path
 is provided. That project file usually points to the default recipe.
+::::
 
-You can also run the public example from this repository:
+## Example Project
+
+You can also run the bundled public example from a repository checkout:
 
 ```sh
 papercrown manifest examples/starfall/recipes/starfall-field-guide.yaml
@@ -54,5 +61,15 @@ For a static web export, use:
 papercrown build examples/starfall/recipes/starfall-field-guide.yaml --target web
 ```
 
-The docs site is built the same way, using @rule.first-build-loop with
-`--target web`.
+Generated output is always caller-owned and goes under:
+
+```text
+<output_dir>/Paper Crown/<output_name>/
+  pdf/
+  web/
+  cache/
+```
+
+`output_dir` and `output_name` are recipe fields. They may point outside the
+project folder when you want source, generated files, and publishing artifacts
+to stay separate.

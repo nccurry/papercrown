@@ -1,4 +1,4 @@
-/* Paper Crown Docs Anthology component overrides. */
+/* Paper Crown Docs component overrides. */
 body.paper-anthology {
   background-color: var(--paper);
 }
@@ -140,8 +140,8 @@ body.paper-anthology {
 .paper-anthology .section-divider-text {
   position: relative;
   z-index: 1;
-  background: color-mix(in srgb, var(--paper) 88%, transparent);
-  box-shadow: 0 0.7rem 1.8rem rgba(32, 25, 20, 0.1);
+  background: color-mix(in srgb, var(--paper) 94%, white);
+  box-shadow: none;
 }
 
 .paper-anthology .section-divider-art-wrap {
@@ -167,7 +167,7 @@ body.paper-anthology {
   max-width: none;
   max-height: none;
   object-fit: cover;
-  filter: saturate(0.95) contrast(1.04);
+  filter: none;
 }
 
 .paper-anthology .section-divider-eyebrow,
@@ -175,7 +175,7 @@ body.paper-anthology {
   letter-spacing: 0;
 }
 
-#div-overview {
+#div-architecture {
   color: #7d2e19;
   background:
     linear-gradient(90deg, rgba(125, 46, 25, 0.08), transparent 58%),
@@ -183,8 +183,16 @@ body.paper-anthology {
     linear-gradient(135deg, #fff2bf 0%, #efd58d 54%, #d2ad56 100%);
 }
 
+#div-overview {
+  color: #d2a64c;
+  background:
+    linear-gradient(90deg, rgba(39, 27, 17, 0.95), rgba(80, 55, 28, 0.72)),
+    repeating-linear-gradient(90deg, rgba(210, 166, 76, 0.12) 0 1px, transparent 1px 2.8rem),
+    var(--paper-grain);
+}
+
 #div-quick-start,
-#div-setup {
+#div-developer-guide {
   color: #51d2c4;
   background:
     linear-gradient(90deg, rgba(16, 31, 46, 0.96), rgba(35, 67, 76, 0.9)),
@@ -192,7 +200,8 @@ body.paper-anthology {
     repeating-linear-gradient(90deg, transparent 0 1.4rem, rgba(255, 255, 255, 0.04) 1.4rem 1.48rem);
 }
 
-#div-authoring {
+#div-recipes,
+#div-art {
   color: #d6b665;
   background:
     linear-gradient(135deg, rgba(28, 19, 29, 0.98), rgba(73, 39, 58, 0.92)),
@@ -200,7 +209,23 @@ body.paper-anthology {
     var(--paper-grain);
 }
 
-#div-maintaining-paper-crown {
+#div-vaults-and-markdown {
+  color: #80c5a0;
+  background:
+    linear-gradient(90deg, rgba(14, 34, 30, 0.98), rgba(45, 82, 61, 0.86)),
+    repeating-linear-gradient(135deg, rgba(128, 197, 160, 0.12) 0 1px, transparent 1px 0.95rem),
+    var(--paper-grain);
+}
+
+#div-themes {
+  color: #e780b7;
+  background:
+    linear-gradient(90deg, rgba(34, 18, 45, 0.96), rgba(88, 40, 85, 0.78)),
+    repeating-linear-gradient(90deg, rgba(231, 128, 183, 0.1) 0 1px, transparent 1px 2.6rem),
+    var(--paper-grain);
+}
+
+#div-builds-and-publishing {
   color: #2c241b;
   background:
     linear-gradient(135deg, #f4d07d 0%, #d4843d 58%, #8f3f2b 100%),
@@ -208,35 +233,56 @@ body.paper-anthology {
     var(--paper-grain);
 }
 
-#div-overview::after {
+#div-architecture::after {
   background:
     linear-gradient(90deg, transparent, currentColor),
     repeating-linear-gradient(0deg, currentColor 0 1px, transparent 1px 0.85rem),
     repeating-linear-gradient(90deg, currentColor 0 1px, transparent 1px 0.85rem);
 }
 
+#div-themes::after {
+  background:
+    linear-gradient(90deg, transparent, currentColor),
+    repeating-linear-gradient(30deg, currentColor 0 1px, transparent 1px 0.82rem),
+    repeating-linear-gradient(150deg, currentColor 0 1px, transparent 1px 0.82rem);
+}
+
+#div-overview::after {
+  background:
+    linear-gradient(90deg, transparent, currentColor),
+    repeating-linear-gradient(60deg, currentColor 0 1px, transparent 1px 0.9rem);
+}
+
 #div-quick-start::after,
-#div-setup::after {
+#div-developer-guide::after {
   background:
     linear-gradient(90deg, transparent, currentColor),
     repeating-linear-gradient(45deg, currentColor 0 2px, transparent 2px 0.8rem);
 }
 
-#div-authoring::after {
+#div-recipes::after,
+#div-art::after {
   background:
     linear-gradient(90deg, transparent, currentColor),
     repeating-linear-gradient(135deg, currentColor 0 1px, transparent 1px 0.7rem);
 }
 
-#div-maintaining-paper-crown::after {
+#div-vaults-and-markdown::after {
+  background:
+    linear-gradient(90deg, transparent, currentColor),
+    repeating-linear-gradient(90deg, currentColor 0 1px, transparent 1px 0.72rem);
+}
+
+#div-builds-and-publishing::after {
   background:
     linear-gradient(90deg, transparent, currentColor),
     repeating-linear-gradient(115deg, currentColor 0 0.38rem, transparent 0.38rem 1rem);
 }
 
 #div-quick-start .section-divider-title,
-#div-setup .section-divider-title,
-#div-authoring .section-divider-title {
+#div-developer-guide .section-divider-title,
+#div-recipes .section-divider-title,
+#div-art .section-divider-title {
   color: #201914;
 }
 
@@ -246,6 +292,20 @@ body.section-codex .book-body {
   --accent-deep: #7a271a;
   --tint-block: #f6e8c2;
   --tint-callout: #fff3d0;
+}
+
+.chapter-wrap.section-overview,
+body.section-overview .book-body {
+  --paper: #fbf3e2;
+  --ink: #211914;
+  --ink-soft: #4a3826;
+  --muted: #776048;
+  --rule: #4c321d;
+  --rule-light: #c79b52;
+  --accent: #c4931a;
+  --accent-deep: #6d3e20;
+  --tint-block: #f4e4bd;
+  --tint-callout: #fff2cc;
 }
 
 .chapter-wrap.section-launch,
@@ -260,6 +320,34 @@ body.section-launch .book-body {
   --accent-deep: #1d536d;
   --tint-block: #dcefed;
   --tint-callout: #eaf6f2;
+}
+
+.chapter-wrap.section-vault,
+body.section-vault .book-body {
+  --paper: #eff5ec;
+  --ink: #17251f;
+  --ink-soft: #31483e;
+  --muted: #607667;
+  --rule: #17372d;
+  --rule-light: #88b89e;
+  --accent: #34795d;
+  --accent-deep: #204f43;
+  --tint-block: #dcebdd;
+  --tint-callout: #f0f4dc;
+}
+
+.chapter-wrap.section-theme-lab,
+body.section-theme-lab .book-body {
+  --paper: #f7edf3;
+  --ink: #241926;
+  --ink-soft: #4f334e;
+  --muted: #755f77;
+  --rule: #4c254e;
+  --rule-light: #c79ab8;
+  --accent: #a63374;
+  --accent-deep: #512664;
+  --tint-block: #efdeea;
+  --tint-callout: #fff1d9;
 }
 
 .chapter-wrap.section-casefile,
@@ -322,6 +410,81 @@ body.section-field-guide .book-body {
 .paper-anthology .pc-ttrpg-sidebar,
 .paper-anthology .pc-ttrpg-handout {
   border-left-color: var(--accent);
+}
+
+.paper-anthology .flourish-note {
+  position: relative;
+  padding-right: 0.72in;
+}
+
+.paper-anthology .flourish-note > p:first-child {
+  margin-top: 0;
+}
+
+.paper-anthology .flourish-note > p:last-child {
+  margin-bottom: 0;
+}
+
+.paper-anthology .flourish-note::after {
+  content: "";
+  position: absolute;
+  top: 0.02in;
+  right: 0.04in;
+  width: 0.46in;
+  height: 0.46in;
+  border: 1px solid color-mix(in srgb, var(--accent) 62%, transparent);
+  background:
+    linear-gradient(135deg, color-mix(in srgb, var(--accent) 32%, transparent), transparent 72%),
+    color-mix(in srgb, var(--tint-block) 55%, transparent);
+  opacity: 0.72;
+}
+
+.paper-anthology .flourish-crown::after {
+  clip-path: polygon(8% 72%, 16% 28%, 34% 58%, 50% 12%, 66% 58%, 84% 28%, 92% 72%, 78% 88%, 22% 88%);
+}
+
+.paper-anthology .flourish-launch::after {
+  clip-path: polygon(50% 5%, 73% 62%, 58% 56%, 50% 88%, 42% 56%, 27% 62%);
+}
+
+.paper-anthology .flourish-folder::after {
+  clip-path: polygon(8% 28%, 38% 28%, 46% 38%, 92% 38%, 92% 82%, 8% 82%);
+}
+
+.paper-anthology .flourish-theme::after {
+  clip-path: polygon(50% 6%, 89% 28%, 82% 75%, 50% 94%, 18% 75%, 11% 28%);
+}
+
+.paper-anthology .art-rule {
+  position: relative;
+  height: 0.25in;
+  max-width: 4.6in;
+  margin: 0.26in auto;
+}
+
+.paper-anthology .art-rule::before,
+.paper-anthology .art-rule::after {
+  content: "";
+  position: absolute;
+  top: 50%;
+}
+
+.paper-anthology .art-rule::before {
+  left: 0;
+  right: 0;
+  height: 1px;
+  background:
+    linear-gradient(90deg, transparent, color-mix(in srgb, var(--accent) 66%, transparent), transparent);
+}
+
+.paper-anthology .art-rule::after {
+  left: 50%;
+  width: 0.42in;
+  height: 0.12in;
+  transform: translate(-50%, -50%);
+  background:
+    linear-gradient(90deg, transparent 0 12%, var(--paper) 12% 88%, transparent 88%),
+    repeating-linear-gradient(90deg, color-mix(in srgb, var(--accent) 75%, transparent) 0 0.06in, transparent 0.06in 0.12in);
 }
 
 .paper-anthology .matter-appendix-index h2 {
@@ -487,13 +650,8 @@ body.mode-web.paper-anthology .section-divider-text {
   padding: 0.48rem 0.68rem;
   border: 0;
   border-left: 4px solid currentColor;
-  background:
-    linear-gradient(90deg, rgba(18, 14, 10, 0.6), rgba(18, 14, 10, 0.36)),
-    var(--docs-reader-grain);
-  background-size: auto, 256px 256px;
-  box-shadow:
-    0 0.8rem 2rem rgba(0, 0, 0, 0.26),
-    inset 0 0 0 1px rgba(255, 247, 218, 0.11);
+  background: rgba(18, 14, 10, 0.74);
+  box-shadow: inset 0 0 0 1px rgba(255, 247, 218, 0.16);
 }
 
 body.mode-web.paper-anthology .section-divider-eyebrow {
@@ -533,61 +691,71 @@ body.mode-web.paper-anthology .section-divider-art {
   object-fit: cover;
   mix-blend-mode: normal;
   opacity: 1;
-  filter: saturate(1.06) contrast(1.08) brightness(0.94);
+  filter: none;
 }
 
-body.mode-web.paper-anthology #div-overview {
+body.mode-web.paper-anthology #div-overview,
+body.mode-web.paper-anthology #div-architecture,
+body.mode-web.paper-anthology #div-themes {
   color: #f0bd4f;
   background: #2a1b12;
 }
 
-body.mode-web.paper-anthology #div-overview .section-divider-art {
+body.mode-web.paper-anthology #div-overview .section-divider-art,
+body.mode-web.paper-anthology #div-architecture .section-divider-art,
+body.mode-web.paper-anthology #div-themes .section-divider-art {
   object-position: center;
   opacity: 1;
-  filter: saturate(1.08) contrast(1.08) brightness(0.96);
+  filter: none;
 }
 
-body.mode-web.paper-anthology #div-overview .section-divider-text {
-  background:
-    linear-gradient(90deg, rgba(55, 31, 15, 0.6), rgba(55, 31, 15, 0.36)),
-    var(--docs-reader-grain);
+body.mode-web.paper-anthology #div-overview .section-divider-text,
+body.mode-web.paper-anthology #div-architecture .section-divider-text,
+body.mode-web.paper-anthology #div-themes .section-divider-text {
+  background: rgba(55, 31, 15, 0.74);
 }
 
 body.mode-web.paper-anthology #div-quick-start,
-body.mode-web.paper-anthology #div-setup {
+body.mode-web.paper-anthology #div-developer-guide {
   color: #51d2c4;
   background: #0c1a22;
 }
 
 body.mode-web.paper-anthology #div-quick-start .section-divider-art,
-body.mode-web.paper-anthology #div-setup .section-divider-art {
+body.mode-web.paper-anthology #div-developer-guide .section-divider-art {
   object-position: center;
-  filter: saturate(1) contrast(1.12) brightness(0.88);
+  filter: none;
 }
 
-body.mode-web.paper-anthology #div-authoring {
+body.mode-web.paper-anthology #div-recipes,
+body.mode-web.paper-anthology #div-vaults-and-markdown,
+body.mode-web.paper-anthology #div-art {
   color: #d7b35e;
   background: #241622;
 }
 
-body.mode-web.paper-anthology #div-authoring .section-divider-art {
+body.mode-web.paper-anthology #div-recipes .section-divider-art,
+body.mode-web.paper-anthology #div-vaults-and-markdown .section-divider-art,
+body.mode-web.paper-anthology #div-art .section-divider-art {
   object-position: center;
-  filter: saturate(1.06) contrast(1.1) brightness(0.92);
+  filter: none;
 }
 
-body.mode-web.paper-anthology #div-maintaining-paper-crown {
+body.mode-web.paper-anthology #div-builds-and-publishing {
   color: #ffc15e;
   background: #321a12;
 }
 
-body.mode-web.paper-anthology #div-maintaining-paper-crown .section-divider-art {
+body.mode-web.paper-anthology #div-builds-and-publishing .section-divider-art {
   object-position: center;
-  filter: saturate(1.05) contrast(1.1) brightness(0.9);
+  filter: none;
 }
 
 body.mode-web.paper-anthology #div-quick-start .section-divider-title,
-body.mode-web.paper-anthology #div-setup .section-divider-title,
-body.mode-web.paper-anthology #div-authoring .section-divider-title {
+body.mode-web.paper-anthology #div-developer-guide .section-divider-title,
+body.mode-web.paper-anthology #div-recipes .section-divider-title,
+body.mode-web.paper-anthology #div-vaults-and-markdown .section-divider-title,
+body.mode-web.paper-anthology #div-art .section-divider-title {
   color: #fff7de;
 }
 
@@ -751,7 +919,8 @@ body.mode-web.paper-anthology .chapter-wrap .section-divider + p {
 
 body.mode-web.paper-anthology .chapter-wrap > p:first-of-type::first-letter,
 body.mode-web.paper-anthology .chapter-wrap .section-divider + p::first-letter,
-body.mode-web.paper-anthology .chapter-wrap h1 + p::first-letter {
+body.mode-web.paper-anthology .chapter-wrap h1 + p::first-letter,
+body.mode-web.paper-anthology .chapter-wrap .flourish-note > p:first-child::first-letter {
   font-size: 1.7em;
 }
 
