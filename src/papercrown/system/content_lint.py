@@ -37,21 +37,25 @@ def lint_manifest_content(
     diagnostics: list[Diagnostic] = []
     diagnostics.extend(_lint_recipe_source_audit(manifest))
     diagnostics.extend(_lint_source_files(manifest))
-    markdown = assembly.assemble_combined_book_markdown(
-        manifest.chapters,
+    markdown = assembly.assemble_book_contents_markdown(
+        manifest.contents,
         export_map=export_map,
         vault_index=manifest.vault_index,
-        include_toc=False,
         include_art=True,
         include_source_markers=True,
     )
     prepared = ttrpg.prepare_book_markdown(
         markdown,
         manifest.recipe,
-        include_generated_matter=True,
+        include_generated_matter=False,
     )
     diagnostics.extend(prepared.diagnostics)
-    markdown = assembly.add_manual_toc(prepared.markdown, manifest.chapters)
+    markdown = _replace_generated_content_for_lint(
+        prepared.markdown,
+        manifest,
+        prepared.registry,
+    )
+    markdown = assembly.replace_manual_toc_markers(markdown, manifest.chapters)
     diagnostics.extend(_lint_no_raw_wikilinks(markdown))
     diagnostics.extend(
         _lint_markdown_images(
@@ -61,6 +65,29 @@ def lint_manifest_content(
     )
     diagnostics.extend(_lint_heading_shape(markdown))
     return diagnostics
+
+
+def _replace_generated_content_for_lint(
+    markdown: str,
+    manifest: Manifest,
+    registry: ttrpg.ObjectRegistry,
+) -> str:
+    out: list[str] = []
+    for line in markdown.splitlines():
+        match = assembly.GENERATED_MARKER_RE.match(line)
+        if match is None:
+            out.append(line)
+            continue
+        out.append(
+            ttrpg.render_generated_content(
+                match.group("kind").strip(),
+                match.group("title").strip(),
+                recipe=manifest.recipe,
+                registry=registry,
+                style=match.group("style").strip() or "generated",
+            )
+        )
+    return "\n".join(out)
 
 
 def _lint_recipe_source_audit(manifest: Manifest) -> list[Diagnostic]:

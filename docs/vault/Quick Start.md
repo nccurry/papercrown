@@ -51,14 +51,14 @@ is provided. That project file usually points to the default recipe.
 You can also run the bundled public example from a repository checkout:
 
 ```sh
-papercrown manifest examples/starfall/recipes/starfall-field-guide.yaml
-papercrown build examples/starfall/recipes/starfall-field-guide.yaml
+papercrown manifest examples/starfall/book.yaml
+papercrown build examples/starfall/book.yaml
 ```
 
 For a static web export, use:
 
 ```sh
-papercrown build examples/starfall/recipes/starfall-field-guide.yaml --target web
+papercrown build examples/starfall/book.yaml --target web
 ```
 
 Generated output is always caller-owned and goes under:

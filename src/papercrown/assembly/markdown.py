@@ -24,10 +24,13 @@ from papercrown.assembly import art_blocks as _art_blocks
 from papercrown.assembly import headings as _headings
 from papercrown.assembly import sources as _source_notes
 from papercrown.project.manifest import (
+    BookPart,
     Chapter,
     ChapterFillerSlot,
     ChapterHeadingFillerMarker,
+    GeneratedPart,
     Splash,
+    TocPart,
     slugify,
 )
 from papercrown.project.vaults import VaultIndex
@@ -36,6 +39,12 @@ render_back_cover_splashes = _art_blocks.render_back_cover_splashes
 
 # Placeholder replaced with generated frame summary tables during assembly.
 FRAME_TABLE_MARKER = "<!-- AUTO_FRAME_TABLE -->"
+TOC_MARKER_RE = re.compile(
+    r"^<!--\s*papercrown-toc:\s*(?P<title>.*?)\s*\|\s*(?P<depth>.*?)\s*-->$"
+)
+GENERATED_MARKER_RE = re.compile(
+    r"^<!--\s*papercrown-generated:\s*(?P<kind>.*?)\s*\|\s*(?P<title>.*?)\s*\|\s*(?P<style>.*?)\s*-->$"
+)
 
 
 # ---------------------------------------------------------------------------
@@ -190,7 +199,7 @@ def assemble_chapter_markdown(
 
 
 def assemble_combined_book_markdown(
-    chapters: list[Chapter],
+    contents: list[Chapter],
     *,
     export_map: dict[Path, Path] | None = None,
     vault_index: VaultIndex | None = None,
@@ -224,7 +233,7 @@ def assemble_combined_book_markdown(
         TOC entry, all headings demoted by `depth`.
     """
     parts: list[str] = []
-    for top in chapters:
+    for top in contents:
         # The top-level divider supplies the canonical chapter heading for
         # every chapter, including non-wrapper file/catalog chapters.
         parts.append(
@@ -301,13 +310,127 @@ def assemble_combined_book_markdown(
             parts.append(back_cover_pages)
     markdown = "\n\n".join(parts)
     if include_toc:
-        return add_manual_toc(markdown, chapters)
+        return add_manual_toc(markdown, contents)
     return markdown
+
+
+def assemble_book_contents_markdown(
+    contents: list[BookPart],
+    *,
+    export_map: dict[Path, Path] | None = None,
+    vault_index: VaultIndex | None = None,
+    include_art: bool = True,
+    include_fillers: bool = True,
+    include_tailpiece_art: bool = False,
+    splashes: list[Splash] | None = None,
+    include_source_markers: bool = False,
+    include_back_cover_splashes: bool = True,
+) -> str:
+    """Concatenate the ordered book contents stream into markdown."""
+    parts: list[str] = []
+    for part in contents:
+        if isinstance(part, TocPart):
+            depth = "" if part.depth is None else str(part.depth)
+            parts.append(f"<!-- papercrown-toc: {part.title} | {depth} -->")
+            continue
+        if isinstance(part, GeneratedPart):
+            parts.append(
+                "<!-- papercrown-generated: "
+                f"{part.type} | {part.title} | {part.style} -->"
+            )
+            continue
+        _append_combined_chapter_parts(
+            parts,
+            part,
+            export_map=export_map,
+            vault_index=vault_index,
+            include_art=include_art,
+            include_fillers=include_fillers,
+            include_tailpiece_art=include_tailpiece_art,
+            splashes=splashes,
+            include_source_markers=include_source_markers,
+        )
+    if include_art and include_back_cover_splashes:
+        back_cover_pages = render_back_cover_splashes(splashes)
+        if back_cover_pages:
+            parts.append(back_cover_pages)
+    return "\n\n".join(parts)
+
+
+def _append_combined_chapter_parts(
+    parts: list[str],
+    top: Chapter,
+    *,
+    export_map: dict[Path, Path] | None,
+    vault_index: VaultIndex | None,
+    include_art: bool,
+    include_fillers: bool,
+    include_tailpiece_art: bool,
+    splashes: list[Splash] | None,
+    include_source_markers: bool,
+) -> None:
+    """Append one top-level chapter and descendants to combined-book parts."""
+    parts.append(
+        _render_section_divider(
+            top,
+            with_heading=True,
+            level=1,
+            include_art=include_art,
+            breadcrumb=_chapter_breadcrumb([top]),
+        )
+    )
+
+    for descendant, depth, ancestors in _walk_with_ancestry(top):
+        is_top = descendant is top
+        has_body = bool(descendant.source_files)
+        wants_descendant_divider = (not is_top) and descendant.divider
+
+        if wants_descendant_divider:
+            divider_level = min(6, depth + 1)
+            parts.append(
+                _render_section_divider(
+                    descendant,
+                    with_heading=True,
+                    level=divider_level,
+                    include_art=include_art,
+                    breadcrumb=_chapter_breadcrumb([*ancestors, descendant]),
+                )
+            )
+
+        if not has_body:
+            continue
+
+        body = assemble_chapter_markdown(
+            descendant,
+            export_map=export_map,
+            vault_index=vault_index,
+            splashes=_splashes_for_chapter(splashes or [], descendant),
+            include_art=include_art,
+            include_splashes=include_art,
+            include_fillers=include_art and include_fillers,
+            include_tailpiece_art=include_tailpiece_art,
+            include_source_markers=include_source_markers,
+        ).strip()
+        slug = descendant.slug or "chapter"
+        if is_top or wants_descendant_divider:
+            body = _strip_leading_h1(body)
+        elif slug:
+            body = _headings.ensure_leading_heading_id(body, slug)
+        if depth >= 1:
+            body = _demote_headings(body, by=depth)
+
+        style = descendant.style or "default"
+        wrapped = (
+            f"\n\n:::::: {{.chapter-wrap .section-{style} #ch-{slug}}}\n\n"
+            f"{body}\n\n"
+            "::::::\n\n"
+        )
+        parts.append(wrapped)
 
 
 def add_manual_toc(
     markdown: str,
-    chapters: list[Chapter],
+    contents: list[Chapter],
     *,
     max_depth: int | None = None,
 ) -> str:
@@ -317,12 +440,42 @@ def add_manual_toc(
     return (
         _headings.render_manual_toc(
             markdown,
-            toc_depths=_toc_depths_for_top_level(chapters),
+            toc_depths=_toc_depths_for_top_level(contents),
             max_depth=max_depth,
         )
         + "\n\n"
         + markdown
     )
+
+
+def replace_manual_toc_markers(
+    markdown: str,
+    chapters: list[Chapter],
+    *,
+    default_max_depth: int | None = None,
+) -> str:
+    """Replace explicit TOC markers with generated manual TOCs."""
+    markdown = _headings.ensure_heading_ids(markdown)
+    markdown = _headings.dedupe_generated_anchor_ids(markdown)
+    toc_source = "\n".join(
+        line for line in markdown.splitlines() if TOC_MARKER_RE.match(line) is None
+    )
+    out: list[str] = []
+    for line in markdown.splitlines():
+        match = TOC_MARKER_RE.match(line)
+        if match is None:
+            out.append(line)
+            continue
+        raw_depth = match.group("depth").strip()
+        depth = int(raw_depth) if raw_depth.isdigit() else default_max_depth
+        out.append(
+            _headings.render_manual_toc(
+                toc_source,
+                toc_depths=_toc_depths_for_top_level(chapters),
+                max_depth=depth,
+            )
+        )
+    return "\n".join(out)
 
 
 def _walk_with_ancestry(root: Chapter) -> Iterator[tuple[Chapter, int, list[Chapter]]]:

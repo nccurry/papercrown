@@ -24,7 +24,7 @@ def _write_recipe(tmp_path: Path, source_body: str) -> Path:
             title: My Book
             vaults:
               v: vault
-            chapters:
+            contents:
               - kind: file
                 title: Foo
                 source: v:Foo.md
@@ -58,7 +58,7 @@ def _write_two_vault_recipe(
               nimble: nimble
               custom: custom
             vault_overlay: [nimble, custom]
-            chapters:
+            contents:
               - kind: file
                 style: {style}
                 title: Foo
@@ -178,7 +178,7 @@ def test_lint_reports_mojibake_recipe_source_path(tmp_path):
             title: My Book
             vaults:
               v: vault
-            chapters:
+            contents:
               - kind: file
                 title: Bad
                 source: v:Bad ΓÇ.md

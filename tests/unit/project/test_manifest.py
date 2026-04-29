@@ -89,7 +89,7 @@ class TestKindFile:
             title: Test
             vaults:
               base: base
-            chapters:
+            contents:
               - kind: file
                 title: Setting
                 style: setting
@@ -120,7 +120,7 @@ class TestKindFile:
             art_dir: art
             vaults:
               base: base
-            chapters:
+            contents:
               - kind: file
                 title: Setting
                 tailpiece: ornaments/tail.png
@@ -147,7 +147,7 @@ class TestKindFile:
             art_dir: art
             vaults:
               base: base
-            chapters:
+            contents:
               - kind: file
                 title: Setting
                 headpiece: ornaments/head.png
@@ -185,7 +185,7 @@ class TestKindFile:
                 target: after-heading
                 heading: Factions
                 placement: corner-right
-            chapters:
+            contents:
               - kind: file
                 title: Setting
                 source: base:Setting.md
@@ -223,7 +223,7 @@ class TestKindFile:
                   art: ornaments/tail.png
                   shape: tailpiece
                   height: 0.65in
-            chapters:
+            contents:
               - kind: file
                 title: Setting
                 tailpiece: ornaments/tail.png
@@ -274,7 +274,7 @@ class TestKindFile:
                   min_space: 1.2in
                   max_space: 8.5in
                   shapes: [spot, small-wide, bottom-band]
-            chapters:
+            contents:
               - kind: group
                 title: Original Rules
                 child_style: rules
@@ -349,7 +349,7 @@ class TestKindFile:
                   chapter_slots: [chapter-end, chapter-bottom-band]
                 source_boundary:
                   sequence_slots: [section-end, section-bottom-band]
-            chapters:
+            contents:
               - kind: file
                 title: Setting
                 source: base:Setting.md
@@ -407,7 +407,7 @@ class TestKindFile:
                 source_boundary: false
                 subclass: false
                 headings: []
-            chapters:
+            contents:
               - kind: file
                 title: Setting
                 source: base:Setting.md
@@ -463,7 +463,7 @@ class TestKindFile:
               glaze_opacity: 0.5
               glaze_texture: surface-paper-fiber-wash.png
               skip: [cover, toc]
-            chapters:
+            contents:
               - kind: file
                 title: Setting
                 source: base:Setting.md
@@ -647,7 +647,7 @@ class TestKindFile:
                   min_space: 0.65in
                   max_space: 3.5in
                   shapes: [small-wide, bottom-band]
-            chapters:
+            contents:
               - kind: file
                 title: Setting
                 source: base:Setting.md
@@ -674,6 +674,100 @@ class TestKindFile:
         assert "auto-splashes-boarding-queue-bottom" not in assets
         assert all("corner" not in asset.art_path.name for asset in assets.values())
         assert all("unused" not in asset.art_path.parts for asset in assets.values())
+
+    def test_auto_filler_discovery_includes_tailpieces_when_slots_accept_them(
+        self,
+        mini_workspace,
+    ):
+        ws, base, _ = mini_workspace
+        art = ws / "art"
+        tailpiece = art / "ornaments" / "ornament-tailpiece-airlock.png"
+        tailpiece.parent.mkdir(parents=True, exist_ok=True)
+        tailpiece.write_text("fake", encoding="utf-8")
+        rp = _write_recipe(
+            ws,
+            """
+            title: Test
+            art_dir: art
+            vaults:
+              base: base
+            fillers:
+              enabled: true
+              slots:
+                chapter-end:
+                  min_space: 0.65in
+                  max_space: 3.5in
+                  shapes: [tailpiece]
+            contents:
+              - kind: file
+                title: Setting
+                source: base:Setting.md
+        """,
+        )
+
+        m = build_manifest(load_recipe(rp))
+        assets = {asset.id: asset for asset in m.fillers.assets}
+
+        assert assets["auto-ornaments-ornament-tailpiece-airlock"].shape == "tailpiece"
+        assert assets["auto-ornaments-ornament-tailpiece-airlock"].art_path == (
+            tailpiece.resolve()
+        )
+
+    def test_art_conventions_infer_book_and_chapter_assets(self, mini_workspace):
+        from papercrown.render import build as build_mod
+
+        ws, base, _ = mini_workspace
+        art = ws / "Art"
+        for rel in (
+            "cover-front-opening-frontier-crew-01.png",
+            "cover-back-closing-the-black-01.png",
+            "ornament-folio-frame.png",
+            "header-setting.png",
+            "class-mage.png",
+            "spot-class-mage.png",
+        ):
+            path = art / rel
+            path.parent.mkdir(parents=True, exist_ok=True)
+            path.write_text("fake", encoding="utf-8")
+
+        recipe = load_recipe(
+            _write_recipe(
+                ws,
+                """
+                title: Test
+                cover:
+                  enabled: true
+                vaults:
+                  base: base
+                contents:
+                  - kind: file
+                    title: Setting
+                    source: base:Setting.md
+                  - kind: classes-catalog
+                    source: base:Heroes/Classes List.md
+                    child_style: class
+                """,
+            )
+        )
+        manifest = build_manifest(recipe)
+
+        assert build_mod._recipe_cover_art_path(recipe) == (
+            art / "cover-front-opening-frontier-crew-01.png"
+        ).resolve()
+        assert build_mod._recipe_ornament_path(recipe, "folio_frame") == (
+            art / "ornament-folio-frame.png"
+        ).resolve()
+        setting = manifest.find_chapter("setting")
+        assert setting is not None
+        assert setting.art_path == (art / "header-setting.png").resolve()
+        mage = manifest.find_chapter("mage")
+        assert mage is not None
+        assert mage.art_path == (art / "class-mage.png").resolve()
+        assert mage.spot_art_path == (art / "spot-class-mage.png").resolve()
+        assert manifest.splashes[-1].id == "auto-cover-back"
+        assert manifest.splashes[-1].art_path == (
+            art / "cover-back-closing-the-black-01.png"
+        ).resolve()
 
     def test_fillers_art_dir_limits_auto_discovery_and_explicit_paths(
         self,
@@ -715,7 +809,7 @@ class TestKindFile:
                   art: ../ornaments/ornament-tailpiece-airlock.png
                   shape: tailpiece
                   height: 0.65in
-            chapters:
+            contents:
               - kind: file
                 title: Setting
                 source: base:Setting.md
@@ -749,7 +843,7 @@ class TestKindFile:
                 chapter: Missing
                 target: chapter-start
                 placement: bottom-half
-            chapters:
+            contents:
               - kind: file
                 title: Setting
                 source: base:Setting.md
@@ -766,7 +860,7 @@ class TestKindFile:
             title: Test
             vaults:
               base: base
-            chapters:
+            contents:
               - kind: file
                 source: base:Nope.md
         """,
@@ -782,7 +876,7 @@ class TestKindFile:
             title: Test
             vaults:
               base: base
-            chapters:
+            contents:
               - kind: file
                 title: Original - Setting
                 slug: original-setting
@@ -814,7 +908,7 @@ class TestKindCatalogEmbedCompendium:
             title: Test
             vaults:
               base: base
-            chapters:
+            contents:
               - kind: catalog
                 title: Backgrounds
                 style: backgrounds
@@ -843,7 +937,7 @@ class TestKindClassesCatalog:
             title: Test
             vaults:
               base: base
-            chapters:
+            contents:
               - kind: classes-catalog
                 source: base:Heroes/Classes List.md
                 wrapper: false
@@ -872,7 +966,7 @@ class TestKindClassesCatalog:
             title: Test
             vaults:
               base: base
-            chapters:
+            contents:
               - kind: classes-catalog
                 title: Classes
                 style: section-classes
@@ -906,7 +1000,7 @@ class TestKindClassesCatalog:
             art_dir: art
             vaults:
               base: base
-            chapters:
+            contents:
               - kind: classes-catalog
                 source: base:Heroes/Classes List.md
                 headpiece: ornaments/head.png
@@ -933,7 +1027,7 @@ class TestKindClassesCatalog:
               base: base
               overlay: overlay
             vault_overlay: [base, overlay]
-            chapters:
+            contents:
               - kind: classes-catalog
                 source: base:Heroes/Classes List.md
         """,
@@ -967,7 +1061,7 @@ class TestKindClassesCatalog:
             title: Test
             vaults:
               base: base
-            chapters:
+            contents:
               - kind: classes-catalog
                 source: base:Heroes/Classes List.md
         """,
@@ -993,7 +1087,7 @@ class TestKindClassesCatalog:
             art_dir: art
             vaults:
               base: base
-            chapters:
+            contents:
               - kind: classes-catalog
                 source: base:Heroes/Classes List.md
                 class_spot_art_pattern: class-spots/spot-class-{slug}.png
@@ -1023,7 +1117,7 @@ class TestKindClassesCatalog:
             art_dir: art
             vaults:
               base: base
-            chapters:
+            contents:
               - kind: classes-catalog
                 source: base:Heroes/Classes List.md
                 class_art_pattern: classes/dividers/class-{slug}.png
@@ -1056,7 +1150,7 @@ class TestKindFolder:
             title: Test
             vaults:
               base: base
-            chapters:
+            contents:
               - kind: folder
                 title: Misc
                 source: base:Misc
@@ -1081,7 +1175,7 @@ class TestManifestHelpers:
             title: Test
             vaults:
               base: base
-            chapters:
+            contents:
               - kind: classes-catalog
                 source: base:Heroes/Classes List.md
         """,
@@ -1102,7 +1196,7 @@ class TestManifestHelpers:
             title: Test
             vaults:
               base: base
-            chapters:
+            contents:
               - kind: file
                 title: Setting
                 source: base:Setting.md
@@ -1162,7 +1256,7 @@ class TestKindComposite:
             title: Test
             vaults:
               base: base
-            chapters:
+            contents:
               - kind: composite
                 title: All Classes
                 source: base:Heroes/Classes
@@ -1188,7 +1282,7 @@ class TestKindComposite:
             title: Test
             vaults:
               base: base
-            chapters:
+            contents:
               - kind: composite
                 source: Heroes/Classes
         """,
@@ -1204,7 +1298,7 @@ class TestKindComposite:
             title: Test
             vaults:
               base: base
-            chapters:
+            contents:
               - kind: composite
                 source: base:Setting.md
         """,
@@ -1227,7 +1321,7 @@ class TestKindGroup:
             title: Test
             vaults:
               base: base
-            chapters:
+            contents:
               - kind: group
                 title: Hero Reference
                 eyebrow: Reference
@@ -1256,7 +1350,7 @@ class TestKindGroup:
             title: Test
             vaults:
               base: base
-            chapters:
+            contents:
               - kind: group
                 title: Equipment
                 child_style: equipment
@@ -1285,7 +1379,7 @@ class TestKindGroup:
             title: Test
             vaults:
               base: base
-            chapters:
+            contents:
               - kind: group
                 title: Stuff
                 child_divider: true
@@ -1320,7 +1414,7 @@ class TestKindSequence:
             title: Test
             vaults:
               base: base
-            chapters:
+            contents:
               - kind: sequence
                 title: Combat
                 source: base:Rules/Intro.md
@@ -1335,7 +1429,7 @@ class TestKindSequence:
             title: Test
             vaults:
               base: base
-            chapters:
+            contents:
               - kind: sequence
                 title: Combat
                 style: rules
@@ -1383,11 +1477,11 @@ class TestRecipePathProperties:
             vaults={},
             vault_overlay=[],
             cover=CoverSpec(),
-            chapters=[],
+            contents=[],
             recipe_path=rp.resolve(),
         )
         assert r.project_dir == project.resolve()
-        assert r.art_dir == (project / "assets" / "art").resolve()
+        assert r.art_dir == (project / "Art").resolve()
 
     def test_project_dir_when_recipe_alongside(self, tmp_path):
         # When the recipe lives directly in the project root (not inside
@@ -1404,7 +1498,7 @@ class TestRecipePathProperties:
             vaults={},
             vault_overlay=[],
             cover=CoverSpec(),
-            chapters=[],
+            contents=[],
             recipe_path=rp.resolve(),
         )
         assert r.project_dir == tmp_path.resolve()
@@ -1425,7 +1519,7 @@ class TestRecipePathProperties:
             vaults={},
             vault_overlay=[],
             cover=CoverSpec(),
-            chapters=[],
+            contents=[],
             recipe_path=rp.resolve(),
             art_dir_override=art_dir.resolve(),
         )

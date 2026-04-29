@@ -104,7 +104,7 @@ def test_ensure_exports_fresh_reuses_export_cache(tmp_path, monkeypatch):
             title: My Book
             vaults:
               v: vault
-            chapters:
+            contents:
               - kind: file
                 source: v:Foo.md
             """

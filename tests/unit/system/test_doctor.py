@@ -44,7 +44,7 @@ def test_doctor_reports_missing_recipe_art_before_tool_checks(tmp_path, monkeypa
             art_dir: art
             vaults:
               v: vault
-            chapters:
+            contents:
               - kind: file
                 title: Foo
                 art: missing.png
@@ -139,7 +139,7 @@ def test_doctor_warns_for_invalid_filler_and_page_wear_assets(
             page_damage:
               enabled: true
               art_dir: page-wear
-            chapters:
+            contents:
               - kind: file
                 title: Foo
                 source: v:Foo.md

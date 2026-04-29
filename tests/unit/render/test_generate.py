@@ -637,7 +637,7 @@ def test_build_chapter_pdf_skips_when_render_cache_matches(tmp_path, monkeypatch
         title: B
         vaults:
           v: vault
-        chapters:
+        contents:
           - kind: file
             title: Foo
             source: v:Foo.md
@@ -701,7 +701,7 @@ def test_build_outputs_scope_all_runs_book_in_prepared_job_pool(tmp_path, monkey
         title: B
         vaults:
           v: vault
-        chapters:
+        contents:
           - kind: file
             title: Foo
             source: v:Foo.md
@@ -775,7 +775,7 @@ def test_build_chapter_pdf_passes_page_damage_catalog(tmp_path, monkeypatch):
           opacity: 0.25
           glaze_opacity: 0.65
           glaze_texture: surface-dust-speckle.png
-        chapters:
+        contents:
           - kind: file
             title: Foo
             source: v:Foo.md
@@ -850,7 +850,7 @@ def test_fast_draft_chapter_pdf_skips_page_art_and_cleanup(tmp_path, monkeypatch
               art: tail.png
               shape: tailpiece
               height: 0.65in
-        chapters:
+        contents:
           - kind: file
             title: Foo
             source: v:Foo.md
@@ -1058,7 +1058,7 @@ def test_clean_stale_pdf_outputs_removes_renamed_artifacts(tmp_path):
         title: My Book
         vaults:
           v: vault
-        chapters:
+        contents:
           - kind: file
             title: For GMs
             source: v:Foo.md
@@ -1109,7 +1109,7 @@ class TestPathReexports:
             title: B
             vaults:
               v: vault
-            chapters:
+            contents:
               - kind: file
                 source: v:Foo.md
         """,
@@ -1125,7 +1125,7 @@ class TestPathReexports:
             title: My Book
             vaults:
               v: vault
-            chapters:
+            contents:
               - kind: file
                 source: v:Foo.md
         """,
@@ -1150,7 +1150,7 @@ class TestSingleChapterLookup:
             title: B
             vaults:
               v: vault
-            chapters:
+            contents:
               - kind: file
                 title: Berserker
                 source: v:Foo.md
@@ -1168,7 +1168,7 @@ class TestSingleChapterLookup:
             title: B
             vaults:
               v: vault
-            chapters:
+            contents:
               - kind: file
                 title: Berserker
                 source: v:Foo.md

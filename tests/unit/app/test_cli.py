@@ -153,7 +153,7 @@ def test_build_command_applies_config_recipe_and_cli_precedence(
           include_art: true
           clean_pdf: true
           page_damage: fast
-        chapters:
+        contents:
           - kind: file
             title: Foo
             source: v:Foo.md
@@ -163,7 +163,7 @@ def test_build_command_applies_config_recipe_and_cli_precedence(
     config_path.write_text(
         textwrap.dedent(
             """
-            default_recipe: recipe.yaml
+            default_book: recipe.yaml
             build:
               scope: sections
               profile: print
@@ -222,7 +222,7 @@ def test_verify_command_uses_config_scope_and_profile(tmp_path, monkeypatch):
         title: Verify Config Book
         vaults:
           v: vault
-        chapters:
+        contents:
           - kind: file
             title: Foo
             source: v:Foo.md
@@ -232,7 +232,7 @@ def test_verify_command_uses_config_scope_and_profile(tmp_path, monkeypatch):
     config_path.write_text(
         textwrap.dedent(
             """
-            default_recipe: recipe.yaml
+            default_book: recipe.yaml
             build:
               scope: book
               profile: draft
@@ -268,7 +268,7 @@ def test_art_audit_command_reports_role_counts(tmp_path):
         art_dir: art
         vaults:
           v: vault
-        chapters:
+        contents:
           - kind: file
             title: Foo
             source: v:Foo.md
@@ -293,7 +293,7 @@ def test_art_contact_sheet_command_writes_html(tmp_path):
         art_dir: art
         vaults:
           v: vault
-        chapters:
+        contents:
           - kind: file
             title: Foo
             source: v:Foo.md
@@ -337,7 +337,7 @@ def test_init_command_accepts_new_book_options(tmp_path):
     )
 
     assert result.exit_code == 0, result.output
-    recipe = (dest / "recipes" / "the-pinlight-colony.yaml").read_text(encoding="utf-8")
+    recipe = (dest / "book.yaml").read_text(encoding="utf-8")
     assert 'title: "The Pinlight Colony"' in recipe
     assert 'theme: "pinlight-industrial"' in recipe
     assert "enabled: false" in recipe
@@ -359,7 +359,7 @@ def test_no_config_ignores_project_config_but_keeps_recipe_build(
           scope: book
           profile: digital
           page_damage: off
-        chapters:
+        contents:
           - kind: file
             title: Foo
             source: v:Foo.md

@@ -29,6 +29,7 @@ from papercrown.project.manifest import (
     PageDamageAsset,
     PageDamageCatalog,
     Splash,
+    convention_art_path,
     slugify,
 )
 from papercrown.project.recipe import Recipe
@@ -378,10 +379,9 @@ def _populate_book_context(
         if (
             include_cover_art
             and not _is_fast_draft(profile, draft_mode)
-            and recipe.cover.art
         ):
-            cover_art = recipe.art_dir / recipe.cover.art
-            if cover_art.is_file():
+            cover_art = _recipe_cover_art_path(recipe)
+            if cover_art is not None:
                 ctx.cover_art = _optimized_optional_image(
                     cover_art,
                     profile=_image_profile_for(profile, draft_mode),
@@ -425,10 +425,20 @@ def _recipe_ornament_path(recipe: Recipe, name: str) -> Path | None:
     """Resolve an optional recipe-level ornament path."""
     ornaments = getattr(recipe, "ornaments", None)
     raw = getattr(ornaments, name, None)
-    if not isinstance(raw, str) or not raw.strip():
-        return None
-    path = (recipe.art_dir / raw).resolve()
-    return path if path.is_file() else None
+    if isinstance(raw, str) and raw.strip():
+        path = (recipe.art_dir / raw).resolve()
+        return path if path.is_file() else None
+    if name == "folio_frame":
+        return convention_art_path(recipe, {"ornament-folio"})
+    return None
+
+
+def _recipe_cover_art_path(recipe: Recipe) -> Path | None:
+    """Resolve explicit or convention-derived front cover art."""
+    if recipe.cover.art:
+        cover_art = (recipe.art_dir / recipe.cover.art).resolve()
+        return cover_art if cover_art.is_file() else None
+    return convention_art_path(recipe, {"cover-front", "cover"})
 
 
 def _prepare_ttrpg_markdown(
@@ -455,14 +465,42 @@ def _prepare_book_markdown_with_manual_toc(
     *,
     toc_max_depth: int | None = None,
 ) -> str:
-    """Prepare book markdown with front matter before the generated TOC."""
+    """Prepare book markdown and replace explicit generated/TOC markers."""
     prepared = _prepare_ttrpg_markdown_result(markdown, recipe)
-    markdown = assembly.add_manual_toc(
+    markdown = _replace_generated_content_markers(
         prepared.markdown,
-        chapters,
-        max_depth=toc_max_depth,
+        recipe,
+        prepared.registry,
     )
-    return ttrpg.add_generated_matter(markdown, recipe, prepared.registry)
+    return assembly.replace_manual_toc_markers(
+        markdown,
+        chapters,
+        default_max_depth=toc_max_depth,
+    )
+
+
+def _replace_generated_content_markers(
+    markdown: str,
+    recipe: Recipe,
+    registry: ttrpg.ObjectRegistry,
+) -> str:
+    """Replace ordered-content generated page markers."""
+    out: list[str] = []
+    for line in markdown.splitlines():
+        match = assembly.GENERATED_MARKER_RE.match(line)
+        if match is None:
+            out.append(line)
+            continue
+        out.append(
+            ttrpg.render_generated_content(
+                match.group("kind").strip(),
+                match.group("title").strip(),
+                recipe=recipe,
+                registry=registry,
+                style=match.group("style").strip() or "generated",
+            )
+        )
+    return "\n".join(out)
 
 
 def _prepare_ttrpg_markdown_result(
@@ -658,11 +696,10 @@ def _prepare_combined_book_job(
     back_cover_pages = (
         assembly.render_back_cover_splashes(manifest.splashes) if render_art else ""
     )
-    markdown = assembly.assemble_combined_book_markdown(
-        manifest.chapters,
+    markdown = assembly.assemble_book_contents_markdown(
+        manifest.contents,
         export_map=export_map,
         vault_index=manifest.vault_index,
-        include_toc=False,
         include_art=render_art,
         include_fillers=render_fillers,
         splashes=manifest.splashes,
@@ -751,11 +788,10 @@ def build_web_book(
     back_cover_pages = (
         assembly.render_back_cover_splashes(manifest.splashes) if include_art else ""
     )
-    markdown = assembly.assemble_combined_book_markdown(
-        manifest.chapters,
+    markdown = assembly.assemble_book_contents_markdown(
+        manifest.contents,
         export_map=export_map,
         vault_index=manifest.vault_index,
-        include_toc=False,
         include_art=include_art,
         include_fillers=False,
         include_tailpiece_art=True,
@@ -1461,14 +1497,14 @@ def _shared_image_paths(recipe: Recipe, manifest: Manifest | None) -> list[Path]
     """Return recipe-level image files that can affect output rendering."""
     paths_for_hash: list[Path] = []
     paths_for_hash.append(recipe.recipe_path)
-    if recipe.cover.enabled and recipe.cover.art:
-        paths_for_hash.append((recipe.art_dir / recipe.cover.art).resolve())
-    for raw in (
-        recipe.ornaments.folio_frame,
-        recipe.ornaments.corner_bracket,
-    ):
-        if raw:
-            paths_for_hash.append((recipe.art_dir / raw).resolve())
+    if recipe.cover.enabled:
+        cover_art = _recipe_cover_art_path(recipe)
+        if cover_art is not None:
+            paths_for_hash.append(cover_art.resolve())
+    for name in ("folio_frame", "corner_bracket"):
+        ornament_path = _recipe_ornament_path(recipe, name)
+        if ornament_path is not None:
+            paths_for_hash.append(ornament_path.resolve())
     if manifest is not None:
         for chapter in manifest.all_chapters():
             for candidate in (

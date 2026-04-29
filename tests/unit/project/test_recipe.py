@@ -78,7 +78,7 @@ class TestLoadRecipeHappy:
             title: My Book
             vaults:
               custom: vault
-            chapters:
+            contents:
               - kind: file
                 source: custom:Foo.md
         """,
@@ -156,7 +156,7 @@ class TestLoadRecipeHappy:
             cover:
               enabled: true
               art: cover.png
-            chapters:
+            contents:
               - kind: file
                 style: setting
                 title: Setting
@@ -249,7 +249,7 @@ class TestLoadRecipeHappy:
             title: My Book
             vaults:
               custom: vault
-            chapters:
+            contents:
               - kind: sequence
                 title: Combat
                 source: custom:Combat.md
@@ -264,7 +264,7 @@ class TestLoadRecipeHappy:
             title: My Book
             vaults:
               custom: vault
-            chapters:
+            contents:
               - kind: sequence
                 title: Combat
                 sources:
@@ -301,7 +301,7 @@ class TestLoadRecipeHappy:
                 output_name: base-book
                 cover:
                   enabled: true
-                chapters:
+                contents:
                   - kind: file
                     title: Base
                     source: base:Base.md
@@ -317,7 +317,7 @@ class TestLoadRecipeHappy:
                 title: Child Book
                 vaults:
                   child: vault
-                chapters:
+                contents:
                   - kind: file
                     title: Child
                     source: child:Child.md
@@ -336,7 +336,7 @@ class TestLoadRecipeHappy:
         assert recipe.vaults["child"].path == (child_dir / "vault").resolve()
         assert [chapter.title for chapter in recipe.chapters] == ["Child"]
 
-    def test_include_chapters_prepends_reusable_fragments(self, tmp_path):
+    def test_include_contents_prepends_reusable_fragments(self, tmp_path):
         (tmp_path / "vault").mkdir()
         include = tmp_path / "chapters.yaml"
         include.write_text(
@@ -353,10 +353,10 @@ class TestLoadRecipeHappy:
             tmp_path,
             """
             title: My Book
-            include_chapters: chapters.yaml
+            include_contents: chapters.yaml
             vaults:
               v: vault
-            chapters:
+            contents:
               - kind: file
                 title: Local
                 source: v:Local.md
@@ -394,7 +394,7 @@ class TestLoadRecipeHappy:
                 include_vaults: ../shared/vaults.yaml
                 vaults:
                   custom: custom
-                chapters:
+                contents:
                   - kind: file
                     source: custom:Foo.md
                 """
@@ -443,7 +443,7 @@ class TestLoadRecipeErrors:
             """
             vaults:
               custom: vault
-            chapters:
+            contents:
               - kind: file
                 source: custom:Foo.md
         """,
@@ -456,7 +456,7 @@ class TestLoadRecipeErrors:
             tmp_path,
             """
             title: X
-            chapters:
+            contents:
               - kind: file
                 source: custom:Foo.md
         """,
@@ -471,7 +471,7 @@ class TestLoadRecipeErrors:
             title: X
             vaults:
               custom: nonexistent_dir
-            chapters:
+            contents:
               - kind: file
                 source: custom:Foo.md
             """,
@@ -487,7 +487,7 @@ class TestLoadRecipeErrors:
             title: X
             vaults:
               "bad name!": vault
-            chapters:
+            contents:
               - kind: file
                 source: vault:Foo.md
             """,
@@ -503,7 +503,7 @@ class TestLoadRecipeErrors:
             vaults:
               custom: vault
             ornaments: ornaments/folio.png
-            chapters:
+            contents:
               - kind: file
                 source: custom:Foo.md
         """,
@@ -519,7 +519,7 @@ class TestLoadRecipeErrors:
             vaults:
               custom: vault
             splashes: splashes/opening.png
-            chapters:
+            contents:
               - kind: file
                 source: custom:Foo.md
         """,
@@ -537,7 +537,7 @@ class TestLoadRecipeErrors:
             image_treatments:
               filler: none
               ornament: ink-blend
-            chapters:
+            contents:
               - kind: file
                 source: custom:Foo.md
         """,
@@ -556,7 +556,7 @@ class TestLoadRecipeErrors:
               custom: vault
             image_treatments:
               portraits: raw
-            chapters:
+            contents:
               - kind: file
                 source: custom:Foo.md
         """,
@@ -572,7 +572,7 @@ class TestLoadRecipeErrors:
               custom: vault
             image_treatments:
               filler: sharpen
-            chapters:
+            contents:
               - kind: file
                 source: custom:Foo.md
         """,
@@ -592,7 +592,7 @@ class TestLoadRecipeErrors:
                 art: splashes/bad.png
                 target: chapter-start
                 placement: cover
-            chapters:
+            contents:
               - kind: file
                 source: custom:Foo.md
         """,
@@ -611,7 +611,7 @@ class TestLoadRecipeErrors:
                 art: splashes/bad.png
                 target: front-cover
                 placement: sideways
-            chapters:
+            contents:
               - kind: file
                 source: custom:Foo.md
         """,
@@ -633,7 +633,7 @@ class TestLoadRecipeErrors:
                   min_space: 0.65in
                   max_space: 3.5in
                   shapes: [sideways]
-            chapters:
+            contents:
               - kind: file
                 source: custom:Foo.md
         """,
@@ -659,7 +659,7 @@ class TestLoadRecipeErrors:
                   art: ornaments/bad.png
                   shape: tailpiece
                   height: lots
-            chapters:
+            contents:
               - kind: file
                 source: custom:Foo.md
         """,
@@ -675,7 +675,7 @@ class TestLoadRecipeErrors:
             vaults:
               custom: vault
             page_damage: yes
-            chapters:
+            contents:
               - kind: file
                 source: custom:Foo.md
         """,
@@ -692,7 +692,7 @@ class TestLoadRecipeErrors:
             page_damage:
               enabled: true
               density: 1.4
-            chapters:
+            contents:
               - kind: file
                 source: custom:Foo.md
         """,
@@ -709,7 +709,7 @@ class TestLoadRecipeErrors:
             page_damage:
               enabled: true
               glaze_opacity: 1.4
-            chapters:
+            contents:
               - kind: file
                 source: custom:Foo.md
         """,
@@ -726,7 +726,7 @@ class TestLoadRecipeErrors:
             page_damage:
               enabled: true
               skip: [cover, glossary]
-            chapters:
+            contents:
               - kind: file
                 source: custom:Foo.md
         """,
@@ -760,7 +760,7 @@ class TestLoadRecipeErrors:
                     heading_level: 2
                     slot_kind: reference-section
                     context: reference
-            chapters:
+            contents:
               - kind: sequence
                 title: Reference
                 fillers: false
@@ -806,7 +806,7 @@ class TestLoadRecipeErrors:
                   sequence_slots: [section-end, section-bottom-band]
                 subclass:
                   slots: [subclass-end, subclass-bottom-band]
-            chapters:
+            contents:
               - kind: file
                 source: custom:Foo.md
         """,
@@ -832,7 +832,7 @@ class TestLoadRecipeErrors:
             "subclass-bottom-band",
         )
 
-    def test_missing_chapters(self, tmp_path):
+    def test_missing_contents(self, tmp_path):
         p = _write_recipe(
             tmp_path,
             """
@@ -841,20 +841,48 @@ class TestLoadRecipeErrors:
               custom: vault
         """,
         )
-        with pytest.raises(RecipeError, match="chapters"):
+        with pytest.raises(RecipeError, match="contents"):
             load_recipe(p)
 
-    def test_empty_chapters(self, tmp_path):
+    @pytest.mark.parametrize(
+        ("field", "hint"),
+        [
+            ("chapters", "use contents instead"),
+            ("front_matter", "ordinary contents items"),
+            ("back_matter", "ordinary contents items"),
+            ("include_chapters", "use include_contents instead"),
+        ],
+    )
+    def test_legacy_recipe_fields_fail_clearly(self, tmp_path, field, hint):
+        legacy_value = "[]"
+        if field == "include_chapters":
+            legacy_value = "old-chapters.yaml"
+        p = _write_recipe(
+            tmp_path,
+            f"""
+            title: X
+            vaults:
+              custom: vault
+            contents:
+              - kind: file
+                source: custom:Foo.md
+            {field}: {legacy_value}
+        """,
+        )
+        with pytest.raises(RecipeError, match=hint):
+            load_recipe(p)
+
+    def test_empty_contents(self, tmp_path):
         p = _write_recipe(
             tmp_path,
             """
             title: X
             vaults:
               custom: vault
-            chapters: []
+            contents: []
         """,
         )
-        with pytest.raises(RecipeError, match="chapters"):
+        with pytest.raises(RecipeError, match="contents"):
             load_recipe(p)
 
     def test_unknown_chapter_kind(self, tmp_path):
@@ -864,7 +892,7 @@ class TestLoadRecipeErrors:
             title: X
             vaults:
               custom: vault
-            chapters:
+            contents:
               - kind: bogus
                 source: custom:Foo.md
         """,
@@ -879,7 +907,7 @@ class TestLoadRecipeErrors:
             title: X
             vaults:
               custom: vault
-            chapters:
+            contents:
               - kind: file
         """,
         )
@@ -893,7 +921,7 @@ class TestLoadRecipeErrors:
             title: X
             vaults:
               custom: vault
-            chapters:
+            contents:
               - kind: file
                 source: nimble:Foo.md
         """,
@@ -909,7 +937,7 @@ class TestLoadRecipeErrors:
             vaults:
               custom: vault
             vault_overlay: [custom, ghost]
-            chapters:
+            contents:
               - kind: file
                 source: custom:Foo.md
         """,
@@ -927,7 +955,7 @@ class TestLoadRecipeErrors:
             title: X
             vaults:
               custom: vault
-            chapters:
+            contents:
               - kind: folder
                 source: custom:Foo
                 sort: alphabetical
@@ -943,7 +971,7 @@ class TestLoadRecipeErrors:
             title: X
             vaults:
               custom: vault
-            chapters:
+            contents:
               - kind: file
                 source: custom:Foo.md
                 full_page_sections: Character Creation
@@ -959,7 +987,7 @@ class TestLoadRecipeErrors:
             title: Test
             vaults:
               base: vault
-            chapters:
+            contents:
               - kind: file
                 source: base:Setting.md
                 toc_depth: 0
@@ -974,7 +1002,7 @@ class TestLoadRecipeErrors:
             title: Test
             vaults:
               base: vault
-            chapters:
+            contents:
               - kind: file
                 source: base:Setting.md
                 toc_depth: deep
@@ -990,7 +1018,7 @@ class TestLoadRecipeErrors:
             title: X
             vaults:
               custom: vault
-            chapters:
+            contents:
               - kind: file
                 source: custom:Foo.md
                 sources:
@@ -1007,7 +1035,7 @@ class TestLoadRecipeErrors:
             title: X
             vaults:
               custom: vault
-            chapters:
+            contents:
               - kind: file
                 source: custom:Foo.md
                 slug: "not a safe slug"
@@ -1027,7 +1055,7 @@ class TestLoadRecipeErrors:
                 title: A
                 vaults:
                   v: vault
-                chapters:
+                contents:
                   - kind: file
                     source: v:A.md
                 """
@@ -1041,7 +1069,7 @@ class TestLoadRecipeErrors:
                 title: B
                 vaults:
                   v: vault
-                chapters:
+                contents:
                   - kind: file
                     source: v:B.md
                 """
@@ -1065,6 +1093,8 @@ def test_chapter_kinds_set_is_canonical():
         "composite",
         "classes-catalog",
         "folder",
+        "generated",
         "group",
         "sequence",
+        "toc",
     }

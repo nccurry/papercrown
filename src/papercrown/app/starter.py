@@ -79,7 +79,7 @@ def init_project(
     if empty:
         files = _empty_files()
         next_steps = [
-            "Create recipes/my-book.yaml or set default_recipe in papercrown.yaml.",
+            "Create book.yaml or set default_book in papercrown.yaml.",
             "Run papercrown manifest --config papercrown.yaml after adding a recipe.",
         ]
     else:
@@ -117,17 +117,16 @@ def init_project(
 def _empty_files() -> dict[str | Path, str]:
     return {
         "papercrown.yaml": """# Empty Paper Crown project.
-# Create a recipe, then uncomment and update default_recipe.
-# default_recipe: recipes/my-book.yaml
+# Create a book file, then uncomment and update default_book.
+# default_book: book.yaml
 
 build:
   target: pdf
   scope: book
   profile: print
 """,
-        "recipes/.gitkeep": "",
         "vault/.gitkeep": "",
-        "assets/art/.gitkeep": "",
+        "Art/.gitkeep": "",
         "themes/.gitkeep": "",
     }
 
@@ -146,14 +145,14 @@ def _starter_files(
         raise InitError("--theme cannot be empty")
 
     slug = _filename_slug(title)
-    recipe_rel = f"recipes/{slug}.yaml"
+    recipe_rel = "book.yaml"
     recipe_path = target / recipe_rel
     vault_path = _resolve_scaffold_vault(target, vault)
     vault_ref = _recipe_path_ref(vault_path, recipe_path.parent, project_root=target)
     files, chapters = _starter_content(book_type, title=title)
 
     scaffold: dict[str | Path, str] = {
-        "papercrown.yaml": f"""default_recipe: {recipe_rel}
+        "papercrown.yaml": f"""default_book: {recipe_rel}
 
 build:
   target: pdf
@@ -168,10 +167,10 @@ build:
             output_name=slug,
             theme=theme.strip(),
             vault_ref=vault_ref,
-            chapters=chapters,
+            contents=chapters,
             with_cover=with_cover,
         ),
-        "assets/art/.gitkeep": "",
+        "Art/.gitkeep": "",
         "themes/.gitkeep": "",
     }
     for starter_file in files:
@@ -324,25 +323,24 @@ def _render_recipe(
     output_name: str,
     theme: str,
     vault_ref: str,
-    chapters: list[_StarterChapter],
+    contents: list[_StarterChapter],
     with_cover: bool,
 ) -> str:
     return f"""title: {_yaml_string(title)}
 subtitle: {_yaml_string(subtitle)}
-output_dir: ../output
+output_dir: output
 output_name: {_yaml_string(output_name)}
 theme: {_yaml_string(theme)}
 
-front_matter:
-  - title-page
 cover:
   enabled: {_yaml_bool(with_cover)}
 
 vaults:
   content: {_yaml_string(vault_ref)}
 
-chapters:
-{_render_chapters(chapters)}"""
+contents:
+  - kind: toc
+{_render_chapters(contents)}"""
 
 
 def _render_chapters(chapters: list[_StarterChapter]) -> str:

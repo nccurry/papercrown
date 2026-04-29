@@ -144,7 +144,7 @@ class TestEnsureExportsFreshIgnoresUnreferencedFailures:
         recipe_path.write_text(
             "title: Poisoned Vault Test\n"
             "vaults:\n  v: poisoned-vault\n"
-            "chapters:\n  - kind: file\n    source: v:Good.md\n",
+            "contents:\n  - kind: file\n    source: v:Good.md\n",
             encoding="utf-8",
         )
         recipe = load_recipe(recipe_path)

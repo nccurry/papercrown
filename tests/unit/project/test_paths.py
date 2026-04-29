@@ -28,7 +28,7 @@ class TestOutputRoot:
                 title: My Book
                 vaults:
                   v: vault
-                chapters:
+                contents:
                   - kind: file
                     source: v:Foo.md
                 """,
@@ -47,7 +47,7 @@ class TestOutputRoot:
                 output_name: custom-name
                 vaults:
                   v: vault
-                chapters:
+                contents:
                   - kind: file
                     source: v:Foo.md
                 """,
@@ -68,7 +68,7 @@ class TestChapterPdfPath:
                 title: B
                 vaults:
                   v: vault
-                chapters:
+                contents:
                   - kind: file
                     source: v:Foo.md
                 """,
@@ -88,7 +88,7 @@ class TestChapterPdfPath:
                 title: B
                 vaults:
                   v: vault
-                chapters:
+                contents:
                   - kind: file
                     source: v:Foo.md
                 """,
@@ -111,7 +111,7 @@ class TestChapterPdfPath:
                 title: B
                 vaults:
                   v: vault
-                chapters:
+                contents:
                   - kind: file
                     source: v:Foo.md
                 """,
@@ -131,7 +131,7 @@ class TestChapterPdfPath:
                 title: B
                 vaults:
                   v: vault
-                chapters:
+                contents:
                   - kind: file
                     source: v:Foo.md
                 """,
@@ -153,7 +153,7 @@ class TestCombinedBookPath:
                 title: My Book
                 vaults:
                   v: vault
-                chapters:
+                contents:
                   - kind: file
                     source: v:Foo.md
                 """,
@@ -175,7 +175,7 @@ class TestCombinedBookPath:
                 title: My Book
                 vaults:
                   v: vault
-                chapters:
+                contents:
                   - kind: file
                     source: v:Foo.md
                 """,
@@ -194,7 +194,7 @@ class TestCombinedBookPath:
                 title: My Book
                 vaults:
                   v: vault
-                chapters:
+                contents:
                   - kind: file
                     source: v:Foo.md
                 """,
@@ -213,7 +213,7 @@ class TestCombinedBookPath:
                 title: "My/Book"
                 vaults:
                   v: vault
-                chapters:
+                contents:
                   - kind: file
                     source: v:Foo.md
                 """,
@@ -232,7 +232,7 @@ class TestCombinedBookPath:
                 title: My Book
                 vaults:
                   v: vault
-                chapters:
+                contents:
                   - kind: file
                     source: v:Foo.md
                 """,

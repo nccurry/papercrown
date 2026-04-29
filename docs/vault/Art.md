@@ -227,7 +227,7 @@ marker family. Set `headings: []` to disable generated heading-section markers.
 Chapters can opt out of generated filler markers:
 
 ```yaml
-chapters:
+contents:
   - kind: file
     title: Legal
     source: rules:Legal.md

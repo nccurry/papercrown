@@ -3,7 +3,7 @@
 #
 # Paths here are resolved relative to this config file. If a command does not
 # pass an explicit recipe path, Paper Crown builds this recipe by default.
-default_recipe: recipes/starfall-field-guide.yaml
+default_book: book.yaml
 
 # Build defaults mirror the `papercrown build` CLI flags. Command-line options
 # can still override these values for one-off builds.

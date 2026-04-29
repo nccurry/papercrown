@@ -18,7 +18,7 @@ Recipe shape:
 
     output_dir: .                  # optional; generated files go under Paper Crown/
     output_name: my-book           # optional; defaults to a slug of the title
-    art_dir: assets/art            # optional; relative to this recipe file
+    art_dir: Art                   # optional; relative to the project root
 
     cover:
       enabled: true
@@ -27,7 +27,7 @@ Recipe shape:
     ornaments:
       folio_frame: ornaments/ornament-folio-frame.png
 
-    chapters:
+    contents:
       - kind: file
         style: setting
         title: Setting Primer
@@ -734,7 +734,7 @@ class SourceItem:
 # ---------------------------------------------------------------------------
 
 
-# Structural chapter kinds accepted in recipe chapter specs.
+# Structural content kinds accepted in book contents.
 CHAPTER_KINDS = {
     "file",
     "catalog",
@@ -743,16 +743,18 @@ CHAPTER_KINDS = {
     "folder",
     "group",
     "sequence",
+    "toc",
+    "generated",
 }
 
 # Kinds that don't need (or use) their own `source:` field. `group` is a
 # pure structural wrapper around its `children:`. `sequence` uses `sources:`.
-_KINDS_WITHOUT_SOURCE = {"group", "sequence"}
+_KINDS_WITHOUT_SOURCE = {"group", "sequence", "toc", "generated"}
 
 
 @dataclass
 class ChapterSpec:
-    """One entry in the recipe's `chapters:` list.
+    """One entry in the book's ordered `contents:` list.
 
     `kind` is structural (how to assemble files into chapter content).
     `style` is semantic (the CSS hook value passed to the template as
@@ -761,6 +763,8 @@ class ChapterSpec:
 
     # file | catalog | composite | classes-catalog | folder | group | sequence
     kind: str
+    # computed content kind for `kind: generated`
+    type: str | None = None
     # required for every kind except `group`
     source: SourceRef | None = None
     # optional; some kinds derive it
@@ -791,6 +795,8 @@ class ChapterSpec:
     break_ornament: str | None = None
     # combined-book TOC depth for this top-level chapter
     toc_depth: int | None = None
+    # `kind: toc` depth cap
+    depth: int | None = None
     # classes-catalog options
     # also emit per-leaf standalone PDFs
     individual_pdfs: bool = False
@@ -818,7 +824,7 @@ class ChapterSpec:
         path: str = "",
     ) -> ChapterSpec:
         """Parse and validate one chapter mapping from the recipe YAML."""
-        loc = f"chapter[{index}]" if not path else f"{path}.children[{index}]"
+        loc = f"contents[{index}]" if not path else f"{path}.children[{index}]"
         if not isinstance(raw, Mapping):
             raise RecipeError(f"{loc} must be a mapping, got {type(raw).__name__}")
         kind_raw = raw.get("kind")
@@ -829,6 +835,13 @@ class ChapterSpec:
             raise RecipeError(
                 f"{loc}.kind={kind!r} is not one of {sorted(CHAPTER_KINDS)}"
             )
+        generated_type = _str_or_none(raw.get("type"))
+        if kind == "generated" and generated_type not in GENERATED_CONTENT_TYPES:
+            raise RecipeError(
+                f"{loc}.type must be one of {sorted(GENERATED_CONTENT_TYPES)}"
+            )
+        if kind != "generated" and generated_type is not None:
+            raise RecipeError(f"{loc}.type is only valid for kind='generated'")
         source_raw = raw.get("source")
         sources_raw = raw.get("sources")
         source: SourceRef | None = None
@@ -900,9 +913,13 @@ class ChapterSpec:
                 f"{loc}.full_page_sections must be a list of heading titles/slugs"
             )
         toc_depth = _toc_depth_or_none(raw.get("toc_depth"), loc=loc)
+        depth = _toc_depth_or_none(raw.get("depth"), loc=loc)
+        if depth is not None and kind != "toc":
+            raise RecipeError(f"{loc}.depth is only valid for kind='toc'")
 
         return cls(
             kind=kind,
+            type=generated_type,
             source=source,
             title=_str_or_none(raw.get("title")),
             slug=_slug_or_none(raw.get("slug"), loc=loc),
@@ -918,6 +935,7 @@ class ChapterSpec:
             headpiece=_str_or_none(raw.get("headpiece")),
             break_ornament=_str_or_none(raw.get("break_ornament")),
             toc_depth=toc_depth,
+            depth=depth,
             individual_pdfs=bool(raw.get("individual_pdfs", False)),
             individual_pdf_subdir=_str_or_none(raw.get("individual_pdf_subdir")),
             art_per_class=bool(raw.get("art_per_class", False)),
@@ -939,7 +957,12 @@ class ChapterSpec:
 # Theme used when a recipe does not specify one.
 DEFAULT_THEME = "pinlight-industrial"
 
-# Generated matter page types accepted in recipe configuration.
+# Computed content page types accepted in book contents.
+GENERATED_CONTENT_TYPES = {
+    "appendix-index",
+}
+
+# Legacy generated matter page types kept for internal compatibility only.
 GENERATED_MATTER_TYPES = {
     "title-page",
     "credits",
@@ -1034,7 +1057,7 @@ class Recipe:
     vaults: dict[str, VaultSpec]  # name -> VaultSpec
     vault_overlay: list[str]  # priority order, first = lowest
     cover: CoverSpec
-    chapters: list[ChapterSpec]
+    contents: list[ChapterSpec]
     recipe_path: Path  # where this recipe was loaded from
     output_dir_override: Path | None = None
     output_name: str | None = None
@@ -1053,6 +1076,11 @@ class Recipe:
     page_damage: PageDamageSpec = field(default_factory=PageDamageSpec)
 
     # Convenience
+    @property
+    def chapters(self) -> list[ChapterSpec]:
+        """Backward-facing internal alias for ordered book contents."""
+        return self.contents
+
     def vault_priority_paths(self) -> list[Path]:
         """Return vault paths in overlay priority order (first = lowest priority)."""
         return [self.vaults[name].path for name in self.vault_overlay]
@@ -1070,7 +1098,7 @@ class Recipe:
     @property
     def art_dir(self) -> Path:
         """Return the directory used for cover and chapter art assets."""
-        return self.art_dir_override or (self.project_dir / "assets" / "art")
+        return self.art_dir_override or (self.project_dir / "Art")
 
     @property
     def output_dir(self) -> Path:

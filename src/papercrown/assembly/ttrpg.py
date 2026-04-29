@@ -125,6 +125,21 @@ def add_generated_matter(
     return _with_generated_matter(markdown, recipe, registry)
 
 
+def render_generated_content(
+    kind: str,
+    title: str,
+    *,
+    recipe: Recipe,
+    registry: ObjectRegistry,
+    style: str = "generated",
+) -> str:
+    """Render one computed content page for the ordered contents stream."""
+    body = _matter_body(kind, recipe=recipe, registry=registry)
+    matter_id = slugify(title)
+    classes = f".generated-matter .section-{style} .matter-{kind}"
+    return f":::: {{#{matter_id} {classes}}}\n\n# {title}\n\n{body.strip()}\n\n::::"
+
+
 def lint_ttrpg_markdown(markdown: str) -> list[Diagnostic]:
     """Return typed-block and cross-reference diagnostics for markdown."""
     normalized, registry, diagnostics = _normalize_ttrpg_blocks(markdown)

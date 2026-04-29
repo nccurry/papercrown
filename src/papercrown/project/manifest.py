@@ -235,6 +235,28 @@ class Chapter:
             yield from c.walk()
 
 
+@dataclass(frozen=True)
+class TocPart:
+    """A table-of-contents marker in the ordered book contents."""
+
+    title: str = "Table of Contents"
+    slug: str = "table-of-contents"
+    depth: int | None = None
+
+
+@dataclass(frozen=True)
+class GeneratedPart:
+    """A computed page in the ordered book contents."""
+
+    type: str
+    title: str
+    slug: str
+    style: str = "generated"
+
+
+BookPart = Chapter | TocPart | GeneratedPart
+
+
 @dataclass
 class Manifest:
     """The resolved recipe, vault index, chapter tree, and warnings."""
@@ -242,6 +264,7 @@ class Manifest:
     recipe: Recipe
     vault_index: VaultIndex
     chapters: list[Chapter]  # top-level (siblings)
+    contents: list[BookPart] = field(default_factory=list)
     splashes: list[Splash] = field(default_factory=list)
     fillers: FillerCatalog = field(default_factory=FillerCatalog)
     page_damage: PageDamageCatalog = field(default_factory=PageDamageCatalog)
@@ -308,11 +331,106 @@ def _resolve_source(source: SourceRef, recipe: Recipe, vault_index: VaultIndex) 
 
 
 def _art_path(recipe: Recipe, art_filename: str | None) -> Path | None:
-    """Resolve a chapter's `art:` filename relative to assets/art/."""
+    """Resolve an explicit art filename relative to the recipe art directory."""
     if not art_filename:
         return None
     art = (recipe.art_dir / art_filename).resolve()
     return art if art.is_file() else None
+
+
+def convention_art_path(
+    recipe: Recipe,
+    roles: set[str],
+    *,
+    slug: str | None = None,
+    prefixes: tuple[str, ...] = (),
+) -> Path | None:
+    """Find the first art asset matching canonical filename conventions."""
+    root = recipe.art_dir
+    if not root.is_dir():
+        return None
+    for path in sorted(root.rglob("*"), key=lambda item: item.as_posix().lower()):
+        if not path.is_file() or path.suffix.lower() not in IMAGE_SUFFIXES:
+            continue
+        classification = classify_art_path(path.resolve(), art_root=root)
+        if classification.role not in roles:
+            continue
+        if slug is not None and not _art_stem_matches_slug(
+            path.stem,
+            slug=slug,
+            prefixes=prefixes,
+        ):
+            continue
+        return path.resolve()
+    return None
+
+
+def _art_stem_matches_slug(
+    stem: str,
+    *,
+    slug: str,
+    prefixes: tuple[str, ...],
+) -> bool:
+    """Return whether a convention filename points at a chapter slug."""
+    normalized = slugify(stem)
+    chapter_slug = slugify(slug)
+    for prefix in sorted(prefixes, key=len, reverse=True):
+        prefix_slug = slugify(prefix)
+        if normalized == prefix_slug:
+            continue
+        token_prefix = f"{prefix_slug}-"
+        if not normalized.startswith(token_prefix):
+            continue
+        subject = _strip_variant_suffix(normalized.removeprefix(token_prefix))
+        if subject == chapter_slug:
+            return True
+        if subject.startswith(f"{chapter_slug}-"):
+            return True
+        if subject.endswith(f"-{chapter_slug}"):
+            return True
+    return False
+
+
+def _strip_variant_suffix(value: str) -> str:
+    """Remove a trailing numeric/v-prefixed filename variant token."""
+    bits = value.split("-")
+    if len(bits) <= 1:
+        return value
+    if re.fullmatch(r"v?\d+[a-z]?", bits[-1]):
+        return "-".join(bits[:-1])
+    return value
+
+
+def _chapter_art_path(recipe: Recipe, spec: ChapterSpec, title: str) -> Path | None:
+    """Resolve explicit or convention-derived chapter divider/header art."""
+    if spec.art:
+        return _art_path(recipe, spec.art)
+    return convention_art_path(
+        recipe,
+        {"chapter-header", "chapter-divider"},
+        slug=_chapter_slug(spec, title),
+        prefixes=("header", "chapter-header", "divider", "chapter-divider"),
+    )
+
+
+def _class_art_path(recipe: Recipe, slug: str) -> Path | None:
+    """Resolve convention-derived class divider art for a class slug."""
+    return convention_art_path(
+        recipe,
+        {"class-divider"},
+        slug=slug,
+        prefixes=("class", "class-divider"),
+    )
+
+
+def _class_spot_art_path(recipe: Recipe, slug: str) -> Path | None:
+    """Resolve convention-derived class opening spot art for a class slug."""
+    return convention_art_path(
+        recipe,
+        {"class-opening-spot"},
+        slug=slug,
+        prefixes=("spot-class", "class-spot"),
+    )
 
 
 def _filler_art_root(recipe: Recipe) -> Path:
@@ -441,6 +559,9 @@ def _auto_filler_assets(
     if not root.is_dir():
         return []
 
+    allow_tailpieces = any(
+        "tailpiece" in slot.shapes for slot in recipe.fillers.slots.values()
+    )
     assets: list[FillerAsset] = []
     for path in sorted(root.rglob("*"), key=lambda item: item.as_posix().lower()):
         if not path.is_file() or path.suffix.lower() not in FILLER_IMAGE_SUFFIXES:
@@ -449,11 +570,14 @@ def _auto_filler_assets(
         if resolved in seen_paths:
             continue
         classification = classify_art_path(resolved, art_root=root)
-        if (
-            not classification.auto_placeable
-            or classification.shape is None
-            or classification.height_in is None
-        ):
+        is_tailpiece = (
+            allow_tailpieces
+            and classification.role == "ornament-tailpiece"
+            and classification.shape == "tailpiece"
+        )
+        if not (classification.auto_placeable or is_tailpiece):
+            continue
+        if classification.shape is None or classification.height_in is None:
             continue
         asset_id = _auto_filler_asset_id(resolved, art_root=root)
         if asset_id in seen_ids:
@@ -472,7 +596,7 @@ def _auto_filler_assets(
 
 
 def _per_class_art(recipe: Recipe, slug: str) -> Path | None:
-    """Look for assets/art/<slug>.png (and a few fallbacks) for a generated child."""
+    """Look for recipe.art_dir/<slug>.png fallbacks for a generated child."""
     for ext in ("png", "jpg", "jpeg", "webp"):
         candidate = recipe.art_dir / f"{slug}.{ext}"
         if candidate.is_file():
@@ -548,6 +672,17 @@ def _build_splashes(
                 heading_slug=slugify(spec.heading) if spec.heading else None,
             )
         )
+    if not any(spec.target == "back-cover" for spec in specs):
+        back_cover = convention_art_path(recipe, {"cover-back"})
+        if back_cover is not None:
+            splashes.append(
+                Splash(
+                    id="auto-cover-back",
+                    art_path=back_cover,
+                    target="back-cover",
+                    placement="back-cover",
+                )
+            )
     return splashes
 
 
@@ -858,7 +993,7 @@ def _build_file_chapter(
         title=title,
         slug=_chapter_slug(spec, title),
         eyebrow=spec.eyebrow,
-        art_path=_art_path(recipe, spec.art),
+        art_path=_chapter_art_path(recipe, spec, title),
         tailpiece_path=_art_path(recipe, spec.tailpiece),
         headpiece_path=_art_path(recipe, spec.headpiece),
         break_ornament_path=_art_path(recipe, spec.break_ornament),
@@ -897,7 +1032,7 @@ def _build_catalog_chapter(
         title=title,
         slug=_chapter_slug(spec, title),
         eyebrow=spec.eyebrow,
-        art_path=_art_path(recipe, spec.art),
+        art_path=_chapter_art_path(recipe, spec, title),
         tailpiece_path=_art_path(recipe, spec.tailpiece),
         headpiece_path=_art_path(recipe, spec.headpiece),
         break_ornament_path=_art_path(recipe, spec.break_ornament),
@@ -960,7 +1095,7 @@ def _build_composite_chapter(
         title=title,
         slug=_chapter_slug(spec, title),
         eyebrow=spec.eyebrow,
-        art_path=_art_path(recipe, spec.art),
+        art_path=_chapter_art_path(recipe, spec, title),
         tailpiece_path=_art_path(recipe, spec.tailpiece),
         headpiece_path=_art_path(recipe, spec.headpiece),
         break_ornament_path=_art_path(recipe, spec.break_ornament),
@@ -1034,6 +1169,8 @@ def _build_classes_catalog_chapters(
         )
         if art is None and spec.art_per_class:
             art = _per_class_art(recipe, slug)
+        if art is None:
+            art = _class_art_path(recipe, slug)
         if spec.class_art_pattern and art is None:
             warnings.append(
                 f"classes-catalog {src.name} [{class_name}]: "
@@ -1045,6 +1182,8 @@ def _build_classes_catalog_chapters(
             slug=slug,
             title=clean_name,
         )
+        if spot_art is None:
+            spot_art = _class_spot_art_path(recipe, slug)
         if spec.class_spot_art_pattern and spot_art is None:
             warnings.append(
                 f"classes-catalog {src.name} [{class_name}]: "
@@ -1085,7 +1224,7 @@ def _build_classes_catalog_chapters(
         title=wrapper_title,
         slug=_chapter_slug(spec, wrapper_title),
         eyebrow=spec.eyebrow,
-        art_path=_art_path(recipe, spec.art),
+        art_path=_chapter_art_path(recipe, spec, wrapper_title),
         tailpiece_path=_art_path(recipe, spec.tailpiece),
         headpiece_path=_art_path(recipe, spec.headpiece),
         break_ornament_path=_art_path(recipe, spec.break_ornament),
@@ -1118,7 +1257,7 @@ def _build_group_chapter(
         title=wrapper_title,
         slug=_chapter_slug(spec, wrapper_title),
         eyebrow=spec.eyebrow,
-        art_path=_art_path(recipe, spec.art),
+        art_path=_chapter_art_path(recipe, spec, wrapper_title),
         tailpiece_path=_art_path(recipe, spec.tailpiece),
         headpiece_path=_art_path(recipe, spec.headpiece),
         break_ornament_path=_art_path(recipe, spec.break_ornament),
@@ -1167,7 +1306,7 @@ def _build_sequence_chapter(
         title=title,
         slug=_chapter_slug(spec, title),
         eyebrow=spec.eyebrow,
-        art_path=_art_path(recipe, spec.art),
+        art_path=_chapter_art_path(recipe, spec, title),
         tailpiece_path=_art_path(recipe, spec.tailpiece),
         headpiece_path=_art_path(recipe, spec.headpiece),
         break_ornament_path=_art_path(recipe, spec.break_ornament),
@@ -1217,7 +1356,7 @@ def _build_folder_chapter(
         title=title,
         slug=_chapter_slug(spec, title),
         eyebrow=spec.eyebrow,
-        art_path=_art_path(recipe, spec.art),
+        art_path=_chapter_art_path(recipe, spec, title),
         tailpiece_path=_art_path(recipe, spec.tailpiece),
         headpiece_path=_art_path(recipe, spec.headpiece),
         break_ornament_path=_art_path(recipe, spec.break_ornament),
@@ -1266,6 +1405,41 @@ def _dispatch_chapter(
     raise ManifestError(f"unknown chapter kind: {spec.kind!r}")
 
 
+def _content_part(
+    spec: ChapterSpec,
+    recipe: Recipe,
+    vault_index: VaultIndex,
+    warnings: list[str],
+) -> tuple[list[BookPart], list[Chapter]]:
+    """Resolve one ordered content spec into render parts and chapter entries."""
+    if spec.kind == "toc":
+        title = spec.title or "Table of Contents"
+        return ([TocPart(title=title, slug=slugify(title), depth=spec.depth)], [])
+    if spec.kind == "generated":
+        if spec.type is None:
+            raise ManifestError("generated content requires a type")
+        title = spec.title or _default_generated_title(spec.type)
+        return (
+            [
+                GeneratedPart(
+                    type=spec.type,
+                    title=title,
+                    slug=spec.slug or slugify(title),
+                    style=spec.style,
+                )
+            ],
+            [],
+        )
+    chapters = _dispatch_chapter(spec, recipe, vault_index, warnings)
+    return (list(chapters), chapters)
+
+
+def _default_generated_title(kind: str) -> str:
+    return {
+        "appendix-index": "Index",
+    }.get(kind, kind.replace("-", " ").title())
+
+
 def build_manifest(recipe: Recipe) -> Manifest:
     """Walk the recipe and produce a Manifest with a populated Chapter tree."""
     # Build VaultIndex in priority order from recipe.vault_overlay
@@ -1274,8 +1448,11 @@ def build_manifest(recipe: Recipe) -> Manifest:
 
     warnings: list[str] = []
     chapters: list[Chapter] = []
+    contents: list[BookPart] = []
     for spec in recipe.chapters:
-        chapters.extend(_dispatch_chapter(spec, recipe, vault_index, warnings))
+        parts, part_chapters = _content_part(spec, recipe, vault_index, warnings)
+        contents.extend(parts)
+        chapters.extend(part_chapters)
     splashes = _build_splashes(recipe.splashes, recipe, chapters, warnings)
     fillers = _build_filler_catalog(recipe, warnings)
     page_damage = _build_page_damage_catalog(recipe, warnings)
@@ -1285,6 +1462,7 @@ def build_manifest(recipe: Recipe) -> Manifest:
         recipe=recipe,
         vault_index=vault_index,
         chapters=chapters,
+        contents=contents,
         splashes=splashes,
         fillers=fillers,
         page_damage=page_damage,

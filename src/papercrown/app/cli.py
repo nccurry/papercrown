@@ -59,7 +59,7 @@ app.add_typer(art_app, name="art")
 RecipeArg = Annotated[
     Path | None,
     typer.Argument(
-        help="Path to a recipe YAML file. Defaults to papercrown.yaml default_recipe.",
+        help="Path to a book YAML file. Defaults to papercrown.yaml default_book.",
     ),
 ]
 ConfigOpt = Annotated[
@@ -136,10 +136,10 @@ def _resolve_config(
     try:
         project_patch = load_project_config(config, enabled=not no_config)
         recipe_arg = recipe.resolve() if recipe is not None else None
-        recipe_path = recipe_arg or project_patch.default_recipe
+        recipe_path = recipe_arg or project_patch.default_book
         if recipe_path is None:
             raise ConfigError(
-                "no recipe provided; pass a recipe path or set default_recipe "
+                "no book provided; pass a book path or set default_book "
                 "in papercrown.yaml"
             )
         recipe_patch = load_recipe_build_config(recipe_path)
@@ -157,7 +157,11 @@ def _resolve_config(
 def _load_recipe_and_manifest(config: BuildConfig) -> tuple[Recipe, Manifest]:
     """Load the recipe and manifest for a resolved build config."""
     try:
-        recipe = load_recipe(config.recipe_path)
+        recipe = load_recipe(
+            config.recipe_path,
+            defaults=config.project_defaults,
+            defaults_base_dir=config.project_defaults_base_dir,
+        )
     except RecipeError as error:
         print(f"Recipe error: {error}", file=sys.stderr)
         raise typer.Exit(2) from error

@@ -1,4 +1,4 @@
-default_recipe: recipes/papercrown-docs.yaml
+default_book: book.yaml
 
 build:
   target: web

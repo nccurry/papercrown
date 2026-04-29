@@ -23,7 +23,6 @@ from papercrown.project.recipe.models import (
     VaultSpec,
     _filename_slug,
     _image_treatments_mapping,
-    _matter_list,
     _slug_or_none,
     _str_or_none,
     _theme_options_mapping,
@@ -44,13 +43,18 @@ def _resolve_vault_path(raw: str, recipe_dir: Path) -> Path:
     return p
 
 
-def load_recipe(path: str | Path) -> Recipe:
-    """Load and validate a recipe YAML file.
+def load_recipe(
+    path: str | Path,
+    *,
+    defaults: Mapping[str, object] | None = None,
+    defaults_base_dir: Path | None = None,
+) -> Recipe:
+    """Load and validate a book YAML file.
 
     Raises RecipeError with a clear message on any structural or referential
-    problem (missing required fields, unknown chapter kinds, vault paths that
-    don't exist, vault_overlay names not in `vaults`, recipe include cycles,
-    etc). Recipes may use ``extends``, ``include_chapters``, and
+    problem (missing required fields, unknown content kinds, vault paths that
+    don't exist, vault_overlay names not in `vaults`, book include cycles,
+    etc). Books may use ``extends``, ``include_contents``, and
     ``include_vaults`` to share reusable book structure.
     """
     recipe_path = Path(path).resolve()
@@ -58,6 +62,14 @@ def load_recipe(path: str | Path) -> Recipe:
         raise RecipeError(f"recipe file not found: {recipe_path}")
 
     raw = _load_recipe_mapping(recipe_path, stack=())
+    if defaults:
+        defaults_raw = {str(key): value for key, value in deepcopy(defaults).items()}
+        _normalize_recipe_filesystem_paths(
+            defaults_raw,
+            (defaults_base_dir or recipe_path.parent).resolve(),
+        )
+        raw = _deep_merge(defaults_raw, raw)
+    _reject_legacy_recipe_shape(raw)
 
     # Required: title
     title = raw.get("title")
@@ -135,10 +147,7 @@ def load_recipe(path: str | Path) -> Recipe:
         raise RecipeError("metadata must be a mapping when provided")
     theme_options = _theme_options_mapping(raw.get("theme_options"))
     image_treatments = _image_treatments_mapping(raw.get("image_treatments"))
-    front_matter = _matter_list(raw.get("front_matter"), field_name="front_matter")
-    back_matter = _matter_list(raw.get("back_matter"), field_name="back_matter")
 
-    # Required: chapters (non-empty)
     cover_raw = raw.get("cover")
     if cover_raw is not None and not isinstance(cover_raw, Mapping):
         raise RecipeError("cover must be a mapping when provided")
@@ -162,16 +171,16 @@ def load_recipe(path: str | Path) -> Recipe:
             )
         splashes.append(SplashSpec.from_dict(splash_raw, index=i))
 
-    chapters_raw = raw.get("chapters")
-    if not isinstance(chapters_raw, list) or not chapters_raw:
-        raise RecipeError("recipe missing required field: chapters (non-empty list)")
-    chapters: list[ChapterSpec] = []
-    for i, chapter_raw in enumerate(chapters_raw):
+    contents_raw = raw.get("contents")
+    if not isinstance(contents_raw, list) or not contents_raw:
+        raise RecipeError("book missing required field: contents (non-empty list)")
+    contents: list[ChapterSpec] = []
+    for i, chapter_raw in enumerate(contents_raw):
         if not isinstance(chapter_raw, Mapping):
             raise RecipeError(
-                f"chapter[{i}] must be a mapping, got {type(chapter_raw).__name__}"
+                f"contents[{i}] must be a mapping, got {type(chapter_raw).__name__}"
             )
-        chapters.append(ChapterSpec.from_dict(chapter_raw, index=i))
+        contents.append(ChapterSpec.from_dict(chapter_raw, index=i))
 
     # Validate every chapter source's vault prefix (if explicit) refers to a
     # known vault. Walks recursively into group `children` too.
@@ -196,7 +205,7 @@ def load_recipe(path: str | Path) -> Recipe:
                     )
             _validate_sources(ch.children, f"{here}.children")
 
-    _validate_sources(chapters, "chapter")
+    _validate_sources(contents, "contents")
 
     return Recipe(
         title=title.strip(),
@@ -213,17 +222,28 @@ def load_recipe(path: str | Path) -> Recipe:
         theme_options=theme_options,
         image_treatments=image_treatments,
         metadata=BookMetadataSpec.from_dict(metadata_raw),
-        front_matter=front_matter,
-        back_matter=back_matter,
         art_dir_override=art_dir_override,
         ornaments=OrnamentsSpec.from_dict(ornaments_raw),
         cover=CoverSpec.from_dict(cover_raw),
         splashes=splashes,
         fillers=FillersSpec.from_dict(fillers_raw),
         page_damage=PageDamageSpec.from_dict(page_damage_raw),
-        chapters=chapters,
+        contents=contents,
         recipe_path=recipe_path,
     )
+
+
+def _reject_legacy_recipe_shape(raw: Mapping[str, object]) -> None:
+    """Fail fast for the pre-contents recipe fields."""
+    legacy = {
+        "chapters": "use contents instead",
+        "front_matter": "make these ordinary contents items before kind: toc",
+        "back_matter": "make these ordinary contents items after kind: toc",
+        "include_chapters": "use include_contents instead",
+    }
+    for key, hint in legacy.items():
+        if key in raw:
+            raise RecipeError(f"{key} is no longer supported; {hint}")
 
 
 def _load_recipe_mapping(path: Path, *, stack: tuple[Path, ...]) -> dict[str, object]:
@@ -263,14 +283,14 @@ def _load_recipe_mapping(path: Path, *, stack: tuple[Path, ...]) -> dict[str, ob
 
     local = dict(raw)
     local.pop("extends", None)
-    chapter_includes = local.pop("include_chapters", None)
+    content_includes = local.pop("include_contents", None)
     vault_includes = local.pop("include_vaults", None)
     _normalize_recipe_filesystem_paths(local, recipe_dir)
 
     if vault_includes is not None:
         _merge_vault_includes(local, vault_includes, recipe_dir, stack=next_stack)
-    if chapter_includes is not None:
-        _merge_chapter_includes(local, chapter_includes, recipe_dir, stack=next_stack)
+    if content_includes is not None:
+        _merge_content_includes(local, content_includes, recipe_dir, stack=next_stack)
 
     return _deep_merge(base, local)
 
@@ -299,6 +319,17 @@ def _normalize_recipe_filesystem_paths(
     art_dir_raw = raw.get("art_dir")
     if isinstance(art_dir_raw, str) and art_dir_raw.strip():
         raw["art_dir"] = str(_resolve_vault_path(art_dir_raw, recipe_dir))
+    art_dirs_raw = raw.get("art_dirs")
+    if isinstance(art_dirs_raw, list):
+        resolved = [
+            str(_resolve_vault_path(item, recipe_dir))
+            for item in art_dirs_raw
+            if isinstance(item, str) and item.strip()
+        ]
+        if resolved and "art_dir" not in raw:
+            # The renderer currently consumes one primary art library; project
+            # defaults accept the new list shape and use the first library.
+            raw["art_dir"] = resolved[0]
     output_dir_raw = raw.get("output_dir")
     if isinstance(output_dir_raw, str) and output_dir_raw.strip():
         raw["output_dir"] = str(_resolve_vault_path(output_dir_raw, recipe_dir))
@@ -346,38 +377,38 @@ def _merge_vault_includes(
         raw["vault_overlay"] = _dedupe(included_overlay + list(merged_vaults))
 
 
-def _merge_chapter_includes(
+def _merge_content_includes(
     raw: dict[str, object],
     includes: object,
     recipe_dir: Path,
     *,
     stack: tuple[Path, ...],
 ) -> None:
-    """Prepend chapter fragments from include files to ``raw`` chapters."""
-    include_paths = _include_path_list(includes, field_name="include_chapters")
-    included_chapters: list[object] = []
+    """Prepend content fragments from include files to ``raw`` contents."""
+    include_paths = _include_path_list(includes, field_name="include_contents")
+    included_contents: list[object] = []
     for include in include_paths:
         include_path = _resolve_include_path(include, recipe_dir)
         fragment = _read_yaml_mapping_or_list(include_path, stack=stack)
         if isinstance(fragment, list):
-            included_chapters.extend(deepcopy(fragment))
+            included_contents.extend(deepcopy(fragment))
             continue
-        chapters_raw = fragment.get("chapters")
-        if not isinstance(chapters_raw, list):
+        contents_raw = fragment.get("contents")
+        if not isinstance(contents_raw, list):
             raise RecipeError(
-                f"{include_path.name}: chapter include must be a list or "
-                "a mapping with chapters"
+                f"{include_path.name}: content include must be a list or "
+                "a mapping with contents"
             )
-        included_chapters.extend(deepcopy(chapters_raw))
+        included_contents.extend(deepcopy(contents_raw))
 
-    local_chapters_raw = raw.get("chapters")
-    if local_chapters_raw is None:
-        local_chapters: list[object] = []
-    elif isinstance(local_chapters_raw, list):
-        local_chapters = list(local_chapters_raw)
+    local_contents_raw = raw.get("contents")
+    if local_contents_raw is None:
+        local_contents: list[object] = []
+    elif isinstance(local_contents_raw, list):
+        local_contents = list(local_contents_raw)
     else:
-        raise RecipeError("chapters must be a list when include_chapters is used")
-    raw["chapters"] = included_chapters + local_chapters
+        raise RecipeError("contents must be a list when include_contents is used")
+    raw["contents"] = included_contents + local_contents
 
 
 def _read_yaml_mapping(path: Path, *, stack: tuple[Path, ...]) -> dict[str, object]:

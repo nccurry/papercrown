@@ -35,7 +35,7 @@ def test_project_recipe_and_cli_layers_apply_in_order(tmp_path):
           scope: book
           profile: digital
           page_damage: fast
-        chapters:
+        contents:
           - kind: file
             title: Foo
             source: v:Foo.md
@@ -45,7 +45,7 @@ def test_project_recipe_and_cli_layers_apply_in_order(tmp_path):
     config_path.write_text(
         textwrap.dedent(
             """
-            default_recipe: recipe.yaml
+            default_book: recipe.yaml
             build:
               target: pdf
               scope: sections
@@ -103,7 +103,7 @@ def test_unknown_recipe_build_key_fails(tmp_path):
           v: vault
         build:
           mystery: true
-        chapters:
+        contents:
           - kind: file
             title: Foo
             source: v:Foo.md
@@ -114,8 +114,8 @@ def test_unknown_recipe_build_key_fails(tmp_path):
         load_recipe_build_config(recipe)
 
 
-def test_missing_recipe_requires_argument_or_default():
-    with pytest.raises(ConfigError, match="no recipe provided"):
+def test_missing_book_requires_argument_or_default():
+    with pytest.raises(ConfigError, match="no book provided"):
         resolve_build_config(
             recipe_arg=None,
             project=BuildConfigPatch(),

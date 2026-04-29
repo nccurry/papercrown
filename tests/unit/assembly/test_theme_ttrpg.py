@@ -14,7 +14,6 @@ from papercrown.project.manifest import Chapter
 from papercrown.project.recipe import (
     BookMetadataSpec,
     CoverSpec,
-    MatterSpec,
     Recipe,
     RecipeError,
     load_recipe,
@@ -40,7 +39,7 @@ def _recipe(tmp_path: Path) -> Recipe:
         vaults={},
         vault_overlay=[],
         cover=CoverSpec(enabled=False),
-        chapters=[],
+        contents=[],
         recipe_path=tmp_path / "recipe.yaml",
         metadata=BookMetadataSpec(
             authors=["Example Author"],
@@ -51,12 +50,10 @@ def _recipe(tmp_path: Path) -> Recipe:
             keywords=["fantasy", "campaign"],
             credits={"art": ["Example Artist"]},
         ),
-        front_matter=[MatterSpec("title-page"), MatterSpec("credits")],
-        back_matter=[MatterSpec("appendix-index")],
     )
 
 
-def test_recipe_loads_theme_metadata_and_generated_matter(tmp_path):
+def test_recipe_loads_theme_metadata_and_ordered_contents(tmp_path):
     recipe_path = _write_recipe(
         tmp_path,
         """
@@ -70,15 +67,15 @@ def test_recipe_loads_theme_metadata_and_generated_matter(tmp_path):
           keywords: [rules, fantasy]
           credits:
             art: Example Artist
-        front_matter: [title-page, credits]
-        back_matter:
-          - type: appendix-index
-            title: Game Object Index
         vaults:
           v: vault
-        chapters:
+        contents:
           - kind: file
             source: v:Book.md
+          - kind: toc
+          - kind: generated
+            type: appendix-index
+            title: Game Object Index
         """,
     )
 
@@ -89,8 +86,8 @@ def test_recipe_loads_theme_metadata_and_generated_matter(tmp_path):
     assert recipe.metadata.authors == ["Example Author"]
     assert recipe.metadata.keywords == ["rules", "fantasy"]
     assert recipe.metadata.credits["art"] == ["Example Artist"]
-    assert [matter.type for matter in recipe.front_matter] == ["title-page", "credits"]
-    assert recipe.back_matter[0].title == "Game Object Index"
+    assert [item.kind for item in recipe.chapters] == ["file", "toc", "generated"]
+    assert recipe.chapters[2].title == "Game Object Index"
 
 
 def test_bundled_theme_resolves_css_template_and_options(tmp_path):
@@ -107,7 +104,7 @@ def test_bundled_theme_resolves_css_template_and_options(tmp_path):
           filler: raw
         vaults:
           v: vault
-        chapters:
+        contents:
           - kind: file
             source: v:Book.md
         """,
@@ -165,7 +162,7 @@ def test_theme_css_list_can_use_arbitrary_source_filenames(tmp_path):
         theme: my-theme
         vaults:
           v: vault
-        chapters:
+        contents:
           - kind: file
             source: v:Book.md
         """,
@@ -189,7 +186,7 @@ def test_theme_css_list_is_required(tmp_path):
         theme: my-theme
         vaults:
           v: vault
-        chapters:
+        contents:
           - kind: file
             source: v:Book.md
         """,
@@ -225,7 +222,7 @@ def test_base_context_layers_core_css_before_theme_css(tmp_path):
         theme: pulp-adventure
         vaults:
           v: vault
-        chapters:
+        contents:
           - kind: file
             source: v:Book.md
         """,
@@ -309,8 +306,15 @@ def test_typed_blocks_resolve_refs_and_generate_index(tmp_path):
     prepared = ttrpg.prepare_book_markdown(
         markdown,
         recipe,
-        include_generated_matter=True,
+        include_generated_matter=False,
     )
+    generated_index = ttrpg.render_generated_content(
+        "appendix-index",
+        "Game Object Index",
+        recipe=recipe,
+        registry=prepared.registry,
+    )
+    rendered = "\n\n".join([prepared.markdown, generated_index])
 
     assert prepared.diagnostics == []
     assert (
@@ -322,23 +326,27 @@ def test_typed_blocks_resolve_refs_and_generate_index(tmp_path):
     assert prepared.registry.objects[0].source_file == Path(source)
     assert 'href="#npc-mara-voss"' in prepared.markdown
     assert 'href="#power-flame-dart"' in prepared.markdown
-    assert "## NPCs" in prepared.markdown
-    assert "## Backgrounds" in prepared.markdown
-    assert "## Frames" in prepared.markdown
-    assert "## Powers" in prepared.markdown
-    assert "- [Mara Voss](#npc-mara-voss) (rival, knight)" in prepared.markdown
-    assert "- [Advantage](#rule-advantage)" in prepared.markdown
+    assert "## NPCs" in rendered
+    assert "## Backgrounds" in rendered
+    assert "## Frames" in rendered
+    assert "## Powers" in rendered
+    assert "- [Mara Voss](#npc-mara-voss) (rival, knight)" in rendered
+    assert "- [Advantage](#rule-advantage)" in rendered
 
 
-def test_combined_book_orders_front_matter_before_manual_toc(tmp_path):
+def test_combined_book_treats_pre_toc_content_as_content(tmp_path):
     recipe = _recipe(tmp_path)
-    recipe.metadata = BookMetadataSpec(license="Legal copy.")
-    recipe.front_matter = [MatterSpec("license", title="Legal & Support")]
-    recipe.back_matter = [MatterSpec("copyright", title="Copyright")]
     chapters = [Chapter(title="First Chapter", slug="first-chapter")]
 
     prepared = build_mod._prepare_book_markdown_with_manual_toc(
-        "# First Chapter\n\nMain content.\n",
+        "\n\n".join(
+            [
+                "# Legal & Support\n\nLegal copy.",
+                "<!-- papercrown-toc: Contents | -->",
+                "# First Chapter\n\nMain content.",
+                "<!-- papercrown-generated: appendix-index | Game Object Index | generated -->",
+            ]
+        ),
         recipe,
         chapters,
     )
@@ -346,13 +354,13 @@ def test_combined_book_orders_front_matter_before_manual_toc(tmp_path):
     legal_pos = prepared.index("# Legal & Support")
     toc_pos = prepared.index("# Table of Contents")
     chapter_pos = prepared.index("# First Chapter")
-    copyright_pos = prepared.index("# Copyright")
+    index_pos = prepared.index("# Game Object Index")
     toc_block = prepared[toc_pos:chapter_pos]
 
-    assert legal_pos < toc_pos < chapter_pos < copyright_pos
-    assert "Legal & Support" not in toc_block
-    assert "Copyright" not in toc_block
+    assert legal_pos < toc_pos < chapter_pos < index_pos
+    assert "Legal & Support" in toc_block
     assert "First Chapter" in toc_block
+    assert "Game Object Index" in toc_block
 
 
 def test_duplicate_typed_block_ids_are_errors():

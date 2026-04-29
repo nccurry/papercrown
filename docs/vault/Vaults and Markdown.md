@@ -24,7 +24,7 @@ vaults:
 Then refer to files through that alias:
 
 ```yaml
-chapters:
+contents:
   - kind: file
     title: Primer
     source: rules:Primer.md

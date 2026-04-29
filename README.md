@@ -63,7 +63,7 @@ papercrown verify
 Or run against the bundled public example from a repository checkout:
 
 ```sh
-papercrown manifest examples/starfall/recipes/starfall-field-guide.yaml
+papercrown manifest examples/starfall/book.yaml
 ```
 
 ## Repository Bootstrap
@@ -107,7 +107,7 @@ papercrown themes copy NAME DEST
 ```
 
 If no recipe argument is provided, Paper Crown reads `papercrown.yaml` in the
-current directory and uses its `default_recipe`.
+current directory and uses its `default_book`.
 
 Common build options:
 
@@ -189,7 +189,7 @@ theme: clean-srd
 vaults:
   rules: ../vault
 
-chapters:
+contents:
   - kind: file
     title: Primer
     source: rules:Primer.md

@@ -41,7 +41,7 @@ def tiny_workspace(tmp_path):
         title: Tiny Book
         vaults:
           v: vault
-        chapters:
+        contents:
           - kind: file
             title: Setting
             source: v:Setting.md
@@ -139,7 +139,7 @@ class TestDeriveExpected:
                 title: Tiny Book
                 vaults:
                   v: vault
-                chapters:
+                contents:
                   - kind: file
                     title: Custom
                     source: v:Custom.md

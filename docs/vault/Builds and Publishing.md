@@ -27,7 +27,7 @@ preflight with `doctor`, render with `build`, and check results with `verify`.
 ::::
 
 If no recipe argument is provided, Paper Crown reads `papercrown.yaml` in the
-current directory and uses its `default_recipe`.
+current directory and uses its `default_book`.
 
 ## Build Options
 

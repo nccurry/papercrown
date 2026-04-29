@@ -96,7 +96,7 @@ def test_art_audit_validates_alpha_and_unclassified_assets(tmp_path: Path):
             art_dir: art
             vaults:
               v: vault
-            chapters:
+            contents:
               - kind: file
                 title: Foo
                 source: v:Foo.md
@@ -142,7 +142,7 @@ def test_art_audit_warns_about_duplicates_sparse_art_and_backgrounds(
             art_dir: art
             vaults:
               v: vault
-            chapters:
+            contents:
               - kind: file
                 title: Foo
                 source: v:Foo.md
@@ -190,7 +190,7 @@ def test_art_audit_warns_about_bottom_band_slot_and_top_safety(
                   min_space: 0.65in
                   max_space: 5.0in
                   shapes: [spot, bottom-band]
-            chapters:
+            contents:
               - kind: file
                 title: Foo
                 source: v:Foo.md
@@ -230,7 +230,7 @@ def test_art_audit_allows_cross_role_ornament_reuse(tmp_path: Path):
             art_dir: art
             vaults:
               v: vault
-            chapters:
+            contents:
               - kind: file
                 title: Foo
                 source: v:Foo.md
@@ -291,7 +291,7 @@ def test_art_audit_expects_cover_roles_for_cover_targets(tmp_path: Path):
                 art: covers/cover-back-foo-01.png
                 target: back-cover
                 placement: back-cover
-            chapters:
+            contents:
               - kind: file
                 title: Foo
                 source: v:Foo.md
@@ -354,7 +354,7 @@ def test_art_audit_allows_namespaced_art_packs_and_filler_art_dir(
                   art: fillers/spot/filler-spot-general-token-01.png
                   shape: spot
                   height: 1.35in
-            chapters:
+            contents:
               - kind: file
                 title: Foo
                 source: v:Foo.md
@@ -415,7 +415,7 @@ def test_art_audit_allows_flat_art_library(tmp_path: Path):
                   art: filler-spot-general-token-01.png
                   shape: spot
                   height: 1.35in
-            chapters:
+            contents:
               - kind: file
                 title: Foo
                 art: scene-01-port-meridian-arrival.png

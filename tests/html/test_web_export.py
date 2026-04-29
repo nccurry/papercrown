@@ -44,7 +44,8 @@ def _make_web_recipe(tmp_path: Path) -> Path:
         art_dir: ../art
         vaults:
           v: ../vault
-        chapters:
+        contents:
+          - kind: toc
           - kind: file
             title: Setting
             source: v:Setting.md
@@ -174,7 +175,7 @@ def test_static_web_export_recovers_lossy_spell_list_embeds(tmp_path, require_pa
         output_dir: ../output
         vaults:
           v: ../vault
-        chapters:
+        contents:
           - kind: group
             title: Original Spells Reference
             slug: original-spells-reference

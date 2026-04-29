@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import os
 from collections.abc import Mapping
-from dataclasses import dataclass, replace
+from dataclasses import dataclass, field, replace
 from pathlib import Path
 from typing import Any
 
@@ -41,7 +41,7 @@ _BUILD_KEYS = {
     "timings",
 }
 # Supported keys at the project configuration root.
-_PROJECT_KEYS = {"default_recipe", "build"}
+_PROJECT_KEYS = {"default_book", "build", "defaults"}
 # Upper bound for jobs:auto so one command does not overfill the machine.
 AUTO_JOBS_CAP = 4
 
@@ -51,6 +51,8 @@ class BuildConfig:
     """Resolved build options after config layers and CLI overrides."""
 
     recipe_path: Path
+    project_defaults: dict[str, object] = field(default_factory=dict)
+    project_defaults_base_dir: Path | None = None
     target: BuildTarget = BuildTarget.PDF
     scope: BuildScope = BuildScope.ALL
     profile: OutputProfile = OutputProfile.PRINT
@@ -69,7 +71,9 @@ class BuildConfig:
 class BuildConfigPatch:
     """Partial build config used for one precedence layer."""
 
-    default_recipe: Path | None = None
+    default_book: Path | None = None
+    project_defaults: dict[str, object] | None = None
+    project_defaults_base_dir: Path | None = None
     target: BuildTarget | None = None
     scope: BuildScope | None = None
     profile: OutputProfile | None = None
@@ -99,6 +103,8 @@ class BuildConfigPatch:
             ("draft_mode", "draft_mode"),
             ("page_damage_mode", "page_damage_mode"),
             ("timings", "timings"),
+            ("project_defaults", "project_defaults"),
+            ("project_defaults_base_dir", "project_defaults_base_dir"),
         ):
             value = getattr(self, patch_name)
             if value is not None:
@@ -131,10 +137,19 @@ def load_project_config(
             f"{config_path}: unknown config key(s): {', '.join(sorted(unknown))}"
         )
     patch = BuildConfigPatch()
-    if raw.get("default_recipe") is not None:
+    if raw.get("default_book") is not None:
         patch = replace(
             patch,
-            default_recipe=_resolve_config_path(raw["default_recipe"], config_path),
+            default_book=_resolve_config_path(raw["default_book"], config_path),
+        )
+    if raw.get("defaults") is not None:
+        defaults_raw = raw["defaults"]
+        if not isinstance(defaults_raw, Mapping):
+            raise ConfigError(f"{config_path}: defaults must be a mapping")
+        patch = replace(
+            patch,
+            project_defaults={str(key): value for key, value in defaults_raw.items()},
+            project_defaults_base_dir=config_path.parent,
         )
     build_raw = raw.get("build") or {}
     if not isinstance(build_raw, Mapping):
@@ -171,10 +186,10 @@ def resolve_build_config(
     cli: BuildConfigPatch,
 ) -> BuildConfig:
     """Resolve the effective build config with documented precedence."""
-    recipe_path = recipe_arg or project.default_recipe
+    recipe_path = recipe_arg or project.default_book
     if recipe_path is None:
         raise ConfigError(
-            "no recipe provided; pass a recipe path or set default_recipe "
+            "no book provided; pass a book path or set default_book "
             "in papercrown.yaml"
         )
     if not recipe_path.is_absolute():
@@ -364,7 +379,7 @@ def _optional_str(value: object, *, key: str, source: str) -> str | None:
 
 def _resolve_config_path(value: object, config_path: Path) -> Path:
     if not isinstance(value, str) or not value.strip():
-        raise ConfigError(f"{config_path}: default_recipe must be a path string")
+        raise ConfigError(f"{config_path}: default_book must be a path string")
     path = Path(value)
     if not path.is_absolute():
         path = config_path.parent / path
@@ -376,7 +391,11 @@ def _merge_patches(
     override: BuildConfigPatch,
 ) -> BuildConfigPatch:
     return BuildConfigPatch(
-        default_recipe=override.default_recipe or base.default_recipe,
+        default_book=override.default_book or base.default_book,
+        project_defaults=override.project_defaults or base.project_defaults,
+        project_defaults_base_dir=(
+            override.project_defaults_base_dir or base.project_defaults_base_dir
+        ),
         target=override.target or base.target,
         scope=override.scope or base.scope,
         profile=override.profile or base.profile,

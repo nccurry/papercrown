@@ -12,12 +12,12 @@ from papercrown.project.recipe import load_recipe
 def test_init_project_creates_verifiable_titled_starter(tmp_path):
     result = init_project(tmp_path, force=True)
 
-    recipe = load_recipe(tmp_path / "recipes" / "my-paper-crown-book.yaml")
+    recipe = load_recipe(tmp_path / "book.yaml")
     manifest = build_manifest(recipe)
 
     assert recipe.title == "My Paper Crown Book"
     assert recipe.cover.enabled is True
-    assert [matter.type for matter in recipe.front_matter] == ["title-page"]
+    assert recipe.chapters[0].kind == "toc"
     assert [chapter.title for chapter in manifest.chapters] == [
         "Overview",
         "Running the Campaign",
@@ -37,7 +37,7 @@ def test_init_project_uses_title_theme_book_type_vault_and_cover_options(tmp_pat
         force=True,
     )
 
-    recipe = load_recipe(tmp_path / "recipes" / "the-pinlight-colony.yaml")
+    recipe = load_recipe(tmp_path / "book.yaml")
     manifest = build_manifest(recipe)
 
     assert recipe.title == "The Pinlight Colony"
@@ -59,16 +59,16 @@ def test_init_project_can_use_external_absolute_vault(tmp_path):
 
     init_project(project, vault=shared_vault, force=True)
 
-    recipe = load_recipe(project / "recipes" / "my-paper-crown-book.yaml")
+    recipe = load_recipe(project / "book.yaml")
 
     assert recipe.vaults["content"].path == shared_vault.resolve()
     assert (shared_vault / "Overview.md").is_file()
 
 
-def test_empty_init_prints_next_steps_without_default_recipe(tmp_path):
+def test_empty_init_prints_next_steps_without_default_book(tmp_path):
     result = init_project(tmp_path, empty=True, force=True)
 
     config = (tmp_path / "papercrown.yaml").read_text(encoding="utf-8")
 
-    assert "# default_recipe: recipes/my-book.yaml" in config
-    assert "Create recipes/my-book.yaml" in result.next_steps[0]
+    assert "# default_book: book.yaml" in config
+    assert "Create book.yaml" in result.next_steps[0]

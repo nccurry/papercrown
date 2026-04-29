@@ -1,10 +1,10 @@
 title: Paper Crown
 subtitle: A framework for building TTRPG material
 cover_eyebrow: Documentation
-output_dir: ../site
+output_dir: site
 output_name: papercrown-docs
-art_dir: ../assets
-theme_dir: ../themes
+art_dir: assets
+theme_dir: themes
 theme: papercrown-docs
 
 metadata:
@@ -119,9 +119,11 @@ page_damage:
     - splash
 
 vaults:
-  docs: ../vault
+  docs: vault
 
-chapters:
+contents:
+  - kind: toc
+    title: Contents
   - kind: file
     style: overview
     title: Overview
