@@ -20,6 +20,7 @@ from papercrown.project.recipe.models import (
     Recipe,
     RecipeError,
     SplashSpec,
+    TtrpgArtSpec,
     VaultSpec,
     _filename_slug,
     _image_treatments_mapping,
@@ -151,6 +152,9 @@ def load_recipe(path: str | Path) -> Recipe:
     page_damage_raw = raw.get("page_damage")
     if page_damage_raw is not None and not isinstance(page_damage_raw, Mapping):
         raise RecipeError("page_damage must be a mapping when provided")
+    ttrpg_art_raw = raw.get("ttrpg_art")
+    if ttrpg_art_raw is not None and not isinstance(ttrpg_art_raw, Mapping):
+        raise RecipeError("ttrpg_art must be a mapping when provided")
 
     splashes_raw = raw.get("splashes") or []
     if not isinstance(splashes_raw, list):
@@ -220,6 +224,7 @@ def load_recipe(path: str | Path) -> Recipe:
         ornaments=OrnamentsSpec.from_dict(ornaments_raw),
         cover=CoverSpec.from_dict(cover_raw),
         splashes=splashes,
+        ttrpg_art=TtrpgArtSpec.from_dict(ttrpg_art_raw),
         fillers=FillersSpec.from_dict(fillers_raw),
         page_damage=PageDamageSpec.from_dict(page_damage_raw),
         chapters=chapters,

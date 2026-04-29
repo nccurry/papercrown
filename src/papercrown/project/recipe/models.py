@@ -581,6 +581,90 @@ class SplashSpec:
 
 
 # ---------------------------------------------------------------------------
+# TTRPG typed-block inline art spec
+# ---------------------------------------------------------------------------
+
+
+# Supported placements for recipe-configured art inside typed TTRPG blocks.
+TTRPG_ART_PLACEMENTS = {
+    "header-right",
+}
+
+
+@dataclass(frozen=True)
+class TtrpgArtAssetSpec:
+    """One recipe-configured image attached to a typed TTRPG block."""
+
+    type: str
+    id: str
+    art: str
+    placement: str = "header-right"
+
+    @classmethod
+    def from_dict(
+        cls,
+        raw: Mapping[str, object],
+        *,
+        index: int,
+    ) -> TtrpgArtAssetSpec:
+        """Parse one ``ttrpg_art.assets`` entry."""
+        loc = f"ttrpg_art.assets[{index}]"
+        block_type = _ttrpg_art_slug(raw.get("type"), loc=f"{loc}.type")
+        block_id = _ttrpg_art_slug(raw.get("id"), loc=f"{loc}.id")
+        art = _str_or_none(raw.get("art"))
+        if art is None:
+            raise RecipeError(f"{loc}.art is required")
+        placement = _str_or_none(raw.get("placement")) or "header-right"
+        if placement not in TTRPG_ART_PLACEMENTS:
+            raise RecipeError(
+                f"{loc}.placement must be one of {sorted(TTRPG_ART_PLACEMENTS)}"
+            )
+        return cls(
+            type=block_type,
+            id=block_id,
+            art=art,
+            placement=placement,
+        )
+
+
+@dataclass(frozen=True)
+class TtrpgArtSpec:
+    """Recipe-level inline art attached to typed TTRPG blocks."""
+
+    enabled: bool = False
+    assets: list[TtrpgArtAssetSpec] = field(default_factory=list)
+
+    @classmethod
+    def from_dict(cls, raw: Mapping[str, object] | None) -> TtrpgArtSpec:
+        """Build typed-block art settings from the optional recipe mapping."""
+        if not raw:
+            return cls()
+        assets_raw = raw.get("assets") or []
+        if not isinstance(assets_raw, list):
+            raise RecipeError("ttrpg_art.assets must be a list when provided")
+        assets: list[TtrpgArtAssetSpec] = []
+        seen: set[tuple[str, str]] = set()
+        for i, asset_raw in enumerate(assets_raw):
+            if not isinstance(asset_raw, Mapping):
+                raise RecipeError(
+                    f"ttrpg_art.assets[{i}] must be a mapping, "
+                    f"got {type(asset_raw).__name__}"
+                )
+            asset = TtrpgArtAssetSpec.from_dict(asset_raw, index=i)
+            key = (asset.type, asset.id)
+            if key in seen:
+                raise RecipeError(
+                    f"ttrpg_art.assets[{i}] duplicates {asset.type}.{asset.id}"
+                )
+            seen.add(key)
+            assets.append(asset)
+        return cls(
+            enabled=bool(raw.get("enabled", True)),
+            assets=assets,
+        )
+
+
+# ---------------------------------------------------------------------------
 # Source reference: vault:relative/path.md
 # ---------------------------------------------------------------------------
 
@@ -1023,6 +1107,7 @@ class Recipe:
     art_dir_override: Path | None = None  # optional override for art assets
     ornaments: OrnamentsSpec = field(default_factory=OrnamentsSpec)
     splashes: list[SplashSpec] = field(default_factory=list)
+    ttrpg_art: TtrpgArtSpec = field(default_factory=TtrpgArtSpec)
     fillers: FillersSpec = field(default_factory=FillersSpec)
     page_damage: PageDamageSpec = field(default_factory=PageDamageSpec)
 
@@ -1220,6 +1305,14 @@ def _slug_or_none(value: object, *, loc: str) -> str | None:
             f"{loc}.slug must contain only letters, numbers, underscores, and hyphens"
         )
     return slug
+
+
+def _ttrpg_art_slug(value: object, *, loc: str) -> str:
+    """Return a slug key for a typed-block art type or object id."""
+    raw = _str_or_none(value)
+    if raw is None:
+        raise RecipeError(f"{loc} is required")
+    return _filename_slug(raw)
 
 
 def _inch_value(value: object, *, loc: str) -> float:
