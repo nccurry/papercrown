@@ -1,25 +1,27 @@
 # Recipes
 
 A recipe is the contract between your Markdown vaults and the generated book.
-It declares the title, output location, theme, vault roots, and chapter order.
+It declares the title, output location, theme, vault roots, chapter order,
+generated matter, and optional art systems.
 
-:::: {.handout #recipe-contract title="Recipe Contract" tags="docs,recipe,authoring"}
+:::: {.handout #recipe-contract title="Recipe Contract" tags="docs,recipe"}
 ### Recipe Contract
 
-Recipes are intentionally explicit: paths, vault aliases, chapter order, themes,
-front matter, back matter, covers, and optional art systems all live in YAML so
-builds are repeatable.
+Recipes are intentionally explicit. Paths, vault aliases, chapter order,
+themes, front matter, back matter, covers, and optional art systems live in
+YAML so builds are repeatable.
 ::::
 
-Minimal recipe:
+## How to Use It
+
+Start with one vault, one theme, and one chapter. Paths are resolved relative to
+the recipe file unless they are absolute.
 
 ```yaml
 title: Starfall Field Guide
 output_dir: ../output
 output_name: starfall-field-guide
 theme: clean-srd
-image_treatments:
-  ornament: ink-blend
 
 vaults:
   rules: ../vault
@@ -30,15 +32,18 @@ chapters:
     source: rules:Primer.md
 ```
 
-Paths are resolved relative to the recipe file. Vaults, art directories, theme
-directories, and output directories do not need to live inside the package or
-repository.
+Content paths are not assumed to be inside the package or repository. Vaults,
+art directories, theme directories, and output directories can all point at
+arbitrary filesystem locations.
 
-## Legal front matter
+Use `papercrown manifest` whenever a recipe changes. The manifest shows exactly
+which files, chapters, themes, and art references Paper Crown resolved before
+you spend time rendering.
 
-Use `metadata.license` with generated `front_matter` when a book needs a
-visible license, attribution, compatibility, or support notice near the
-beginning of the PDF and static web export:
+## How to Adapt It
+
+Add generated matter when a book needs standard pages around the hand-written
+chapters:
 
 ```yaml
 metadata:
@@ -53,7 +58,7 @@ front_matter:
 ```
 
 Generated front matter appears before the table of contents in combined book
-outputs. Generated back matter still appears after the assembled chapters.
+outputs. Generated back matter appears after the assembled chapters.
 
 Art lives under `art_dir` and follows the [art contract](Art.md). The contract
 defines canonical folders, filename shapes, automatic filler roles, and the
@@ -61,8 +66,13 @@ checks performed by `papercrown art audit`.
 
 Images render without filters or blend modes by default. Use
 `image_treatments` only when a role needs an intentional treatment such as
-`ink-blend` for decorative line art. See the [art contract](Art.md) for
-supported roles and presets.
+`ink-blend` for decorative line art.
+
+## How It Works
+
+Paper Crown loads the recipe into typed models, resolves each vault alias to a
+real folder, then turns the chapter list into a render manifest. The manifest
+is the handoff between project configuration and the assembly/render pipeline.
 
 Automatic filler policy also lives in the recipe. Source Markdown may opt out
 of a local marker, but the recipe decides which marker families exist, which
@@ -82,41 +92,22 @@ fillers:
       art: fillers/plate/filler-plate-general-bridge-01.png
       shape: plate
       height: 3.25in
-  markers:
-    terminal:
-      chapter_slot: chapter-end
-      class_slot: class-end
-    source_boundary:
-      sequence_slot: section-end
-    subclass:
-      slot: subclass-end
-    headings:
-      - chapter: frames
-        slot: frame-family-end
-        heading_level: 1
-        slot_kind: frame-family
-        skip_first: true
-        context: frame
 ```
 
-If `fillers.markers` is omitted, Paper Crown uses the historical default marker
-policy. Set a marker family such as `terminal`, `source_boundary`, or
-`subclass` to `false` to disable it, or use `headings: []` to disable generated
-heading markers. `fillers.art_dir` is optional; when present, filler asset
-paths are resolved under `art_dir / fillers.art_dir`.
+If `fillers.markers` is omitted, Paper Crown uses the default marker policy.
+Set a marker family such as `terminal`, `source_boundary`, or `subclass` to
+`false` to disable it, or use `headings: []` to disable generated heading
+markers.
 
-Chapters can disable generated filler markers with `fillers: false`. Individual
-items inside a `sequence` can disable the source-boundary marker after that
-source with `filler: false`.
+Chapters can disable generated filler markers with `fillers: false`.
+Individual items inside a `sequence` can disable the source-boundary marker
+after that source with `filler: false`.
 
 Common chapter shapes:
 
 - `file`: one Markdown source becomes one chapter.
 - `sequence`: several Markdown sources are assembled in order.
 - `folder`, `catalog`, and related kinds support larger structured books.
-
-Use `papercrown manifest` to inspect exactly which files and chapters a recipe
-resolves before rendering.
 
 ## Compact Field Reference
 

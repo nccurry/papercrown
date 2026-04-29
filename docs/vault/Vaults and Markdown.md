@@ -1,7 +1,46 @@
-# Markdown Components
+# Vaults and Markdown
 
-Paper Crown supports ordinary Markdown first. Use these optional components
-when a rule needs to stand out as a reusable game object rather than a plain
+:::: {.flourish-note .flourish-folder}
+Vaults are named content roots. They let a recipe assemble Markdown from one or
+more folders without moving the source into Paper Crown or into the repository.
+::::
+
+Markdown stays ordinary first. Paper Crown adds source resolution, Obsidian-style
+links, embedded images, and optional TTRPG components when a book needs richer
+game objects.
+
+<div class="art-rule art-rule-folder" aria-hidden="true"></div>
+
+## How to Use It
+
+Give each content root an alias in the recipe:
+
+```yaml
+vaults:
+  rules: ../vault
+  setting: ../setting-notes
+```
+
+Then refer to files through that alias:
+
+```yaml
+chapters:
+  - kind: file
+    title: Primer
+    source: rules:Primer.md
+```
+
+Keep source Markdown readable outside Paper Crown. Headings, lists, tables,
+code blocks, images, and links should still make sense in your editor.
+
+## How to Adapt It
+
+Use multiple vaults when a book combines reusable rules, campaign-specific
+setting material, or local overrides. Use a single vault when the project is a
+small book and the extra naming would not buy clarity.
+
+Paper Crown supports ordinary Markdown first. Use optional components when a
+rule needs to stand out as a reusable game object rather than a plain
 paragraph, list, or table.
 
 ## Rules Widgets
@@ -80,3 +119,10 @@ Supported metadata fields are:
 
 Keep metadata short. Put rulings, exceptions, examples, and table text in the
 body of the widget.
+
+## How It Works
+
+During assembly, Paper Crown resolves each chapter source through the configured
+vault aliases, exports Obsidian-style content when needed, normalizes headings,
+and runs the Markdown filters used by both PDF and web renderers. The same
+assembled HTML then flows into the selected theme.

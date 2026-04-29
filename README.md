@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="docs/assets/logos/logo-papercrown-readme.png" alt="Paper Crown mascot logo" width="420">
+  <img src="docs/assets/logos/logo-papercrown-readme.svg" alt="Paper Crown mascot logo" width="420">
 </p>
 
 <h1 align="center">Paper Crown</h1>

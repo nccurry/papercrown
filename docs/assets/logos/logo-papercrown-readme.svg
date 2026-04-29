@@ -1,0 +1,58 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 760 300" role="img" aria-label="Wonky folded paper crown mascot">
+  <defs>
+    <linearGradient id="paper" x1="0" y1="28" x2="1" y2="1">
+      <stop offset="0" stop-color="#fff0bc"/>
+      <stop offset="0.47" stop-color="#dfaa54"/>
+      <stop offset="1" stop-color="#8d542a"/>
+    </linearGradient>
+    <linearGradient id="fold" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#fff8d5"/>
+      <stop offset="1" stop-color="#b26e32"/>
+    </linearGradient>
+    <linearGradient id="night" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#130f0c"/>
+      <stop offset="0.62" stop-color="#20150f"/>
+      <stop offset="1" stop-color="#081c24"/>
+    </linearGradient>
+    <filter id="warm-shadow" x="-15%" y="-15%" width="130%" height="140%">
+      <feDropShadow dx="0" dy="12" stdDeviation="10" flood-color="#120b08" flood-opacity="0.48"/>
+    </filter>
+  </defs>
+
+  <rect x="92" y="28" width="576" height="238" rx="38" fill="url(#night)"/>
+  <path d="M112 217 C205 192 234 237 331 207 C421 180 474 221 571 181 C610 166 641 166 666 177 L668 266 L92 266 L92 232 C99 227 105 222 112 217 Z" fill="#102a35" opacity="0.72"/>
+  <path d="M133 90 C228 34 345 34 438 70 C502 96 578 89 639 54" fill="none" stroke="#c99038" stroke-width="3" opacity="0.46"/>
+  <path d="M141 103 C236 48 350 49 441 84 C504 109 574 101 632 70" fill="none" stroke="#f4d17a" stroke-width="1.5" opacity="0.45"/>
+
+  <g fill="#f4c95f" opacity="0.95">
+    <path d="M153 157 l10 4 l-10 4 l-4 10 l-4 -10 l-10 -4 l10 -4 l4 -10 Z"/>
+    <path d="M609 91 l8 3 l-8 3 l-3 8 l-3 -8 l-8 -3 l8 -3 l3 -8 Z"/>
+    <path d="M559 205 l6 2 l-6 2 l-2 6 l-2 -6 l-6 -2 l6 -2 l2 -6 Z"/>
+    <circle cx="198" cy="210" r="3"/>
+    <circle cx="538" cy="72" r="2.6"/>
+    <circle cx="584" cy="182" r="2.4"/>
+  </g>
+
+  <g filter="url(#warm-shadow)" stroke="#17110d" stroke-width="7" stroke-linejoin="round" stroke-linecap="round">
+    <path d="M226 198 L318 72 L382 165 L436 54 L491 166 L575 82 L551 207 C461 236 337 236 239 211 Z" fill="url(#paper)"/>
+    <path d="M226 198 C315 232 458 242 551 207 L535 239 C448 263 344 262 251 231 Z" fill="#d69039"/>
+    <path d="M318 72 L340 204 L382 165 L388 221 L436 54 L442 219 L491 166 L516 213 L575 82" fill="none" stroke="#775029" stroke-width="5" opacity="0.5"/>
+    <path d="M251 231 L318 205 L356 246 Z" fill="#f7d376"/>
+    <path d="M356 246 L388 218 L437 250 Z" fill="#c77b32"/>
+    <path d="M437 250 L515 212 L535 239 Z" fill="#f0bc5b"/>
+    <path d="M264 201 C345 228 466 230 536 207" fill="none" stroke="#5e351c" stroke-width="4" opacity="0.55"/>
+  </g>
+
+  <g fill="#0b0806">
+    <ellipse cx="337" cy="169" rx="12" ry="18" transform="rotate(-8 337 169)"/>
+    <ellipse cx="454" cy="169" rx="12" ry="18" transform="rotate(6 454 169)"/>
+    <path d="M389 188 L421 177 L414 204 Z"/>
+  </g>
+
+  <g stroke="#f0c45a" stroke-linecap="round" stroke-linejoin="round" fill="none" opacity="0.8">
+    <path d="M165 151 H77 M165 151 L133 127 M165 151 L132 178" stroke-width="7"/>
+    <path d="M595 151 H683 M595 151 L627 127 M595 151 L628 178" stroke-width="7"/>
+    <path d="M206 86 l16 -19 M206 86 l-20 -12 M206 86 l-11 24" stroke-width="5"/>
+    <path d="M534 108 l19 -15 M534 108 l24 8 M534 108 l2 -27" stroke-width="5"/>
+  </g>
+</svg>
