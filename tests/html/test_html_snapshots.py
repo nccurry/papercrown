@@ -201,8 +201,7 @@ class TestLuaFilterRendering:
 
     def test_callouts_render_pc_contract(self):
         html = pipeline.render_markdown_to_html(
-            "> [!tip]- Table Hint\n"
-            "> Keep the clue in front of the players.\n",
+            "> [!tip]- Table Hint\n> Keep the clue in front of the players.\n",
             _make_ctx_for_book(),
         )
 
@@ -285,7 +284,7 @@ class TestLuaFilterRendering:
 
     def test_procedure_widget_can_use_first_heading_as_title(self):
         html = pipeline.render_markdown_to_html(
-            ":::: {.pc-procedure usage=\"Downtime\"}\n"
+            ':::: {.pc-procedure usage="Downtime"}\n'
             "### Recovery Turn\n\n"
             "1. Clear temporary conditions.\n"
             "2. Advance clocks.\n"

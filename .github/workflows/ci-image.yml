@@ -12,7 +12,7 @@ on:
       - 'scripts/deps-install.ps1'
       - 'scripts/bootstrap.sh'
       - 'scripts/bootstrap.ps1'
-      - 'tools/sync_dependencies.py'
+      - 'scripts/sync_dependencies.py'
       - '.github/workflows/ci-image.yml'
   workflow_dispatch:
 

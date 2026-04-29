@@ -426,8 +426,7 @@ def _render_section_divider(
     # the listed classes/id/data-attrs.
     running_title_attr = _headings.attribute_value(running_title)
     divider_attrs = (
-        f'.section-divider data-chapter-name="{running_title_attr}" '
-        f'id="div-{slug}"'
+        f'.section-divider data-chapter-name="{running_title_attr}" id="div-{slug}"'
     )
     return (
         "\n\n"

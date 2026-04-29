@@ -12,6 +12,8 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[1]
 # Directory where the package build writes wheels and source distributions.
 DIST = ROOT / "dist"
+# Source package root used to detect stale files copied from old build output.
+SOURCE_PACKAGE = ROOT / "src" / "papercrown"
 # SPDX license expression expected in the built wheel metadata.
 LICENSE_EXPRESSION = "AGPL-3.0-or-later"
 # Wheel member suffixes that prove runtime resources were packaged.
@@ -40,6 +42,18 @@ def _latest_wheel() -> Path:
     return wheels[-1]
 
 
+def _unexpected_package_files(names: set[str]) -> list[str]:
+    """Return package files in the wheel that are absent from ``src/papercrown``."""
+    unexpected: list[str] = []
+    for name in names:
+        if not name.startswith("papercrown/") or name.endswith("/"):
+            continue
+        relative = Path(*name.split("/")[1:])
+        if not (SOURCE_PACKAGE / relative).is_file():
+            unexpected.append(name)
+    return sorted(unexpected)
+
+
 def main() -> int:
     """Return non-zero when the built wheel is missing expected metadata."""
     wheel = _latest_wheel()
@@ -50,6 +64,7 @@ def main() -> int:
             for suffix in REQUIRED_SUFFIXES
             if not any(name.endswith(suffix) for name in names)
         ]
+        unexpected = _unexpected_package_files(names)
         entry_points_name = next(
             name for name in names if name.endswith(".dist-info/entry_points.txt")
         )
@@ -67,10 +82,16 @@ def main() -> int:
         missing.append("console_scripts.papercrown")
     if "papercrown-verify" in scripts:
         missing.append("removed console_scripts.papercrown-verify")
-    if missing:
+    if missing or unexpected:
         print("Package verification failed:")
-        for item in missing:
-            print(f"  {item}")
+        if missing:
+            print("  Missing or invalid:")
+            for item in missing:
+                print(f"    {item}")
+        if unexpected:
+            print("  Unexpected package files:")
+            for item in unexpected:
+                print(f"    {item}")
         return 1
     print(f"Package verification passed: {wheel.name}")
     return 0

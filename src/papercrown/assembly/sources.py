@@ -14,9 +14,7 @@ from papercrown.assembly.headings import (
 from papercrown.project.vaults import VaultIndex, WikilinkTarget
 
 # Matches a line containing only an Obsidian embed and optional indentation.
-_OBSIDIAN_EMBED_LINE_RE = re.compile(
-    r"^(?P<indent>\s*)!\[\[(?P<target>[^\]]+)\]\]\s*$"
-)
+_OBSIDIAN_EMBED_LINE_RE = re.compile(r"^(?P<indent>\s*)!\[\[(?P<target>[^\]]+)\]\]\s*$")
 
 
 def first_heading_text(text: str) -> str | None:

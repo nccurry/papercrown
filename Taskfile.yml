@@ -69,13 +69,20 @@ tasks:
 
   package:
     desc: Build source and wheel distributions.
+    deps: [package:clean]
     cmds:
       - uv build
 
   package:wheel:
     desc: Build the wheel distribution used by PR checks.
+    deps: [package:clean]
     cmds:
       - uv build --wheel
+
+  package:clean:
+    desc: Remove generated package build artifacts.
+    cmds:
+      - uv run python scripts/clean_package.py
 
   package:verify:
     desc: Verify built distributions include runtime resources and CLI metadata.

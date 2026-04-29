@@ -1067,8 +1067,6 @@ class Recipe:
         return self.cache_dir_override or (self.generated_root / "cache")
 
 
-
-
 def _filename_slug(value: str) -> str:
     """Return a filesystem-friendly lowercase slug for generated folders."""
     slug = re.sub(r"[^A-Za-z0-9_-]+", "-", value.strip().lower())

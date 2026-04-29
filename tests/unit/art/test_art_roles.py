@@ -387,9 +387,7 @@ def test_art_audit_allows_flat_art_library(tmp_path: Path):
     Image.new("RGBA", (128, 128), (0, 0, 0, 0)).save(
         art / "filler-spot-general-token-01.png"
     )
-    Image.new("RGB", (128, 128), (255, 255, 255)).save(
-        art / "bg-dockside-alias.png"
-    )
+    Image.new("RGB", (128, 128), (255, 255, 255)).save(art / "bg-dockside-alias.png")
     Image.new("RGB", (128, 128), (255, 255, 255)).save(
         art / "scene-01-port-meridian-arrival.png"
     )

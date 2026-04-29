@@ -3,7 +3,13 @@
 from __future__ import annotations
 
 import os
+from importlib.metadata import PackageNotFoundError, version
 from pathlib import Path
+
+try:
+    __version__ = version("papercrown")
+except PackageNotFoundError:
+    __version__ = "0+unknown"
 
 if os.name == "nt":
     os.environ.setdefault("GIO_USE_VFS", "local")

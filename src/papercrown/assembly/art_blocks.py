@@ -28,7 +28,9 @@ def render_filler_slot(slot: ChapterFillerSlot) -> str:
         f'data-chapter="{attribute_value(slot.chapter_slug)}"',
     ]
     if slot.preferred_asset_id:
-        attrs.append(f'data-preferred-filler="{attribute_value(slot.preferred_asset_id)}"')
+        attrs.append(
+            f'data-preferred-filler="{attribute_value(slot.preferred_asset_id)}"'
+        )
     if slot.section_slug:
         attrs.append(f'data-section="{attribute_value(slot.section_slug)}"')
     if slot.section_title:
