@@ -7,7 +7,7 @@ from pathlib import Path
 
 import pytest
 
-from papercrown.app.options import BuildScope, OutputProfile
+from papercrown.build.options import BuildScope, OutputProfile
 from papercrown.project.manifest import build_manifest
 from papercrown.project.recipe import load_recipe
 from papercrown.system import verify as verifier

@@ -10,7 +10,7 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
 
-from papercrown.app.options import BuildScope, OutputProfile
+from papercrown.build.options import BuildScope, OutputProfile
 from papercrown.project import paths
 from papercrown.project.manifest import Manifest, build_manifest
 from papercrown.project.recipe import RecipeError, load_recipe

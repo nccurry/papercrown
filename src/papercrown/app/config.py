@@ -10,7 +10,7 @@ from typing import Any
 
 import yaml
 
-from papercrown.app.options import (
+from papercrown.build.options import (
     BuildScope,
     BuildTarget,
     DraftMode,

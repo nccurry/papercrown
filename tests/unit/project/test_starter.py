@@ -4,9 +4,9 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from papercrown.app.starter import StarterBookType, init_project
 from papercrown.project.manifest import build_manifest
 from papercrown.project.recipe import load_recipe
+from papercrown.project.starter import StarterBookType, init_project
 
 
 def test_init_project_creates_verifiable_titled_starter(tmp_path):

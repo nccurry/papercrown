@@ -509,10 +509,10 @@ def _plan_filler_decisions(
             section_title=measurement.section_title,
         )
         rank = _placement_rank(measurement, placement, index)
-        key = (measurement.page_number, placement.mode)
-        current = by_page_mode.get(key)
+        page_mode_key = (measurement.page_number, placement.mode)
+        current = by_page_mode.get(page_mode_key)
         if current is None or rank < current[0]:
-            by_page_mode[key] = (rank, placement)
+            by_page_mode[page_mode_key] = (rank, placement)
             used_assets = _placement_use_map(
                 [item[1] for item in by_page_mode.values()]
             )
@@ -525,8 +525,8 @@ def _plan_filler_decisions(
     }
     revised_decisions: list[FillerDecision] = []
     for decision in decisions:
-        key = (decision.measurement.slot_id, decision.measurement.page_number)
-        placed = placement_by_slot.get(key)
+        slot_key = (decision.measurement.slot_id, decision.measurement.page_number)
+        placed = placement_by_slot.get(slot_key)
         if decision.asset is not None and placed is None:
             revised_decisions.append(
                 FillerDecision(

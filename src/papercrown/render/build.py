@@ -8,7 +8,9 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import cast
 
-from papercrown.app.options import (
+from papercrown.assembly import markdown as assembly
+from papercrown.assembly import ttrpg
+from papercrown.build.options import (
     BuildScope,
     BuildTarget,
     DraftMode,
@@ -16,8 +18,6 @@ from papercrown.app.options import (
     PageDamageMode,
     PaginationMode,
 )
-from papercrown.assembly import markdown as assembly
-from papercrown.assembly import ttrpg
 from papercrown.media import images
 from papercrown.media import page_damage as page_damage_module
 from papercrown.project import paths, themes

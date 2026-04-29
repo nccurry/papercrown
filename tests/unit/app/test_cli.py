@@ -9,15 +9,17 @@ from PIL import Image
 from typer.main import get_command
 from typer.testing import CliRunner
 
-from papercrown.app import cli
+from papercrown.app import actions, cli
 from papercrown.app.config import parse_jobs
-from papercrown.app.options import (
+from papercrown.build.options import (
     BuildScope,
     DraftMode,
     OutputProfile,
     PageDamageMode,
     PaginationMode,
 )
+from papercrown.render.build import BuildResult
+from papercrown.system.export import Tools
 
 runner = CliRunner()
 
@@ -87,7 +89,7 @@ def test_deps_check_is_a_subcommand(monkeypatch):
             assert strict is False
             return 0
 
-    monkeypatch.setattr(cli, "check_dependencies", lambda manifest: FakeReport())
+    monkeypatch.setattr(actions, "check_dependencies", lambda manifest: FakeReport())
 
     result = runner.invoke(cli.app, ["deps", "check"])
 
@@ -103,7 +105,7 @@ def test_main_returns_typer_exit_code(monkeypatch):
         def exit_code(self, *, strict: bool = False) -> int:
             return 1
 
-    monkeypatch.setattr(cli, "check_dependencies", lambda manifest: FakeReport())
+    monkeypatch.setattr(actions, "check_dependencies", lambda manifest: FakeReport())
 
     assert cli.main(["deps", "check"]) == 1
 
@@ -122,7 +124,7 @@ def test_old_action_aliases_are_not_accepted():
 
 
 def test_cli_patch_tracks_explicit_page_damage_mode():
-    patch = cli._build_cli_patch(page_damage=PageDamageMode.PROOF)
+    patch = actions.build_cli_patch(page_damage=PageDamageMode.PROOF)
 
     assert patch.page_damage_mode is PageDamageMode.PROOF
 
@@ -246,7 +248,7 @@ def test_verify_command_uses_config_scope_and_profile(tmp_path, monkeypatch):
         captured["argv"] = argv
         return 0
 
-    monkeypatch.setattr(cli.verify_mod, "main", fake_verify_main)
+    monkeypatch.setattr(actions.verify_mod, "main", fake_verify_main)
 
     result = runner.invoke(cli.app, ["verify", "--config", str(config_path)])
 
@@ -395,18 +397,18 @@ def _patch_build_side_effects(tmp_path, monkeypatch):
         captured["tools"] = tools
         captured["request"] = request
         out_pdf.write_bytes(b"%PDF")
-        return cli.BuildResult(produced=[out_pdf], skipped=[], export_map={})
+        return BuildResult(produced=[out_pdf], skipped=[], export_map={})
 
     monkeypatch.setattr(
-        cli,
+        actions,
         "discover_tools",
-        lambda *, require_weasyprint=True: cli.Tools(
+        lambda *, require_weasyprint=True: Tools(
             pandoc="pandoc",
             obsidian_export="obsidian-export",
             weasyprint="weasyprint",
         ),
     )
-    monkeypatch.setattr(cli, "build_outputs", fake_build_outputs)
+    monkeypatch.setattr(actions, "build_outputs", fake_build_outputs)
     return captured
 
 

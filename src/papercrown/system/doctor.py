@@ -9,8 +9,8 @@ from typing import Any
 
 from PIL import Image, UnidentifiedImageError
 
-from papercrown.app.options import BuildTarget
 from papercrown.art.audit import audit_recipe_art
+from papercrown.build.options import BuildTarget
 from papercrown.media.images import diagnose_image
 from papercrown.project.manifest import Manifest, classify_filler_art_path
 from papercrown.project.recipe import (

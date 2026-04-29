@@ -8,7 +8,7 @@ from types import SimpleNamespace
 
 from PIL import Image
 
-from papercrown.app.options import OutputProfile
+from papercrown.build.options import OutputProfile
 from papercrown.media import page_damage
 from papercrown.media.page_damage import (
     page_has_surface_art,

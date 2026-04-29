@@ -14,7 +14,7 @@ from papercrown.app.config import (
     parse_jobs,
     resolve_build_config,
 )
-from papercrown.app.options import (
+from papercrown.build.options import (
     BuildScope,
     BuildTarget,
     DraftMode,

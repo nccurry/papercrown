@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from papercrown.app.options import OutputProfile, profile_filename_suffix
+from papercrown.build.options import OutputProfile, profile_filename_suffix
 from papercrown.project.manifest import Chapter
 from papercrown.project.recipe import Recipe
 

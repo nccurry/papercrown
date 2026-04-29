@@ -7,8 +7,8 @@ from pathlib import Path
 
 import pytest
 
-from papercrown.app.options import OutputProfile
 from papercrown.assembly import ttrpg
+from papercrown.build.options import OutputProfile
 from papercrown.project import themes
 from papercrown.project.manifest import Chapter
 from papercrown.project.recipe import (
@@ -344,7 +344,10 @@ def test_combined_book_treats_pre_toc_content_as_content(tmp_path):
                 "# Legal & Support\n\nLegal copy.",
                 "<!-- papercrown-toc: Contents | -->",
                 "# First Chapter\n\nMain content.",
-                "<!-- papercrown-generated: appendix-index | Game Object Index | generated -->",
+                (
+                    "<!-- papercrown-generated: appendix-index | "
+                    "Game Object Index | generated -->"
+                ),
             ]
         ),
         recipe,

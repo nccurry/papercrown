@@ -1,4 +1,4 @@
-"""Typed build options shared by the CLI, builder, paths, and verifier."""
+"""Typed build options shared by builders, paths, diagnostics, and the CLI."""
 
 from __future__ import annotations
 

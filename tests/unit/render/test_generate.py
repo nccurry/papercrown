@@ -13,7 +13,12 @@ from types import SimpleNamespace
 import pytest
 from PIL import Image
 
-from papercrown.app.options import BuildScope, DraftMode, OutputProfile, PageDamageMode
+from papercrown.build.options import (
+    BuildScope,
+    DraftMode,
+    OutputProfile,
+    PageDamageMode,
+)
 from papercrown.media.fillers import FillerDecision, FillerMeasurement, FillerPlacement
 from papercrown.project import paths, resources
 from papercrown.project.manifest import (

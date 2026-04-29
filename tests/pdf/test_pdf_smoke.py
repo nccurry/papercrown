@@ -9,8 +9,8 @@ from urllib.parse import quote
 import pytest
 from PIL import Image
 
-from papercrown.app.options import DraftMode, OutputProfile, PaginationMode
 from papercrown.assembly import markdown as assembly
+from papercrown.build.options import DraftMode, OutputProfile, PaginationMode
 from papercrown.project.manifest import (
     PageDamageAsset,
     PageDamageCatalog,

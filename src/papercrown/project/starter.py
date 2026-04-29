@@ -80,7 +80,7 @@ def init_project(
         files = _empty_files()
         next_steps = [
             "Create book.yaml or set default_book in papercrown.yaml.",
-            "Run papercrown manifest --config papercrown.yaml after adding a recipe.",
+            "Run papercrown manifest --config papercrown.yaml after adding a book.",
         ]
     else:
         book_type_enum = _coerce_book_type(book_type)

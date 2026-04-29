@@ -13,7 +13,7 @@ from urllib.parse import unquote, urlparse
 
 from PIL import Image, ImageOps, UnidentifiedImageError
 
-from papercrown.app.options import OutputProfile
+from papercrown.build.options import OutputProfile
 from papercrown.system.diagnostics import Diagnostic, DiagnosticSeverity
 
 # Raster image extensions that can be inspected or optimized by Pillow.

@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from PIL import Image
 
-from papercrown.app.options import OutputProfile
+from papercrown.build.options import OutputProfile
 from papercrown.media import images
 from papercrown.media.images import (
     diagnose_image,
