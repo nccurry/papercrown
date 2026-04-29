@@ -316,6 +316,69 @@ class TestKindFile:
         assert combat.source_boundary_filler_slot == "section-end"
         assert combat.filler_slots[0].context == "combat"
 
+    def test_fillers_attach_multiple_marker_slots(self, mini_workspace):
+        ws, base, _ = mini_workspace
+        (base / "Combat.md").write_text("# Combat\nIntro.\n", encoding="utf-8")
+        rp = _write_recipe(
+            ws,
+            """
+            title: Test
+            vaults:
+              base: base
+            fillers:
+              enabled: true
+              slots:
+                chapter-end:
+                  min_space: 0.65in
+                  max_space: 8.5in
+                  shapes: [tailpiece, spot]
+                chapter-bottom-band:
+                  min_space: 2.4in
+                  max_space: 4.25in
+                  shapes: [bottom-band]
+                section-end:
+                  min_space: 1.2in
+                  max_space: 8.5in
+                  shapes: [spot]
+                section-bottom-band:
+                  min_space: 2.4in
+                  max_space: 4.25in
+                  shapes: [bottom-band]
+              markers:
+                terminal:
+                  chapter_slots: [chapter-end, chapter-bottom-band]
+                source_boundary:
+                  sequence_slots: [section-end, section-bottom-band]
+            chapters:
+              - kind: file
+                title: Setting
+                source: base:Setting.md
+              - kind: sequence
+                style: equipment
+                title: Combat
+                sources:
+                  - base:Combat.md
+                  - title: Weapons & Armor
+                    source: base:Backgrounds.md
+            """,
+        )
+
+        m = build_manifest(load_recipe(rp))
+
+        setting = m.find_chapter("setting")
+        assert setting is not None
+        assert [slot.slot for slot in setting.filler_slots] == [
+            "chapter-end",
+            "chapter-bottom-band",
+        ]
+        combat = m.find_chapter("combat")
+        assert combat is not None
+        assert combat.source_boundary_filler_slots == [
+            "section-end",
+            "section-bottom-band",
+        ]
+        assert combat.source_boundary_filler_slot == "section-end"
+
     def test_filler_marker_policy_can_disable_generated_markers(
         self,
         mini_workspace,

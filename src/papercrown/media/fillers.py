@@ -375,7 +375,7 @@ def write_filler_report(
     undersized = [
         opportunity
         for opportunity in (
-            _missing_art_opportunity(decision)
+            _missing_art_opportunity(decision, catalog)
             for decision in decisions
             if decision.reason == "no size-matched context asset"
         )
@@ -411,7 +411,7 @@ def write_missing_art_report(
         recipe_title=recipe_title,
     )
     raw_opportunities = [
-        _missing_art_opportunity(decision)
+        _missing_art_opportunity(decision, catalog)
         for decision in decisions
         if _is_missing_art_decision(decision)
     ]
@@ -472,7 +472,8 @@ def _plan_filler_decisions(
     *,
     recipe_title: str,
 ) -> tuple[list[FillerPlacement], list[FillerDecision]]:
-    by_page: dict[int, tuple[tuple[int, float, int], FillerPlacement]] = {}
+    by_page_mode: dict[tuple[int, str], tuple[tuple[int, float, int], FillerPlacement]]
+    by_page_mode = {}
     decisions: list[FillerDecision] = []
     used_assets: dict[str, FillerAssetUse] = {}
     for index, measurement in enumerate(measure_slots(document)):
@@ -508,12 +509,15 @@ def _plan_filler_decisions(
             section_title=measurement.section_title,
         )
         rank = _placement_rank(measurement, placement, index)
-        current = by_page.get(measurement.page_number)
+        key = (measurement.page_number, placement.mode)
+        current = by_page_mode.get(key)
         if current is None or rank < current[0]:
-            by_page[measurement.page_number] = (rank, placement)
-            used_assets = _placement_use_map([item[1] for item in by_page.values()])
+            by_page_mode[key] = (rank, placement)
+            used_assets = _placement_use_map(
+                [item[1] for item in by_page_mode.values()]
+            )
     placements = _finalize_placement_reuse(
-        [by_page[page_number][1] for page_number in sorted(by_page)]
+        [by_page_mode[key][1] for key in sorted(by_page_mode)]
     )
     placement_by_slot = {
         (placement.slot_id, placement.page_number): placement
@@ -852,12 +856,13 @@ def _is_missing_art_decision(decision: FillerDecision) -> bool:
 
 def _missing_art_opportunity(
     decision: FillerDecision,
+    catalog: FillerCatalog,
 ) -> MissingFillerOpportunity | None:
     measurement = decision.measurement
     usable = max(0.0, measurement.available_in - TOP_SAFETY_IN - BOTTOM_SAFETY_IN)
     if usable <= 0:
         return None
-    shape, prefix, note = _recommended_missing_shape(usable)
+    shape, prefix, note = _recommended_missing_shape(measurement, catalog, usable)
     context = _missing_context(measurement)
     subject = _slug_part(
         measurement.section_slug or measurement.chapter_slug or measurement.slot_id
@@ -878,7 +883,18 @@ def _missing_art_opportunity(
     )
 
 
-def _recommended_missing_shape(usable_in: float) -> tuple[str, str, str]:
+def _recommended_missing_shape(
+    measurement: FillerMeasurement,
+    catalog: FillerCatalog,
+    usable_in: float,
+) -> tuple[str, str, str]:
+    slot = catalog.slots.get(measurement.slot_name)
+    if slot is not None and slot.shapes == ["bottom-band"]:
+        return (
+            "bottom-band art",
+            "filler-bottom",
+            "transparent or softly fading top edge, stamped from the page bottom",
+        )
     if usable_in < 2.0:
         return (
             "spot/object filler",

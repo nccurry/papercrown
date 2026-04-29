@@ -194,8 +194,18 @@ FILLER_SHAPES = {
 class FillerTerminalMarkersSpec:
     """Recipe policy for terminal chapter filler markers."""
 
-    chapter_slot: str | None = "chapter-end"
-    class_slot: str | None = "class-end"
+    chapter_slots: tuple[str, ...] = ("chapter-end",)
+    class_slots: tuple[str, ...] = ("class-end",)
+
+    @property
+    def chapter_slot(self) -> str | None:
+        """Backward-compatible first terminal chapter marker slot."""
+        return self.chapter_slots[0] if self.chapter_slots else None
+
+    @property
+    def class_slot(self) -> str | None:
+        """Backward-compatible first terminal class marker slot."""
+        return self.class_slots[0] if self.class_slots else None
 
     @classmethod
     def from_raw(cls, raw: object, *, loc: str) -> FillerTerminalMarkersSpec:
@@ -203,19 +213,19 @@ class FillerTerminalMarkersSpec:
         if raw is None:
             return cls()
         if raw is False:
-            return cls(chapter_slot=None, class_slot=None)
+            return cls(chapter_slots=(), class_slots=())
         if not isinstance(raw, Mapping):
             raise RecipeError(f"{loc} must be a mapping or false")
         return cls(
-            chapter_slot=_marker_slot_or_none(
-                raw.get("chapter_slot", raw.get("chapter")),
+            chapter_slots=_marker_slots_or_none(
+                _marker_raw_value(raw, "chapter_slots", "chapter_slot", "chapter"),
                 default="chapter-end",
-                loc=f"{loc}.chapter_slot",
+                loc=f"{loc}.chapter_slots",
             ),
-            class_slot=_marker_slot_or_none(
-                raw.get("class_slot", raw.get("class")),
+            class_slots=_marker_slots_or_none(
+                _marker_raw_value(raw, "class_slots", "class_slot", "class"),
                 default="class-end",
-                loc=f"{loc}.class_slot",
+                loc=f"{loc}.class_slots",
             ),
         )
 
@@ -224,7 +234,12 @@ class FillerTerminalMarkersSpec:
 class FillerSourceBoundaryMarkersSpec:
     """Recipe policy for sequence source-boundary filler markers."""
 
-    sequence_slot: str | None = "section-end"
+    sequence_slots: tuple[str, ...] = ("section-end",)
+
+    @property
+    def sequence_slot(self) -> str | None:
+        """Backward-compatible first source-boundary marker slot."""
+        return self.sequence_slots[0] if self.sequence_slots else None
 
     @classmethod
     def from_raw(cls, raw: object, *, loc: str) -> FillerSourceBoundaryMarkersSpec:
@@ -232,16 +247,22 @@ class FillerSourceBoundaryMarkersSpec:
         if raw is None:
             return cls()
         if raw is False:
-            return cls(sequence_slot=None)
+            return cls(sequence_slots=())
         if isinstance(raw, str):
-            return cls(sequence_slot=_required_marker_slot(raw, loc=loc))
+            return cls(sequence_slots=(_required_marker_slot(raw, loc=loc),))
         if not isinstance(raw, Mapping):
             raise RecipeError(f"{loc} must be a mapping, string, or false")
         return cls(
-            sequence_slot=_marker_slot_or_none(
-                raw.get("sequence_slot", raw.get("sequence", raw.get("slot"))),
+            sequence_slots=_marker_slots_or_none(
+                _marker_raw_value(
+                    raw,
+                    "sequence_slots",
+                    "sequence_slot",
+                    "sequence",
+                    "slot",
+                ),
                 default="section-end",
-                loc=f"{loc}.sequence_slot",
+                loc=f"{loc}.sequence_slots",
             )
         )
 
@@ -250,7 +271,12 @@ class FillerSourceBoundaryMarkersSpec:
 class FillerSubclassMarkersSpec:
     """Recipe policy for subclass source-end filler markers."""
 
-    slot: str | None = "subclass-end"
+    slots: tuple[str, ...] = ("subclass-end",)
+
+    @property
+    def slot(self) -> str | None:
+        """Backward-compatible first subclass marker slot."""
+        return self.slots[0] if self.slots else None
 
     @classmethod
     def from_raw(cls, raw: object, *, loc: str) -> FillerSubclassMarkersSpec:
@@ -258,16 +284,16 @@ class FillerSubclassMarkersSpec:
         if raw is None:
             return cls()
         if raw is False:
-            return cls(slot=None)
+            return cls(slots=())
         if isinstance(raw, str):
-            return cls(slot=_required_marker_slot(raw, loc=loc))
+            return cls(slots=(_required_marker_slot(raw, loc=loc),))
         if not isinstance(raw, Mapping):
             raise RecipeError(f"{loc} must be a mapping, string, or false")
         return cls(
-            slot=_marker_slot_or_none(
-                raw.get("slot"),
+            slots=_marker_slots_or_none(
+                _marker_raw_value(raw, "slots", "slot"),
                 default="subclass-end",
-                loc=f"{loc}.slot",
+                loc=f"{loc}.slots",
             )
         )
 
@@ -1113,6 +1139,35 @@ def _marker_slot_or_none(
     if value is False:
         return None
     return _required_marker_slot(value, loc=loc)
+
+
+def _marker_raw_value(raw: Mapping[str, object], *keys: str) -> object:
+    """Return the first present marker config value from a mapping."""
+    for key in keys:
+        if key in raw:
+            return raw[key]
+    return None
+
+
+def _marker_slots_or_none(
+    value: object,
+    *,
+    default: str,
+    loc: str,
+) -> tuple[str, ...]:
+    """Parse optional marker slot names where false disables the marker."""
+    if value is None:
+        return (default,)
+    if value is False:
+        return ()
+    if isinstance(value, list):
+        slots: list[str] = []
+        for i, item in enumerate(value):
+            if item is False:
+                raise RecipeError(f"{loc}[{i}] must be a marker slot name")
+            slots.append(_required_marker_slot(item, loc=f"{loc}[{i}]"))
+        return tuple(slots)
+    return (_required_marker_slot(value, loc=loc),)
 
 
 def _string_list_or_one(value: object) -> list[str]:

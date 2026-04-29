@@ -784,6 +784,54 @@ class TestLoadRecipeErrors:
         assert recipe.chapters[0].fillers_enabled is False
         assert recipe.chapters[0].sources[0].filler_enabled is False
 
+    def test_fillers_parse_multi_slot_marker_policy(self, tmp_path):
+        p = _write_recipe(
+            tmp_path,
+            """
+            title: X
+            vaults:
+              custom: vault
+            fillers:
+              enabled: true
+              slots:
+                chapter-end:
+                  min_space: 0.65in
+                  max_space: 5.5in
+                  shapes: [tailpiece]
+              markers:
+                terminal:
+                  chapter_slots: [chapter-end, chapter-bottom-band]
+                  class_slots: [class-end, class-bottom-band]
+                source_boundary:
+                  sequence_slots: [section-end, section-bottom-band]
+                subclass:
+                  slots: [subclass-end, subclass-bottom-band]
+            chapters:
+              - kind: file
+                source: custom:Foo.md
+        """,
+        )
+
+        recipe = load_recipe(p)
+
+        assert recipe.fillers.markers.terminal.chapter_slots == (
+            "chapter-end",
+            "chapter-bottom-band",
+        )
+        assert recipe.fillers.markers.terminal.chapter_slot == "chapter-end"
+        assert recipe.fillers.markers.terminal.class_slots == (
+            "class-end",
+            "class-bottom-band",
+        )
+        assert recipe.fillers.markers.source_boundary.sequence_slots == (
+            "section-end",
+            "section-bottom-band",
+        )
+        assert recipe.fillers.markers.subclass.slots == (
+            "subclass-end",
+            "subclass-bottom-band",
+        )
+
     def test_missing_chapters(self, tmp_path):
         p = _write_recipe(
             tmp_path,

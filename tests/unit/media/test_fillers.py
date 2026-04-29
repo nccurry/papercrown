@@ -1023,6 +1023,65 @@ def test_one_filler_max_per_page_is_enforced(tmp_path, monkeypatch):
     assert placements[0].page_number == 4
 
 
+def test_flow_and_bottom_bleed_modes_each_get_page_winner(tmp_path, monkeypatch):
+    catalog = FillerCatalog(
+        enabled=True,
+        slots={
+            "chapter-end": FillerSlot(
+                name="chapter-end",
+                min_space_in=1.2,
+                max_space_in=8.5,
+                shapes=["plate"],
+            ),
+            "chapter-bottom-band": FillerSlot(
+                name="chapter-bottom-band",
+                min_space_in=2.4,
+                max_space_in=4.25,
+                shapes=["bottom-band"],
+            ),
+        },
+        assets=[
+            FillerAsset(
+                "plate",
+                tmp_path / "filler-plate-general-deck.png",
+                "plate",
+                3.6,
+            ),
+            FillerAsset(
+                "bottom",
+                tmp_path / "filler-bottom-general-dock.png",
+                "bottom-band",
+                2.4,
+            ),
+        ],
+    )
+    monkeypatch.setattr(
+        fillers_mod,
+        "measure_slots",
+        lambda document: [
+            FillerMeasurement(
+                slot_id="slot-flow",
+                slot_name="chapter-end",
+                chapter_slug="languages",
+                page_number=4,
+                available_in=4.0,
+            ),
+            FillerMeasurement(
+                slot_id="slot-bottom",
+                slot_name="chapter-bottom-band",
+                chapter_slug="languages",
+                page_number=4,
+                available_in=4.0,
+            ),
+        ],
+    )
+
+    placements = plan_fillers(object(), catalog, recipe_title="Book")
+
+    assert {placement.mode for placement in placements} == {"flow", "bottom-bleed"}
+    assert {placement.asset.id for placement in placements} == {"plate", "bottom"}
+
+
 def test_reuse_is_marked_and_warned_only_when_unavoidable(tmp_path, monkeypatch):
     catalog = FillerCatalog(
         enabled=True,
@@ -1209,6 +1268,53 @@ def test_missing_art_report_summarizes_unfilled_slots(tmp_path, monkeypatch):
     assert "recommended=wide transparent filler" in text
     assert "`filler-wide-frame-baseline-human-01.png`" in text
     assert "transparent background" in text
+
+
+def test_missing_art_report_recommends_bottom_art_for_bottom_slots(
+    tmp_path,
+    monkeypatch,
+):
+    catalog = FillerCatalog(
+        enabled=True,
+        slots={
+            "chapter-bottom-band": FillerSlot(
+                name="chapter-bottom-band",
+                min_space_in=2.4,
+                max_space_in=4.25,
+                shapes=["bottom-band"],
+            )
+        },
+        assets=[],
+    )
+    monkeypatch.setattr(
+        fillers_mod,
+        "measure_slots",
+        lambda document: [
+            FillerMeasurement(
+                slot_id="slot-bottom",
+                slot_name="chapter-bottom-band",
+                chapter_slug="combat",
+                page_number=22,
+                available_in=5.0,
+                section_slug="combat",
+                section_title="Combat",
+                context="combat",
+            )
+        ],
+    )
+    out = tmp_path / "book.missing-art.md"
+
+    fillers_mod.write_missing_art_report(
+        out,
+        object(),
+        catalog,
+        recipe_title="Book",
+    )
+
+    text = out.read_text(encoding="utf-8")
+    assert "recommended=bottom-band art" in text
+    assert "`filler-bottom-combat-combat-01.png`" in text
+    assert "stamped from the page bottom" in text
 
 
 def test_filler_report_lists_reuse_and_undersized_opportunities(

@@ -684,6 +684,26 @@ class TestAssembleChapterMarkdown:
         assert "#filler-subclass-end-mage-beta-level-3" in out
         assert out.count("#filler-subclass-end-mage-") == 2
 
+    def test_subclass_end_can_emit_multiple_slot_families(self, tmp_path):
+        source = _write(
+            tmp_path / "Mage" / "Subclasses" / "Alpha" / "Level 3.md",
+            "# Level 3\nAlpha subclass text.\n",
+        )
+        ch = Chapter(
+            title="Mage",
+            slug="mage",
+            style="class",
+            source_files=[source],
+            subclass_filler_slots=["subclass-end", "subclass-bottom-band"],
+        )
+
+        out = assembly.assemble_chapter_markdown(ch)
+
+        assert "#filler-subclass-end-mage-alpha-level-3" in out
+        assert "#filler-subclass-bottom-band-mage-alpha-level-3" in out
+        assert 'data-slot="subclass-end"' in out
+        assert 'data-slot="subclass-bottom-band"' in out
+
     def test_original_class_chapters_do_not_emit_subclass_end_slots(self, tmp_path):
         source = _write(
             tmp_path / "Mage" / "Subclasses" / "Alpha" / "Level 3.md",
@@ -731,6 +751,32 @@ class TestAssembleChapterMarkdown:
         assert 'data-filler-context="combat"' in out
         assert 'data-filler-context="equipment"' in out
         assert "filler-section-end-combat-prototype-artifacts" not in out
+
+    def test_sequence_source_boundaries_can_emit_multiple_slot_families(
+        self,
+        tmp_path,
+    ):
+        combat = _write(tmp_path / "System" / "Combat.md", "# Combat\nIntro.\n")
+        weapons = _write(
+            tmp_path / "Items" / "Weapons & Armor.md",
+            "# Weapons & Armor\nGear.\n",
+        )
+        ch = Chapter(
+            title="Combat",
+            slug="combat",
+            style="equipment",
+            source_files=[combat, weapons],
+            source_titles=[None, "Weapons & Armor"],
+            source_boundary_filler_slots=["section-end", "section-bottom-band"],
+        )
+
+        out = assembly.assemble_chapter_markdown(ch)
+
+        assert "#filler-section-end-combat-system-combat" in out
+        assert "#filler-section-bottom-band-combat-system-combat" in out
+        assert 'data-slot="section-end"' in out
+        assert 'data-slot="section-bottom-band"' in out
+        assert out.count('data-slot-kind="source-boundary"') == 2
 
     def test_sequence_source_boundary_filler_can_be_disabled_per_source(
         self,

@@ -99,32 +99,34 @@ def assemble_chapter_markdown(
             include_fillers
             and chapter.fillers_enabled
             and chapter.style == "class"
-            and chapter.subclass_filler_slot
+            and chapter.subclass_filler_slots
             and _source_filler_enabled(chapter, i)
             and not chapter.slug.startswith("original-")
             and _is_subclass_source(src)
         ):
-            body = _append_source_end_filler_slot(
-                body,
-                chapter,
-                src,
-                slot_name=chapter.subclass_filler_slot,
-            )
+            for slot_name in chapter.subclass_filler_slots:
+                body = _append_source_end_filler_slot(
+                    body,
+                    chapter,
+                    src,
+                    slot_name=slot_name,
+                )
         if (
             include_fillers
             and chapter.fillers_enabled
-            and chapter.source_boundary_filler_slot
+            and chapter.source_boundary_filler_slots
             and _source_filler_enabled(chapter, i)
             and i < len(chapter.source_files) - 1
         ):
-            body = _append_source_end_filler_slot(
-                body,
-                chapter,
-                src,
-                slot_name=chapter.source_boundary_filler_slot,
-                slot_kind="source-boundary",
-                context=_source_filler_context(chapter, src, source_title),
-            )
+            for slot_name in chapter.source_boundary_filler_slots:
+                body = _append_source_end_filler_slot(
+                    body,
+                    chapter,
+                    src,
+                    slot_name=slot_name,
+                    slot_kind="source-boundary",
+                    context=_source_filler_context(chapter, src, source_title),
+                )
         if include_source_markers:
             body = _inject_source_file_marker(body, src)
         if i == 0:

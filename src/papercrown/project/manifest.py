@@ -187,7 +187,9 @@ class Chapter:
     source_strip_related: list[bool] = field(default_factory=list)
     source_filler_enabled: list[bool] = field(default_factory=list)
     source_boundary_filler_slot: str | None = None
+    source_boundary_filler_slots: list[str] = field(default_factory=list)
     subclass_filler_slot: str | None = "subclass-end"
+    subclass_filler_slots: list[str] = field(default_factory=list)
     heading_filler_markers: list[ChapterHeadingFillerMarker] | None = None
     fillers_enabled: bool = True
     children: list[Chapter] = field(default_factory=list)
@@ -205,6 +207,21 @@ class Chapter:
     # Combined-book table-of-contents depth for this top-level chapter.
     # None means use the assembly default.
     toc_depth: int | None = None
+
+    def __post_init__(self) -> None:
+        """Normalize singular filler marker fields into list form."""
+        if not self.source_boundary_filler_slots and self.source_boundary_filler_slot:
+            self.source_boundary_filler_slots = [self.source_boundary_filler_slot]
+        elif (
+            self.source_boundary_filler_slots
+            and self.source_boundary_filler_slot is None
+        ):
+            self.source_boundary_filler_slot = self.source_boundary_filler_slots[0]
+
+        if not self.subclass_filler_slots and self.subclass_filler_slot:
+            self.subclass_filler_slots = [self.subclass_filler_slot]
+        elif self.subclass_filler_slots and self.subclass_filler_slot is None:
+            self.subclass_filler_slot = self.subclass_filler_slots[0]
 
     @property
     def is_leaf(self) -> bool:
@@ -656,37 +673,43 @@ def _attach_chapter_filler_slots(
             candidate.heading_filler_markers = []
             if not candidate.fillers_enabled:
                 candidate.source_boundary_filler_slot = None
+                candidate.source_boundary_filler_slots = []
                 candidate.subclass_filler_slot = None
+                candidate.subclass_filler_slots = []
                 continue
             candidate.heading_filler_markers = _chapter_heading_filler_markers(
                 candidate,
                 markers.headings,
                 catalog,
             )
-            if candidate.subclass_filler_slot not in catalog.slots:
-                candidate.subclass_filler_slot = None
+            candidate.subclass_filler_slots = _valid_marker_slots(
+                candidate.subclass_filler_slots,
+                catalog,
+            )
+            candidate.subclass_filler_slot = (
+                candidate.subclass_filler_slots[0]
+                if candidate.subclass_filler_slots
+                else None
+            )
             if not candidate.source_files:
                 continue
-            if candidate.source_boundary_filler_slot not in catalog.slots:
-                candidate.source_boundary_filler_slot = None
+            candidate.source_boundary_filler_slots = _valid_marker_slots(
+                candidate.source_boundary_filler_slots,
+                catalog,
+            )
+            candidate.source_boundary_filler_slot = (
+                candidate.source_boundary_filler_slots[0]
+                if candidate.source_boundary_filler_slots
+                else None
+            )
             if _skip_terminal_filler_slot(candidate):
                 continue
-            slot_name = (
-                markers.terminal.class_slot
-                if candidate.style == "class"
-                else markers.terminal.chapter_slot
+            slot_names = _terminal_marker_slots(
+                candidate,
+                markers,
+                catalog,
             )
-            if slot_name is None:
-                continue
-            if slot_name not in catalog.slots:
-                if (
-                    slot_name == markers.terminal.class_slot
-                    and markers.terminal.chapter_slot in catalog.slots
-                ):
-                    slot_name = markers.terminal.chapter_slot
-                else:
-                    continue
-            if slot_name is None:
+            if not slot_names:
                 continue
             preferred_asset = None
             if candidate.tailpiece_path is not None:
@@ -698,20 +721,40 @@ def _attach_chapter_filler_slots(
                         f"chapter {candidate.slug!r}: tailpiece has no matching "
                         "filler asset"
                     )
-            candidate.filler_slots.append(
-                ChapterFillerSlot(
-                    id=f"filler-{slot_name}-{candidate.slug}",
-                    slot=slot_name,
-                    chapter_slug=candidate.slug,
-                    preferred_asset_id=(
-                        preferred_asset.id if preferred_asset is not None else None
-                    ),
-                    section_slug=candidate.slug,
-                    section_title=candidate.title,
-                    slot_kind="terminal",
-                    context=_chapter_filler_context(candidate),
+            for slot_name in slot_names:
+                candidate.filler_slots.append(
+                    ChapterFillerSlot(
+                        id=f"filler-{slot_name}-{candidate.slug}",
+                        slot=slot_name,
+                        chapter_slug=candidate.slug,
+                        preferred_asset_id=(
+                            preferred_asset.id if preferred_asset is not None else None
+                        ),
+                        section_slug=candidate.slug,
+                        section_title=candidate.title,
+                        slot_kind="terminal",
+                        context=_chapter_filler_context(candidate),
+                    )
                 )
-            )
+
+
+def _valid_marker_slots(slots: list[str], catalog: FillerCatalog) -> list[str]:
+    """Return configured marker slots that exist in the filler catalog."""
+    return [slot for slot in slots if slot in catalog.slots]
+
+
+def _terminal_marker_slots(
+    chapter: Chapter,
+    markers: FillerMarkersSpec,
+    catalog: FillerCatalog,
+) -> list[str]:
+    """Return terminal marker slots for a chapter, preserving class fallback."""
+    if chapter.style == "class":
+        class_slots = _valid_marker_slots(list(markers.terminal.class_slots), catalog)
+        if class_slots:
+            return class_slots
+        return _valid_marker_slots(list(markers.terminal.chapter_slots), catalog)
+    return _valid_marker_slots(list(markers.terminal.chapter_slots), catalog)
 
 
 def _chapter_heading_filler_markers(
@@ -821,6 +864,7 @@ def _build_file_chapter(
         break_ornament_path=_art_path(recipe, spec.break_ornament),
         source_files=[src],
         subclass_filler_slot=recipe.fillers.markers.subclass.slot,
+        subclass_filler_slots=list(recipe.fillers.markers.subclass.slots),
         fillers_enabled=spec.fillers_enabled,
         style=spec.style,
         individual_pdf=spec.individual_pdfs,
@@ -858,6 +902,7 @@ def _build_catalog_chapter(
         headpiece_path=_art_path(recipe, spec.headpiece),
         break_ornament_path=_art_path(recipe, spec.break_ornament),
         subclass_filler_slot=recipe.fillers.markers.subclass.slot,
+        subclass_filler_slots=list(recipe.fillers.markers.subclass.slots),
         fillers_enabled=spec.fillers_enabled,
         style=spec.style,
         individual_pdf=spec.individual_pdfs,
@@ -921,6 +966,7 @@ def _build_composite_chapter(
         break_ornament_path=_art_path(recipe, spec.break_ornament),
         source_files=files,
         subclass_filler_slot=recipe.fillers.markers.subclass.slot,
+        subclass_filler_slots=list(recipe.fillers.markers.subclass.slots),
         fillers_enabled=spec.fillers_enabled,
         style=spec.style,
         individual_pdf=spec.individual_pdfs,
@@ -1016,6 +1062,7 @@ def _build_classes_catalog_chapters(
             break_ornament_path=_art_path(recipe, spec.break_ornament),
             source_files=files,
             subclass_filler_slot=recipe.fillers.markers.subclass.slot,
+            subclass_filler_slots=list(recipe.fillers.markers.subclass.slots),
             fillers_enabled=spec.fillers_enabled,
             style=spec.child_style,
             individual_pdf=spec.individual_pdfs,
@@ -1044,6 +1091,7 @@ def _build_classes_catalog_chapters(
         break_ornament_path=_art_path(recipe, spec.break_ornament),
         children=children,
         subclass_filler_slot=recipe.fillers.markers.subclass.slot,
+        subclass_filler_slots=list(recipe.fillers.markers.subclass.slots),
         fillers_enabled=spec.fillers_enabled,
         style=spec.style,
         full_page_sections=list(spec.full_page_sections),
@@ -1075,6 +1123,7 @@ def _build_group_chapter(
         headpiece_path=_art_path(recipe, spec.headpiece),
         break_ornament_path=_art_path(recipe, spec.break_ornament),
         subclass_filler_slot=recipe.fillers.markers.subclass.slot,
+        subclass_filler_slots=list(recipe.fillers.markers.subclass.slots),
         fillers_enabled=spec.fillers_enabled,
         style=spec.style,
         full_page_sections=list(spec.full_page_sections),
@@ -1129,7 +1178,11 @@ def _build_sequence_chapter(
         source_boundary_filler_slot=(
             recipe.fillers.markers.source_boundary.sequence_slot
         ),
+        source_boundary_filler_slots=list(
+            recipe.fillers.markers.source_boundary.sequence_slots
+        ),
         subclass_filler_slot=recipe.fillers.markers.subclass.slot,
+        subclass_filler_slots=list(recipe.fillers.markers.subclass.slots),
         fillers_enabled=spec.fillers_enabled,
         style=spec.style,
         individual_pdf=spec.individual_pdfs,
@@ -1170,6 +1223,7 @@ def _build_folder_chapter(
         break_ornament_path=_art_path(recipe, spec.break_ornament),
         source_files=files,
         subclass_filler_slot=recipe.fillers.markers.subclass.slot,
+        subclass_filler_slots=list(recipe.fillers.markers.subclass.slots),
         fillers_enabled=spec.fillers_enabled,
         style=spec.style,
         individual_pdf=spec.individual_pdfs,
