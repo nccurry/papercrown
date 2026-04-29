@@ -12,7 +12,6 @@ from papercrown.project.recipe.models import (
     PAGE_DAMAGE_SKIP_TARGETS,
     SPLASH_PLACEMENTS,
     SPLASH_TARGETS,
-    TTRPG_ART_PLACEMENTS,
     BookMetadataSpec,
     ChapterSpec,
     CoverSpec,
@@ -32,8 +31,6 @@ from papercrown.project.recipe.models import (
     SourceItem,
     SourceRef,
     SplashSpec,
-    TtrpgArtAssetSpec,
-    TtrpgArtSpec,
     VaultSpec,
 )
 
@@ -67,9 +64,6 @@ __all__ = [
     "SPLASH_PLACEMENTS",
     "SPLASH_TARGETS",
     "SplashSpec",
-    "TTRPG_ART_PLACEMENTS",
-    "TtrpgArtAssetSpec",
-    "TtrpgArtSpec",
     "VaultSpec",
     "_load_recipe_mapping",
     "load_recipe",

@@ -67,7 +67,6 @@ IMAGE_TREATMENT_ROLE_SELECTORS: dict[str, tuple[str, ...]] = {
     "splash-inline": (".splash-img",),
     "splash-page": (".splash-page-art",),
     "spot": (".art-spot img", ".class-opening-spot img", ".background-spot img"),
-    "ttrpg-art": (".pc-ttrpg-header-art img",),
     "diagram": (".art-diagram img", ".diagram img"),
     "screenshot": (".art-screenshot img", ".screenshot img"),
     "map": (".art-map img", ".map img"),

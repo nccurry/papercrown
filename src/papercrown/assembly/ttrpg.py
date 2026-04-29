@@ -9,7 +9,7 @@ from dataclasses import dataclass, field
 from pathlib import Path
 
 from papercrown.project.manifest import slugify
-from papercrown.project.recipe import MatterSpec, Recipe, TtrpgArtAssetSpec
+from papercrown.project.recipe import MatterSpec, Recipe
 from papercrown.system.diagnostics import Diagnostic, DiagnosticSeverity
 
 # Custom div block types that Paper Crown upgrades into TTRPG components.
@@ -105,8 +105,6 @@ def prepare_book_markdown(
 ) -> PreparedMarkdown:
     """Normalize typed blocks, resolve refs, and add generated matter."""
     normalized, registry, diagnostics = _normalize_ttrpg_blocks(markdown)
-    normalized, art_diagnostics = _inject_ttrpg_art(normalized, recipe, registry)
-    diagnostics.extend(art_diagnostics)
     normalized, ref_diagnostics = _resolve_ttrpg_refs(normalized, registry)
     diagnostics.extend(ref_diagnostics)
     if include_generated_matter:
@@ -421,91 +419,6 @@ def _resolve_ttrpg_refs(
 
         out.append(_REF_RE.sub(replace, line))
     return "\n".join(out), diagnostics
-
-
-def _inject_ttrpg_art(
-    markdown: str,
-    recipe: Recipe,
-    registry: ObjectRegistry,
-) -> tuple[str, list[Diagnostic]]:
-    """Insert configured art blocks inside matching typed TTRPG blocks."""
-    spec = getattr(recipe, "ttrpg_art", None)
-    if spec is None or not spec.enabled or not spec.assets:
-        return markdown, []
-
-    diagnostics: list[Diagnostic] = []
-    lookup = {(asset.type, asset.id): asset for asset in spec.assets}
-    available = {(obj.type, obj.id) for obj in registry.objects}
-    resolved_art: dict[tuple[str, str], Path] = {}
-
-    for asset in spec.assets:
-        key = (asset.type, asset.id)
-        if key not in available:
-            diagnostics.append(
-                Diagnostic(
-                    code="ttrpg-art.unmatched",
-                    severity=DiagnosticSeverity.WARNING,
-                    message=(
-                        f"configured art for @{asset.type}.{asset.id} "
-                        "did not match any typed block"
-                    ),
-                    path=recipe.recipe_path,
-                )
-            )
-            continue
-        art_path = (recipe.art_dir / asset.art).resolve()
-        if not art_path.is_file():
-            diagnostics.append(
-                Diagnostic(
-                    code="ttrpg-art.missing",
-                    severity=DiagnosticSeverity.ERROR,
-                    message=f"configured art for @{asset.type}.{asset.id} is missing",
-                    path=art_path,
-                )
-            )
-            continue
-        resolved_art[key] = art_path
-
-    if not resolved_art:
-        return markdown, diagnostics
-
-    out: list[str] = []
-    for line in markdown.splitlines():
-        out.append(line)
-        key = _ttrpg_block_key_from_opening(line)
-        if key is None:
-            continue
-        asset = lookup.get(key)
-        art_path = resolved_art.get(key)
-        if asset is None or art_path is None:
-            continue
-        out.extend(["", _render_ttrpg_art_block(asset, art_path), ""])
-    return "\n".join(out), diagnostics
-
-
-def _ttrpg_block_key_from_opening(line: str) -> tuple[str, str] | None:
-    """Return the typed-block key encoded in a normalized opening fence."""
-    if "pc-ttrpg-block" not in line:
-        return None
-    type_match = re.search(r'data-ttrpg-type="([^"]+)"', line)
-    id_match = re.search(r'data-ttrpg-id="([^"]+)"', line)
-    if type_match is None or id_match is None:
-        return None
-    return type_match.group(1), id_match.group(1)
-
-
-def _render_ttrpg_art_block(asset: TtrpgArtAssetSpec, art_path: Path) -> str:
-    """Render one configured typed-block art image as an in-flow float."""
-    placement_class = f".pc-ttrpg-art-{asset.placement}"
-    type_class = f".pc-ttrpg-{asset.type}-art"
-    target_attr = f'data-ttrpg-art-for="{asset.type}.{asset.id}"'
-    return (
-        "::: {.pc-ttrpg-header-art .pc-ttrpg-inline-art "
-        f"{placement_class} {type_class} {target_attr}"
-        "}\n"
-        f"![](<{art_path.as_posix()}>){{.pc-ttrpg-header-art-img}}\n"
-        ":::"
-    )
 
 
 def _with_generated_matter(

@@ -17,8 +17,6 @@ from papercrown.project.recipe import (
     MatterSpec,
     Recipe,
     RecipeError,
-    TtrpgArtAssetSpec,
-    TtrpgArtSpec,
     load_recipe,
 )
 from papercrown.project.resources import CORE_CSS_FILES, TEMPLATE_FILE
@@ -72,11 +70,6 @@ def test_recipe_loads_theme_metadata_and_generated_matter(tmp_path):
           keywords: [rules, fantasy]
           credits:
             art: Example Artist
-        ttrpg_art:
-          assets:
-            - type: power
-              id: Flame Dart
-              art: power-flame-dart.png
         front_matter: [title-page, credits]
         back_matter:
           - type: appendix-index
@@ -96,8 +89,6 @@ def test_recipe_loads_theme_metadata_and_generated_matter(tmp_path):
     assert recipe.metadata.authors == ["Example Author"]
     assert recipe.metadata.keywords == ["rules", "fantasy"]
     assert recipe.metadata.credits["art"] == ["Example Artist"]
-    assert recipe.ttrpg_art.enabled is True
-    assert recipe.ttrpg_art.assets[0].id == "flame-dart"
     assert [matter.type for matter in recipe.front_matter] == ["title-page", "credits"]
     assert recipe.back_matter[0].title == "Game Object Index"
 
@@ -337,44 +328,6 @@ def test_typed_blocks_resolve_refs_and_generate_index(tmp_path):
     assert "## Powers" in prepared.markdown
     assert "- [Mara Voss](#npc-mara-voss) (rival, knight)" in prepared.markdown
     assert "- [Advantage](#rule-advantage)" in prepared.markdown
-
-
-def test_typed_block_art_injects_inside_matching_block(tmp_path):
-    recipe = _recipe(tmp_path)
-    art_dir = tmp_path / "assets" / "art"
-    art_dir.mkdir(parents=True)
-    (art_dir / "power-flame-dart.png").write_bytes(b"fake image")
-    recipe.art_dir_override = art_dir
-    recipe.ttrpg_art = TtrpgArtSpec(
-        enabled=True,
-        assets=[
-            TtrpgArtAssetSpec(
-                type="power",
-                id="flame-dart",
-                art="power-flame-dart.png",
-            )
-        ],
-    )
-    markdown = textwrap.dedent(
-        """
-        ::: {.power title="Flame Dart" tags="thermal"}
-        ## Flame Dart
-
-        Deal thermal damage at range.
-        :::
-        """
-    ).lstrip()
-
-    prepared = ttrpg.prepare_book_markdown(
-        markdown,
-        recipe,
-        include_generated_matter=False,
-    )
-
-    assert prepared.diagnostics == []
-    assert 'data-ttrpg-art-for="power.flame-dart"' in prepared.markdown
-    assert ".pc-ttrpg-header-art" in prepared.markdown
-    assert f"<{(art_dir / 'power-flame-dart.png').as_posix()}>" in prepared.markdown
 
 
 def test_combined_book_orders_front_matter_before_manual_toc(tmp_path):
