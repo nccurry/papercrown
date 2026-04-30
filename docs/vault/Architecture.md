@@ -37,10 +37,13 @@ Pages, GitLab Pages, or any plain file host.
 
 ## Package Map
 
-- `papercrown.app`: CLI commands, build configuration, option enums, and project
-  scaffolding.
+- `papercrown.app`: CLI commands, command actions, console output, and layered
+  build configuration.
+- `papercrown.build`: command-neutral build options, build requests, and build
+  results shared by the CLI, render orchestration, paths, and diagnostics.
 - `papercrown.project`: recipe models/loading, manifest construction, vault and
-  catalog resolution, bundled resource paths, output paths, and themes.
+  catalog resolution, project scaffolding, bundled resource paths, output paths,
+  and themes.
 - `papercrown.assembly`: Markdown assembly, heading/source normalization, art
   blocks, filler markers, and TTRPG block preprocessing.
 - `papercrown.render`: build orchestration, render jobs, Pandoc/WeasyPrint/PDF

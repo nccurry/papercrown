@@ -889,112 +889,14 @@ class ChapterSpec:
         loc = f"contents[{index}]" if not path else f"{path}.children[{index}]"
         if not isinstance(raw, Mapping):
             raise RecipeError(f"{loc} must be a mapping, got {type(raw).__name__}")
-        kind_raw = raw.get("kind")
-        if kind_raw is None:
-            kind = _infer_content_kind(raw, loc=loc)
-        elif isinstance(kind_raw, str):
-            kind = kind_raw
-        else:
-            raise RecipeError(f"{loc}.kind must be a string")
-        if kind not in CHAPTER_KINDS:
-            raise RecipeError(
-                f"{loc}.kind={kind!r} is not one of {sorted(CHAPTER_KINDS)}"
-            )
-        generated_type = _str_or_none(raw.get("type"))
-        if kind == "generated" and generated_type not in GENERATED_CONTENT_TYPES:
-            raise RecipeError(
-                f"{loc}.type must be one of {sorted(GENERATED_CONTENT_TYPES)}"
-            )
-        if kind != "generated" and generated_type is not None:
-            raise RecipeError(f"{loc}.type is only valid for kind='generated'")
-        source_raw = raw.get("source")
-        sources_raw = raw.get("sources")
-        source: SourceRef | None = None
-        if kind in _KINDS_WITHOUT_SOURCE:
-            if source_raw is not None:
-                raise RecipeError(
-                    f"{loc} kind={kind!r} should not declare `source:` "
-                    f"(use `children:` for groups or `sources:` for sequences)"
-                )
-        else:
-            if not isinstance(source_raw, str) or not source_raw.strip():
-                raise RecipeError(f"{loc} missing required field: source")
-            try:
-                source = SourceRef.parse(source_raw)
-            except RecipeError as e:
-                raise RecipeError(f"{loc}: {e}") from e
-
-        sources: list[SourceItem] = []
-        if kind == "sequence":
-            if not isinstance(sources_raw, list) or not sources_raw:
-                raise RecipeError(
-                    f"{loc} kind='sequence' requires a non-empty `sources:` list"
-                )
-            for i, item in enumerate(sources_raw):
-                try:
-                    sources.append(SourceItem.from_raw(item, loc=f"{loc}.sources[{i}]"))
-                except RecipeError as e:
-                    raise RecipeError(str(e)) from e
-        elif sources_raw is not None:
-            raise RecipeError(
-                f"{loc}.sources is only valid for kind='sequence' (got kind={kind!r})"
-            )
-
-        # Recursively parse `children:` (only meaningful for `group` kind, but
-        # we accept it generically for forward-compatibility).
-        if "sort" in raw:
-            raise RecipeError(
-                f"{loc}.sort is no longer supported; folder ordering is always "
-                "alphabetical. Remove the field from your recipe."
-            )
-
-        children_raw = raw.get("children") or []
-        if not isinstance(children_raw, list):
-            raise RecipeError(
-                f"{loc}.children must be a list, got {type(children_raw).__name__}"
-            )
-        if kind == "group" and not children_raw:
-            raise RecipeError(
-                f"{loc} kind='group' requires a non-empty `children:` list"
-            )
-        if kind != "group" and children_raw:
-            raise RecipeError(
-                f"{loc}.children is only valid for kind='group' (got kind={kind!r})"
-            )
-        children: list[ChapterSpec] = []
-        for i, child_raw in enumerate(children_raw):
-            if not isinstance(child_raw, Mapping):
-                raise RecipeError(
-                    f"{loc}.children[{i}] must be a mapping, "
-                    f"got {type(child_raw).__name__}"
-                )
-            children.append(cls.from_dict(child_raw, index=i, path=loc))
-
-        full_page_sections_raw = raw.get("full_page_sections") or []
-        if not isinstance(full_page_sections_raw, list) or not all(
-            isinstance(x, str) for x in full_page_sections_raw
-        ):
-            raise RecipeError(
-                f"{loc}.full_page_sections must be a list of heading titles/slugs"
-            )
-        toc_depth = _toc_depth_or_none(raw.get("toc_depth"), loc=loc)
-        depth = _toc_depth_or_none(raw.get("depth"), loc=loc)
-        if depth is not None and kind != "toc":
-            raise RecipeError(f"{loc}.depth is only valid for kind='toc'")
-
-        art_raw = raw.get("art")
-        chapter_art: str | None = None
-        art_inserts: list[ArtInsertSpec] = []
-        if isinstance(art_raw, list):
-            for i, art_item in enumerate(art_raw):
-                if not isinstance(art_item, Mapping):
-                    raise RecipeError(
-                        f"{loc}.art[{i}] must be a mapping, "
-                        f"got {type(art_item).__name__}"
-                    )
-                art_inserts.append(ArtInsertSpec.from_dict(art_item, index=i, loc=loc))
-        elif art_raw is not None:
-            chapter_art = _str_or_none(art_raw)
+        kind = _chapter_kind(raw, loc=loc)
+        generated_type = _chapter_generated_type(kind, raw, loc=loc)
+        source = _chapter_source(kind, raw, loc=loc)
+        sources = _chapter_sources(kind, raw, loc=loc)
+        children = _chapter_children(kind, raw, loc=loc, parser=cls)
+        full_page_sections = _chapter_full_page_sections(raw, loc=loc)
+        toc_depth, depth = _chapter_toc_depths(kind, raw, loc=loc)
+        chapter_art, art_inserts = _chapter_art_fields(raw, loc=loc)
 
         return cls(
             kind=kind,
@@ -1014,7 +916,7 @@ class ChapterSpec:
             child_divider=bool(raw.get("child_divider", False)),
             children=children,
             sources=sources,
-            full_page_sections=[str(section) for section in full_page_sections_raw],
+            full_page_sections=full_page_sections,
             headpiece=_str_or_none(raw.get("headpiece")),
             break_ornament=_str_or_none(raw.get("break_ornament")),
             toc_depth=toc_depth,
@@ -1030,6 +932,171 @@ class ChapterSpec:
             tailpiece=_str_or_none(raw.get("tailpiece")),
             fillers_enabled=_bool_value(raw.get("fillers", True), loc=f"{loc}.fillers"),
         )
+
+
+def _chapter_kind(raw: Mapping[str, object], *, loc: str) -> str:
+    """Validate or infer the structural kind for one contents item."""
+    kind_raw = raw.get("kind")
+    if kind_raw is None:
+        kind = _infer_content_kind(raw, loc=loc)
+    elif isinstance(kind_raw, str):
+        kind = kind_raw
+    else:
+        raise RecipeError(f"{loc}.kind must be a string")
+    if kind not in CHAPTER_KINDS:
+        raise RecipeError(f"{loc}.kind={kind!r} is not one of {sorted(CHAPTER_KINDS)}")
+    return kind
+
+
+def _chapter_generated_type(
+    kind: str,
+    raw: Mapping[str, object],
+    *,
+    loc: str,
+) -> str | None:
+    """Validate the optional computed content type."""
+    generated_type = _str_or_none(raw.get("type"))
+    if kind == "generated" and generated_type not in GENERATED_CONTENT_TYPES:
+        raise RecipeError(
+            f"{loc}.type must be one of {sorted(GENERATED_CONTENT_TYPES)}"
+        )
+    if kind != "generated" and generated_type is not None:
+        raise RecipeError(f"{loc}.type is only valid for kind='generated'")
+    return generated_type
+
+
+def _chapter_source(
+    kind: str,
+    raw: Mapping[str, object],
+    *,
+    loc: str,
+) -> SourceRef | None:
+    """Validate a chapter's single source field, when its kind uses one."""
+    source_raw = raw.get("source")
+    if kind in _KINDS_WITHOUT_SOURCE:
+        if source_raw is not None:
+            raise RecipeError(
+                f"{loc} kind={kind!r} should not declare `source:` "
+                f"(use `children:` for groups or `sources:` for sequences)"
+            )
+        return None
+    if not isinstance(source_raw, str) or not source_raw.strip():
+        raise RecipeError(f"{loc} missing required field: source")
+    try:
+        return SourceRef.parse(source_raw)
+    except RecipeError as e:
+        raise RecipeError(f"{loc}: {e}") from e
+
+
+def _chapter_sources(
+    kind: str,
+    raw: Mapping[str, object],
+    *,
+    loc: str,
+) -> list[SourceItem]:
+    """Validate the ordered source list used by sequence chapters."""
+    sources_raw = raw.get("sources")
+    if kind != "sequence":
+        if sources_raw is not None:
+            raise RecipeError(
+                f"{loc}.sources is only valid for kind='sequence' (got kind={kind!r})"
+            )
+        return []
+    if not isinstance(sources_raw, list) or not sources_raw:
+        raise RecipeError(f"{loc} kind='sequence' requires a non-empty `sources:` list")
+    sources: list[SourceItem] = []
+    for i, item in enumerate(sources_raw):
+        try:
+            sources.append(SourceItem.from_raw(item, loc=f"{loc}.sources[{i}]"))
+        except RecipeError as e:
+            raise RecipeError(str(e)) from e
+    return sources
+
+
+def _chapter_children(
+    kind: str,
+    raw: Mapping[str, object],
+    *,
+    loc: str,
+    parser: type[ChapterSpec],
+) -> list[ChapterSpec]:
+    """Validate and recursively parse group children."""
+    if "sort" in raw:
+        raise RecipeError(
+            f"{loc}.sort is no longer supported; folder ordering is always "
+            "alphabetical. Remove the field from your recipe."
+        )
+
+    children_raw = raw.get("children") or []
+    if not isinstance(children_raw, list):
+        raise RecipeError(
+            f"{loc}.children must be a list, got {type(children_raw).__name__}"
+        )
+    if kind == "group" and not children_raw:
+        raise RecipeError(f"{loc} kind='group' requires a non-empty `children:` list")
+    if kind != "group" and children_raw:
+        raise RecipeError(
+            f"{loc}.children is only valid for kind='group' (got kind={kind!r})"
+        )
+
+    children: list[ChapterSpec] = []
+    for i, child_raw in enumerate(children_raw):
+        if not isinstance(child_raw, Mapping):
+            raise RecipeError(
+                f"{loc}.children[{i}] must be a mapping, got {type(child_raw).__name__}"
+            )
+        children.append(parser.from_dict(child_raw, index=i, path=loc))
+    return children
+
+
+def _chapter_full_page_sections(
+    raw: Mapping[str, object],
+    *,
+    loc: str,
+) -> list[str]:
+    """Validate explicit full-page heading breaks."""
+    sections_raw = raw.get("full_page_sections") or []
+    if not isinstance(sections_raw, list) or not all(
+        isinstance(x, str) for x in sections_raw
+    ):
+        raise RecipeError(
+            f"{loc}.full_page_sections must be a list of heading titles/slugs"
+        )
+    return [str(section) for section in sections_raw]
+
+
+def _chapter_toc_depths(
+    kind: str,
+    raw: Mapping[str, object],
+    *,
+    loc: str,
+) -> tuple[int | None, int | None]:
+    """Validate combined-book and generated TOC depth settings."""
+    toc_depth = _toc_depth_or_none(raw.get("toc_depth"), loc=loc)
+    depth = _toc_depth_or_none(raw.get("depth"), loc=loc)
+    if depth is not None and kind != "toc":
+        raise RecipeError(f"{loc}.depth is only valid for kind='toc'")
+    return toc_depth, depth
+
+
+def _chapter_art_fields(
+    raw: Mapping[str, object],
+    *,
+    loc: str,
+) -> tuple[str | None, list[ArtInsertSpec]]:
+    """Split divider art and content-scoped art inserts."""
+    art_raw = raw.get("art")
+    if not isinstance(art_raw, list):
+        return _str_or_none(art_raw) if art_raw is not None else None, []
+
+    art_inserts: list[ArtInsertSpec] = []
+    for i, art_item in enumerate(art_raw):
+        if not isinstance(art_item, Mapping):
+            raise RecipeError(
+                f"{loc}.art[{i}] must be a mapping, got {type(art_item).__name__}"
+            )
+        art_inserts.append(ArtInsertSpec.from_dict(art_item, index=i, loc=loc))
+    return None, art_inserts
 
 
 # ---------------------------------------------------------------------------

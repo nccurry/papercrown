@@ -79,79 +79,159 @@ def assemble_chapter_markdown(
         # Empty leaf -- still emit a chapter heading so it's visible
         return f"# {chapter.title}\n\n*(empty)*\n"
 
+    combined = "\n\n".join(
+        _chapter_source_parts(
+            chapter,
+            export_map=export_map,
+            vault_index=vault_index,
+            include_fillers=include_fillers,
+            include_source_markers=include_source_markers,
+        )
+    )
+    return _decorate_chapter_markdown(
+        combined,
+        chapter,
+        splashes=splashes,
+        include_art=include_art,
+        include_splashes=include_splashes,
+        include_fillers=include_fillers,
+        include_tailpiece_art=include_tailpiece_art,
+        recipe=recipe,
+    )
+
+
+def _chapter_source_parts(
+    chapter: Chapter,
+    *,
+    export_map: dict[Path, Path] | None,
+    vault_index: VaultIndex | None,
+    include_fillers: bool,
+    include_source_markers: bool,
+) -> list[str]:
+    """Return prepared markdown for each source file in a chapter."""
     parts: list[str] = []
     for i, src in enumerate(chapter.source_files):
-        body = _source_notes.read_via_export(src, export_map, vault_index=vault_index)
-        body = _source_notes.strip_frontmatter(body).strip()
-        body = _source_notes.normalize_heading_spacing(body)
-        if i < len(chapter.source_strip_related) and chapter.source_strip_related[i]:
-            body = _source_notes.strip_trailing_related_section(body)
-        source_title = (
-            chapter.source_titles[i] if i < len(chapter.source_titles) else None
+        body, source_title = _prepare_source_body(
+            chapter,
+            src,
+            index=i,
+            export_map=export_map,
+            vault_index=vault_index,
         )
-        stripped_wrapper_heading = False
-        if source_title:
-            body, stripped_wrapper_heading = _strip_redundant_wrapper_heading(
+        if include_fillers and chapter.fillers_enabled:
+            body = _append_source_filler_markers(
                 body,
-                source_title,
-            )
-        if (
-            source_title
-            and not stripped_wrapper_heading
-            and not _source_notes.starts_with_h1(body)
-            and not _source_notes.starts_with_heading_title(body, source_title)
-        ):
-            body = f"# {source_title}\n\n{body}"
-        if chapter.slug.startswith("original-"):
-            body = _prefix_original_source_anchor(
-                body,
+                chapter,
                 src,
-                is_first_source=i == 0,
-                chapter_slug=chapter.slug,
+                index=i,
+                source_title=source_title,
             )
-        if (
-            include_fillers
-            and chapter.fillers_enabled
-            and chapter.style == "class"
-            and chapter.subclass_filler_slots
-            and _source_filler_enabled(chapter, i)
-            and not chapter.slug.startswith("original-")
-            and _is_subclass_source(src)
-        ):
-            for slot_name in chapter.subclass_filler_slots:
-                body = _append_source_end_filler_slot(
-                    body,
-                    chapter,
-                    src,
-                    slot_name=slot_name,
-                )
-        if (
-            include_fillers
-            and chapter.fillers_enabled
-            and chapter.source_boundary_filler_slots
-            and _source_filler_enabled(chapter, i)
-            and i < len(chapter.source_files) - 1
-        ):
-            for slot_name in chapter.source_boundary_filler_slots:
-                body = _append_source_end_filler_slot(
-                    body,
-                    chapter,
-                    src,
-                    slot_name=slot_name,
-                    slot_kind="source-boundary",
-                    context=_source_filler_context(chapter, src, source_title),
-                )
         if include_source_markers:
             body = _inject_source_file_marker(body, src)
         if i == 0:
             parts.append(body)
         else:
             parts.append("\n\n" + _source_notes.demote_h1s(body).strip())
+    return parts
 
-    combined = "\n\n".join(parts)
 
-    # Make sure the chapter has an h1. If the first file didn't open with one,
-    # prepend the chapter title.
+def _prepare_source_body(
+    chapter: Chapter,
+    source: Path,
+    *,
+    index: int,
+    export_map: dict[Path, Path] | None,
+    vault_index: VaultIndex | None,
+) -> tuple[str, str | None]:
+    """Read and normalize one source file before chapter-level decoration."""
+    body = _source_notes.read_via_export(source, export_map, vault_index=vault_index)
+    body = _source_notes.strip_frontmatter(body).strip()
+    body = _source_notes.normalize_heading_spacing(body)
+    if (
+        index < len(chapter.source_strip_related)
+        and chapter.source_strip_related[index]
+    ):
+        body = _source_notes.strip_trailing_related_section(body)
+
+    source_title = (
+        chapter.source_titles[index] if index < len(chapter.source_titles) else None
+    )
+    stripped_wrapper_heading = False
+    if source_title:
+        body, stripped_wrapper_heading = _strip_redundant_wrapper_heading(
+            body,
+            source_title,
+        )
+    if (
+        source_title
+        and not stripped_wrapper_heading
+        and not _source_notes.starts_with_h1(body)
+        and not _source_notes.starts_with_heading_title(body, source_title)
+    ):
+        body = f"# {source_title}\n\n{body}"
+    if chapter.slug.startswith("original-"):
+        body = _prefix_original_source_anchor(
+            body,
+            source,
+            is_first_source=index == 0,
+            chapter_slug=chapter.slug,
+        )
+    return body, source_title
+
+
+def _append_source_filler_markers(
+    text: str,
+    chapter: Chapter,
+    source: Path,
+    *,
+    index: int,
+    source_title: str | None,
+) -> str:
+    """Append source-end filler markers enabled by chapter/source policy."""
+    body = text
+    if (
+        chapter.style == "class"
+        and chapter.subclass_filler_slots
+        and _source_filler_enabled(chapter, index)
+        and not chapter.slug.startswith("original-")
+        and _is_subclass_source(source)
+    ):
+        for slot_name in chapter.subclass_filler_slots:
+            body = _append_source_end_filler_slot(
+                body,
+                chapter,
+                source,
+                slot_name=slot_name,
+            )
+    if (
+        chapter.source_boundary_filler_slots
+        and _source_filler_enabled(chapter, index)
+        and index < len(chapter.source_files) - 1
+    ):
+        for slot_name in chapter.source_boundary_filler_slots:
+            body = _append_source_end_filler_slot(
+                body,
+                chapter,
+                source,
+                slot_name=slot_name,
+                slot_kind="source-boundary",
+                context=_source_filler_context(chapter, source, source_title),
+            )
+    return body
+
+
+def _decorate_chapter_markdown(
+    combined: str,
+    chapter: Chapter,
+    *,
+    splashes: list[Splash] | None,
+    include_art: bool,
+    include_splashes: bool,
+    include_fillers: bool,
+    include_tailpiece_art: bool,
+    recipe: Recipe | None,
+) -> str:
+    """Run chapter-level markdown decoration passes in render order."""
     if not _source_notes.starts_with_h1(combined):
         combined = f"# {chapter.title}\n\n" + combined
     combined = _normalize_original_frame_size_line(combined, chapter)
@@ -246,77 +326,18 @@ def assemble_combined_book_markdown(
     """
     parts: list[str] = []
     for top in contents:
-        # The top-level divider supplies the canonical chapter heading for
-        # every chapter, including non-wrapper file/catalog chapters.
-        parts.append(
-            _render_section_divider(
-                top,
-                with_heading=True,
-                level=1,
-                include_art=include_art,
-                breadcrumb=_chapter_breadcrumb([top]),
-            )
+        _append_combined_chapter_parts(
+            parts,
+            top,
+            export_map=export_map,
+            vault_index=vault_index,
+            include_art=include_art,
+            include_fillers=include_fillers,
+            include_tailpiece_art=include_tailpiece_art,
+            splashes=splashes,
+            include_source_markers=include_source_markers,
+            recipe=recipe,
         )
-
-        for descendant, depth, ancestors in _walk_with_ancestry(top):
-            is_top = descendant is top
-            has_body = bool(descendant.source_files)
-            # Per-child dividers fire only for non-top descendants flagged
-            # with `divider=True` (set by `child_divider: true` in a recipe).
-            # The top's divider was already emitted above, so we never emit
-            # a second one here.
-            wants_descendant_divider = (not is_top) and descendant.divider
-
-            if wants_descendant_divider:
-                # Heading inside the divider sits at h(depth+1) so it nests
-                # under the wrapper's h1 in the TOC.
-                divider_level = min(6, depth + 1)
-                parts.append(
-                    _render_section_divider(
-                        descendant,
-                        with_heading=True,
-                        level=divider_level,
-                        include_art=include_art,
-                        breadcrumb=_chapter_breadcrumb([*ancestors, descendant]),
-                    )
-                )
-
-            if not has_body:
-                # Wrapper-style chapter (own divider IS the output, no body).
-                continue
-
-            body = assemble_chapter_markdown(
-                descendant,
-                export_map=export_map,
-                vault_index=vault_index,
-                splashes=_splashes_for_chapter(splashes or [], descendant),
-                include_art=include_art,
-                include_splashes=include_art,
-                include_fillers=include_art and include_fillers,
-                include_tailpiece_art=include_tailpiece_art,
-                include_source_markers=include_source_markers,
-                recipe=recipe,
-            ).strip()
-            slug = descendant.slug or "chapter"
-
-            # Strip the body's leading h1 whenever a divider supplied that
-            # chapter/major-section heading. Top-level chapters always use
-            # their divider as the canonical heading; descendant chapters do
-            # so only when `divider=True`.
-            if is_top or wants_descendant_divider:
-                body = _strip_leading_h1(body)
-            elif slug:
-                body = _headings.ensure_leading_heading_id(body, slug)
-            if depth >= 1:
-                body = _demote_headings(body, by=depth)
-
-            style = descendant.style or "default"
-            wrapped = (
-                f"\n\n:::::: {{.chapter-wrap .section-{style} #ch-{slug}}}\n\n"
-                f"{body}\n\n"
-                "::::::\n\n"
-            )
-            parts.append(wrapped)
     if include_art and include_back_cover_splashes:
         back_cover_pages = render_back_cover_splashes(splashes)
         if back_cover_pages:

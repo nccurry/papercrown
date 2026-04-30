@@ -6,6 +6,7 @@ import hashlib
 import html as html_lib
 import math
 from collections import Counter
+from collections.abc import Iterable
 from dataclasses import dataclass, field
 from pathlib import Path
 
@@ -78,6 +79,40 @@ PAGE_BLEND_ROLES = {
     "ornament-tailpiece",
     "portrait",
     "spot",
+}
+REFERENCE_COVER_FRONT_ROLES = frozenset({"cover-front", "scene"})
+REFERENCE_COVER_BACK_ROLES = frozenset({"cover-back", "scene"})
+REFERENCE_SPLASH_ROLES = frozenset({"scene", "splash"})
+REFERENCE_CLASS_SPOT_ROLES = frozenset({"class-opening-spot", "spot"})
+REFERENCE_PAGE_WEAR_ROLES = frozenset({"page-wear"})
+REFERENCE_ORNAMENT_HEADPIECE_ROLES = frozenset({"ornament-headpiece"})
+REFERENCE_ORNAMENT_BREAK_ROLES = frozenset({"ornament-break"})
+REFERENCE_ORNAMENT_TAILPIECE_ROLES = frozenset({"ornament-tailpiece"})
+REFERENCE_CHAPTER_ART_ROLES = frozenset(
+    {
+        "chapter-header",
+        "chapter-divider",
+        "class-divider",
+        "handout",
+        "item",
+        "location",
+        "map",
+        "npc",
+        "portrait",
+        "scene",
+        "splash",
+        "spread",
+    }
+)
+RECIPE_CHAPTER_ART_ROLES = REFERENCE_CHAPTER_ART_ROLES | frozenset({"cover"})
+MANIFEST_CHAPTER_ART_ROLES = REFERENCE_CHAPTER_ART_ROLES | frozenset({"cover-front"})
+REFERENCE_FILLER_ROLES_BY_SHAPE = {
+    "spot": frozenset({"filler-spot"}),
+    "small-wide": frozenset({"filler-wide"}),
+    "plate": frozenset({"filler-plate"}),
+    "bottom-band": frozenset({"filler-bottom"}),
+    "page-finish": frozenset({"page-finish"}),
+    "tailpiece": REFERENCE_ORNAMENT_TAILPIECE_ROLES,
 }
 
 
@@ -739,7 +774,7 @@ def _recipe_art_references(recipe: Recipe) -> list[ArtReference]:
                 recipe,
                 "cover",
                 recipe.cover.art,
-                expected_roles={"cover-front", "scene"},
+                expected_roles=REFERENCE_COVER_FRONT_ROLES,
             )
         )
     if recipe.ornaments.folio_frame:
@@ -776,21 +811,7 @@ def _recipe_art_references(recipe: Recipe) -> list[ArtReference]:
                     recipe,
                     f"chapter {label}",
                     spec.art,
-                    expected_roles={
-                        "chapter-header",
-                        "chapter-divider",
-                        "class-divider",
-                        "cover",
-                        "handout",
-                        "item",
-                        "location",
-                        "map",
-                        "npc",
-                        "portrait",
-                        "scene",
-                        "splash",
-                        "spread",
-                    },
+                    expected_roles=RECIPE_CHAPTER_ART_ROLES,
                 )
             )
         if spec.headpiece:
@@ -799,7 +820,7 @@ def _recipe_art_references(recipe: Recipe) -> list[ArtReference]:
                     recipe,
                     f"chapter {label} headpiece",
                     spec.headpiece,
-                    expected_roles={"ornament-headpiece"},
+                    expected_roles=REFERENCE_ORNAMENT_HEADPIECE_ROLES,
                 )
             )
         if spec.break_ornament:
@@ -808,7 +829,7 @@ def _recipe_art_references(recipe: Recipe) -> list[ArtReference]:
                     recipe,
                     f"chapter {label} break ornament",
                     spec.break_ornament,
-                    expected_roles={"ornament-break"},
+                    expected_roles=REFERENCE_ORNAMENT_BREAK_ROLES,
                 )
             )
         if spec.tailpiece:
@@ -817,7 +838,7 @@ def _recipe_art_references(recipe: Recipe) -> list[ArtReference]:
                     recipe,
                     f"chapter {label} tailpiece",
                     spec.tailpiece,
-                    expected_roles={"ornament-tailpiece"},
+                    expected_roles=REFERENCE_ORNAMENT_TAILPIECE_ROLES,
                 )
             )
     return refs
@@ -840,23 +861,7 @@ def _manifest_art_references(manifest: Manifest) -> list[ArtReference]:
                 ArtReference(
                     label=f"chapter {chapter.title}",
                     path=chapter.art_path.resolve(),
-                    expected_roles=frozenset(
-                        {
-                            "chapter-header",
-                            "chapter-divider",
-                            "class-divider",
-                            "cover-front",
-                            "handout",
-                            "item",
-                            "location",
-                            "map",
-                            "npc",
-                            "portrait",
-                            "scene",
-                            "splash",
-                            "spread",
-                        }
-                    ),
+                    expected_roles=MANIFEST_CHAPTER_ART_ROLES,
                 )
             )
         if chapter.spot_art_path is not None:
@@ -864,7 +869,7 @@ def _manifest_art_references(manifest: Manifest) -> list[ArtReference]:
                 ArtReference(
                     label=f"chapter {chapter.title} class spot",
                     path=chapter.spot_art_path.resolve(),
-                    expected_roles=frozenset({"class-opening-spot", "spot"}),
+                    expected_roles=REFERENCE_CLASS_SPOT_ROLES,
                 )
             )
         if chapter.headpiece_path is not None:
@@ -872,7 +877,7 @@ def _manifest_art_references(manifest: Manifest) -> list[ArtReference]:
                 ArtReference(
                     label=f"chapter {chapter.title} headpiece",
                     path=chapter.headpiece_path.resolve(),
-                    expected_roles=frozenset({"ornament-headpiece"}),
+                    expected_roles=REFERENCE_ORNAMENT_HEADPIECE_ROLES,
                 )
             )
         if chapter.break_ornament_path is not None:
@@ -880,7 +885,7 @@ def _manifest_art_references(manifest: Manifest) -> list[ArtReference]:
                 ArtReference(
                     label=f"chapter {chapter.title} break ornament",
                     path=chapter.break_ornament_path.resolve(),
-                    expected_roles=frozenset({"ornament-break"}),
+                    expected_roles=REFERENCE_ORNAMENT_BREAK_ROLES,
                 )
             )
         if chapter.tailpiece_path is not None:
@@ -888,7 +893,7 @@ def _manifest_art_references(manifest: Manifest) -> list[ArtReference]:
                 ArtReference(
                     label=f"chapter {chapter.title} tailpiece",
                     path=chapter.tailpiece_path.resolve(),
-                    expected_roles=frozenset({"ornament-tailpiece"}),
+                    expected_roles=REFERENCE_ORNAMENT_TAILPIECE_ROLES,
                 )
             )
     for asset in manifest.fillers.assets:
@@ -904,18 +909,18 @@ def _manifest_art_references(manifest: Manifest) -> list[ArtReference]:
             ArtReference(
                 label=f"page-wear {page_asset.id}",
                 path=page_asset.art_path.resolve(),
-                expected_roles=frozenset({"page-wear"}),
+                expected_roles=REFERENCE_PAGE_WEAR_ROLES,
             )
         )
     return refs
 
 
-def _expected_splash_roles(target: str) -> set[str]:
+def _expected_splash_roles(target: str) -> frozenset[str]:
     if target == "front-cover":
-        return {"cover-front", "scene"}
+        return REFERENCE_COVER_FRONT_ROLES
     if target == "back-cover":
-        return {"cover-back", "scene"}
-    return {"scene", "splash"}
+        return REFERENCE_COVER_BACK_ROLES
+    return REFERENCE_SPLASH_ROLES
 
 
 def _reference(
@@ -923,7 +928,7 @@ def _reference(
     label: str,
     art: str,
     *,
-    expected_roles: set[str] | None = None,
+    expected_roles: Iterable[str] | None = None,
 ) -> ArtReference:
     return ArtReference(
         label=label,
@@ -937,7 +942,7 @@ def _filler_reference(
     label: str,
     art: str,
     *,
-    expected_roles: set[str] | None = None,
+    expected_roles: Iterable[str] | None = None,
 ) -> ArtReference:
     root = recipe.art_dir
     if recipe.fillers.art_dir:
@@ -957,20 +962,8 @@ def _walk_specs(chapters: list[ChapterSpec]) -> list[ChapterSpec]:
     return specs
 
 
-def _expected_filler_roles(shape: str) -> set[str]:
-    if shape == "spot":
-        return {"filler-spot"}
-    if shape == "small-wide":
-        return {"filler-wide"}
-    if shape == "plate":
-        return {"filler-plate"}
-    if shape == "bottom-band":
-        return {"filler-bottom"}
-    if shape == "page-finish":
-        return {"page-finish"}
-    if shape == "tailpiece":
-        return {"ornament-tailpiece"}
-    return set()
+def _expected_filler_roles(shape: str) -> frozenset[str]:
+    return REFERENCE_FILLER_ROLES_BY_SHAPE.get(shape, frozenset())
 
 
 def _read_metadata(path: Path) -> ArtMetadata | None:

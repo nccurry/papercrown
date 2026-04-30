@@ -30,12 +30,13 @@ from papercrown.build.options import (
     PageDamageMode,
     PaginationMode,
 )
+from papercrown.build.requests import BuildRequest
 from papercrown.project import manifest as manifest_mod
 from papercrown.project import themes as themes_mod
 from papercrown.project.manifest import Manifest, build_manifest
 from papercrown.project.recipe import Recipe, RecipeError, load_recipe
 from papercrown.project.starter import InitError, StarterBookType, init_project
-from papercrown.render.build import BuildRequest, build_outputs
+from papercrown.render.build import build_outputs
 from papercrown.system import verify as verify_mod
 from papercrown.system.dependencies import check_dependencies
 from papercrown.system.doctor import run_doctor as run_doctor_checks

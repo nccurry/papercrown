@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import hashlib
 from collections.abc import Callable
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from pathlib import Path
 from typing import cast
 
@@ -18,6 +18,7 @@ from papercrown.build.options import (
     PageDamageMode,
     PaginationMode,
 )
+from papercrown.build.requests import BuildRequest, BuildResult
 from papercrown.media import images
 from papercrown.media import page_damage as page_damage_module
 from papercrown.project import paths, themes
@@ -66,36 +67,6 @@ REQUIRED_FONTS: tuple[str, ...] = (
     "IBMPlexSerif-Bold.ttf",
     "IBMPlexSerif-BoldItalic.ttf",
 )
-
-
-@dataclass(frozen=True)
-class BuildRequest:
-    """A typed build command created by the CLI from parsed flags."""
-
-    recipe: Recipe
-    manifest: Manifest
-    target: BuildTarget = BuildTarget.PDF
-    scope: BuildScope = BuildScope.ALL
-    profile: OutputProfile = OutputProfile.PRINT
-    include_art: bool = True
-    single_chapter: str | None = None
-    force: bool = False
-    jobs: int = 1
-    clean_pdf: bool = True
-    pagination_mode: PaginationMode = PaginationMode.REPORT
-    draft_mode: DraftMode = DraftMode.FAST
-    page_damage_mode: PageDamageMode = PageDamageMode.AUTO
-    filler_debug_overlay: bool = False
-    timings: bool = False
-
-
-@dataclass(frozen=True)
-class BuildResult:
-    """Artifacts produced by one build invocation."""
-
-    produced: list[Path] = field(default_factory=list)
-    skipped: list[Path] = field(default_factory=list)
-    export_map: dict[Path, Path] = field(default_factory=dict)
 
 
 @dataclass(frozen=True)
@@ -376,10 +347,7 @@ def _populate_book_context(
         ctx.cover_subtitle = recipe.subtitle
         ctx.cover_eyebrow = recipe.cover_eyebrow
         ctx.cover_footer = recipe.cover_footer
-        if (
-            include_cover_art
-            and not _is_fast_draft(profile, draft_mode)
-        ):
+        if include_cover_art and not _is_fast_draft(profile, draft_mode):
             cover_art = _recipe_cover_art_path(recipe)
             if cover_art is not None:
                 ctx.cover_art = _optimized_optional_image(

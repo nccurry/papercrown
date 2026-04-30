@@ -13,7 +13,7 @@ from dataclasses import dataclass, replace
 from pathlib import Path
 from typing import Any
 
-from papercrown.project.manifest import FillerAsset, FillerCatalog
+from papercrown.project.manifest import FillerAsset, FillerCatalog, FillerSlot
 
 # CSS pixel to inch conversion used for WeasyPrint box measurements.
 PX_PER_IN = 96.0
@@ -582,6 +582,37 @@ def _select_filler_selection(
     slot = catalog.slots.get(measurement.slot_name)
     if slot is None:
         return None, "slot not configured"
+    usable_in, reason = _usable_slot_space(slot, measurement)
+    if usable_in is None:
+        return None, reason or "insufficient space"
+    fitting_candidates = _context_fitting_assets(catalog, slot, measurement)
+    candidates = _size_matched_candidates(fitting_candidates, usable_in)
+    if not candidates:
+        if fitting_candidates:
+            return None, "no size-matched context asset"
+        return None, "no fitting context-matched asset"
+    candidates = _prefer_semantic_context(candidates, measurement)
+    reusable_candidates, reason = _reuse_policy_candidates(
+        candidates,
+        measurement,
+        used_asset_ids,
+    )
+    if reusable_candidates is None:
+        return None, reason or "matching filler already used recently"
+    return _choose_candidate(
+        reusable_candidates,
+        usable_in,
+        measurement,
+        recipe_title=recipe_title,
+        used_asset_ids=used_asset_ids,
+    )
+
+
+def _usable_slot_space(
+    slot: FillerSlot,
+    measurement: FillerMeasurement,
+) -> tuple[float | None, str | None]:
+    """Return the safety-adjusted usable gap for one measured slot."""
     if measurement.available_in < slot.min_space_in:
         return None, "insufficient space"
 
@@ -591,7 +622,16 @@ def _select_filler_selection(
         return None, "insufficient safety margin"
     if not _slot_has_enough_intervening_content(measurement, usable_in):
         return None, "not enough intervening content"
-    fitting_candidates = [
+    return usable_in, None
+
+
+def _context_fitting_assets(
+    catalog: FillerCatalog,
+    slot: FillerSlot,
+    measurement: FillerMeasurement,
+) -> list[FillerAsset]:
+    """Return assets whose shape and context can be considered for a slot."""
+    return [
         asset
         for asset in catalog.assets
         if asset.shape in V1_SHAPES
@@ -599,42 +639,57 @@ def _select_filler_selection(
         and asset.height_in <= slot.max_space_in
         and _asset_matches_context(asset, measurement)
     ]
-    candidates = [
+
+
+def _size_matched_candidates(
+    assets: list[FillerAsset],
+    usable_in: float,
+) -> list[_Candidate]:
+    """Return assets that match the measured gap's size tier."""
+    return [
         _Candidate(
             asset=asset,
             render_height_in=_candidate_render_height_in(asset, usable_in),
             fill_ratio=_candidate_fill_ratio(asset, usable_in),
         )
-        for asset in fitting_candidates
+        for asset in assets
         if _candidate_matches_gap_size(asset, usable_in)
     ]
-    if not candidates:
-        if fitting_candidates:
-            return None, "no size-matched context asset"
-        return None, "no fitting context-matched asset"
-    candidates = _prefer_semantic_context(candidates, measurement)
+
+
+def _reuse_policy_candidates(
+    candidates: list[_Candidate],
+    measurement: FillerMeasurement,
+    used_asset_ids: dict[str, FillerAssetUse] | set[str] | None,
+) -> tuple[list[_Candidate] | None, str | None]:
+    """Prefer unused candidates, then allow reuse only after spacing checks."""
     unused_candidates = [
         candidate
         for candidate in candidates
         if not _asset_has_prior_use(used_asset_ids, candidate.asset.id)
     ]
     if unused_candidates:
-        candidates = unused_candidates
-    else:
-        reusable_candidates = [
-            candidate
-            for candidate in candidates
-            if _candidate_reuse_allowed(candidate, measurement, used_asset_ids)
-        ]
-        if not reusable_candidates:
-            return None, "matching filler already used recently"
-        candidates = reusable_candidates
+        return unused_candidates, None
 
-    seed = (
-        f"{recipe_title}|{measurement.chapter_slug}|"
-        f"{measurement.section_slug or ''}|"
-        f"{measurement.slot_id}|{measurement.page_number}"
-    )
+    reusable_candidates = [
+        candidate
+        for candidate in candidates
+        if _candidate_reuse_allowed(candidate, measurement, used_asset_ids)
+    ]
+    if not reusable_candidates:
+        return None, "matching filler already used recently"
+    return reusable_candidates, None
+
+
+def _choose_candidate(
+    candidates: list[_Candidate],
+    usable_in: float,
+    measurement: FillerMeasurement,
+    *,
+    recipe_title: str,
+    used_asset_ids: dict[str, FillerAssetUse] | set[str] | None,
+) -> tuple[_FillerSelection, str]:
+    """Choose the preferred or deterministic winning candidate."""
     preferred = _preferred_candidates(candidates, usable_in)
     for candidate in preferred:
         if candidate.asset.id == measurement.preferred_asset_id:
@@ -642,6 +697,8 @@ def _select_filler_selection(
                 _selection_for_candidate(candidate, used_asset_ids),
                 "preferred asset",
             )
+
+    seed = _selection_seed(recipe_title, measurement)
     chosen = min(
         preferred,
         key=lambda candidate: (
@@ -650,6 +707,15 @@ def _select_filler_selection(
         ),
     )
     return _selection_for_candidate(chosen, used_asset_ids), "chosen"
+
+
+def _selection_seed(recipe_title: str, measurement: FillerMeasurement) -> str:
+    """Return a stable seed for deterministic candidate selection."""
+    return (
+        f"{recipe_title}|{measurement.chapter_slug}|"
+        f"{measurement.section_slug or ''}|"
+        f"{measurement.slot_id}|{measurement.page_number}"
+    )
 
 
 def inject_fillers(html: str, placements: list[FillerPlacement]) -> str:

@@ -6,7 +6,7 @@ import os
 from collections.abc import Mapping
 from dataclasses import dataclass, field, replace
 from pathlib import Path
-from typing import Any
+from typing import Any, cast
 
 import yaml
 
@@ -189,8 +189,7 @@ def resolve_build_config(
     recipe_path = recipe_arg or project.default_book
     if recipe_path is None:
         raise ConfigError(
-            "no book provided; pass a book path or set default_book "
-            "in papercrown.yaml"
+            "no book provided; pass a book path or set default_book in papercrown.yaml"
         )
     if not recipe_path.is_absolute():
         recipe_path = recipe_path.resolve()
@@ -211,92 +210,72 @@ def _build_patch_from_mapping(
         unknown_keys = ", ".join(sorted(unknown))
         raise ConfigError(f"{source}: unknown build key(s): {unknown_keys}")
     patch = BuildConfigPatch()
-    if "target" in raw:
-        patch = replace(
-            patch,
-            target=_enum_value(BuildTarget, raw["target"], key="target", source=source),
-        )
-    if "scope" in raw:
-        patch = replace(
-            patch,
-            scope=_enum_value(BuildScope, raw["scope"], key="scope", source=source),
-        )
-    if "profile" in raw:
-        patch = replace(
-            patch,
-            profile=_enum_value(
-                OutputProfile,
-                raw["profile"],
-                key="profile",
-                source=source,
-            ),
-        )
+    patch = _patch_enum_fields(patch, raw, source=source)
+    patch = _patch_bool_fields(patch, raw, source=source)
     if "chapter" in raw:
-        patch = replace(
+        patch = _patch_value(
             patch,
-            single_chapter=_optional_str(raw["chapter"], key="chapter", source=source),
-        )
-    if "include_art" in raw:
-        patch = replace(
-            patch,
-            include_art=_bool_value(
-                raw["include_art"],
-                key="include_art",
-                source=source,
-            ),
-        )
-    if "force" in raw:
-        patch = replace(
-            patch,
-            force=_bool_value(raw["force"], key="force", source=source),
+            "single_chapter",
+            _optional_str(raw["chapter"], key="chapter", source=source),
         )
     if "jobs" in raw:
-        patch = replace(patch, jobs=parse_jobs(raw["jobs"]))
-    if "clean_pdf" in raw:
-        patch = replace(
-            patch,
-            clean_pdf=_bool_value(
-                raw["clean_pdf"],
-                key="clean_pdf",
-                source=source,
-            ),
-        )
-    if "pagination" in raw:
-        patch = replace(
-            patch,
-            pagination_mode=_enum_value(
-                PaginationMode,
-                raw["pagination"],
-                key="pagination",
-                source=source,
-            ),
-        )
-    if "draft_mode" in raw:
-        patch = replace(
-            patch,
-            draft_mode=_enum_value(
-                DraftMode,
-                raw["draft_mode"],
-                key="draft_mode",
-                source=source,
-            ),
-        )
-    if "page_damage" in raw:
-        patch = replace(
-            patch,
-            page_damage_mode=_enum_value(
-                PageDamageMode,
-                raw["page_damage"],
-                key="page_damage",
-                source=source,
-            ),
-        )
-    if "timings" in raw:
-        patch = replace(
-            patch,
-            timings=_bool_value(raw["timings"], key="timings", source=source),
-        )
+        patch = _patch_value(patch, "jobs", parse_jobs(raw["jobs"]))
     return patch
+
+
+def _patch_enum_fields(
+    patch: BuildConfigPatch,
+    raw: Mapping[object, object],
+    *,
+    source: str,
+) -> BuildConfigPatch:
+    enum_fields: tuple[tuple[str, str, type[Any]], ...] = (
+        ("target", "target", BuildTarget),
+        ("scope", "scope", BuildScope),
+        ("profile", "profile", OutputProfile),
+        ("pagination", "pagination_mode", PaginationMode),
+        ("draft_mode", "draft_mode", DraftMode),
+        ("page_damage", "page_damage_mode", PageDamageMode),
+    )
+    for key, field_name, enum_type in enum_fields:
+        if key in raw:
+            patch = _patch_value(
+                patch,
+                field_name,
+                _enum_value(enum_type, raw[key], key=key, source=source),
+            )
+    return patch
+
+
+def _patch_bool_fields(
+    patch: BuildConfigPatch,
+    raw: Mapping[object, object],
+    *,
+    source: str,
+) -> BuildConfigPatch:
+    bool_fields = (
+        ("include_art", "include_art"),
+        ("force", "force"),
+        ("clean_pdf", "clean_pdf"),
+        ("timings", "timings"),
+    )
+    for key, field_name in bool_fields:
+        if key in raw:
+            patch = _patch_value(
+                patch,
+                field_name,
+                _bool_value(raw[key], key=key, source=source),
+            )
+    return patch
+
+
+def _patch_value(
+    patch: BuildConfigPatch,
+    field_name: str,
+    value: object,
+) -> BuildConfigPatch:
+    """Return ``patch`` with one dynamically chosen dataclass field updated."""
+    return replace(patch, **cast(Any, {field_name: value}))
 
 
 def parse_jobs(value: object) -> int:

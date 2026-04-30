@@ -5,7 +5,7 @@ from __future__ import annotations
 from pathlib import Path
 
 from papercrown.build.options import BuildTarget
-from papercrown.render.build import BuildResult
+from papercrown.build.requests import BuildResult
 from papercrown.system.export import Tools
 
 

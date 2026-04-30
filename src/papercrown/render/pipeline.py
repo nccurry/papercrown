@@ -372,113 +372,40 @@ def render_html_to_pdf(
 ) -> Path:
     """Render a standalone HTML string to PDF, optionally injecting fillers."""
     stage_start = time.perf_counter()
-    base_url = ctx.template.parent.resolve().as_uri()
-    html = _normalize_local_urls_in_markup(html)
-    _, HTML = _weasyprint_classes()
-    font_config = _new_weasyprint_font_config()
-    stylesheets = _render_stylesheets(ctx, font_config=font_config)
-    weasy_options = ctx.pdf_settings.weasy_options()
+    html, session = _prepare_weasy_render(html, ctx)
     stage_start = _log_timing(ctx, "weasy setup", stage_start)
-    first_doc = HTML(
-        string=html,
-        base_url=base_url,
-        url_fetcher=_WEASYPRINT_URL_FETCHER,
-    ).render(stylesheets=stylesheets, font_config=font_config, **weasy_options)
+    first_doc = _render_weasy_document(html, session)
     stage_start = _log_timing(
         ctx,
         f"weasy layout ({len(first_doc.pages)} pages)",
         stage_start,
     )
-    pagination_fix_ids: list[str] = []
-    accepted_fix: bool | None = None
-    fix_reason: str | None = None
+
+    pagination_result = _apply_pagination_fix(html, first_doc, session, ctx)
+    html = pagination_result.html
+    first_doc = pagination_result.document
     if ctx.pagination_mode == "fix":
-        initial_report = pagination.analyze_document(first_doc)
-        fix_result = pagination.inject_page_break_fixes(html, initial_report)
-        if fix_result.changed:
-            fixed_html = _normalize_local_urls_in_markup(fix_result.html)
-            candidate_doc = HTML(
-                string=fixed_html,
-                base_url=base_url,
-                url_fetcher=_WEASYPRINT_URL_FETCHER,
-            ).render(
-                stylesheets=stylesheets,
-                font_config=font_config,
-                **weasy_options,
-            )
-            candidate_report = pagination.analyze_document(candidate_doc)
-            page_growth = len(candidate_doc.pages) - len(first_doc.pages)
-            if (
-                candidate_report.total_badness < initial_report.total_badness
-                and page_growth <= 1
-            ):
-                html = fixed_html
-                first_doc = candidate_doc
-                pagination_fix_ids = fix_result.applied_ids
-                accepted_fix = True
-                fix_reason = (
-                    f"badness {initial_report.total_badness} -> "
-                    f"{candidate_report.total_badness}"
-                )
-            else:
-                accepted_fix = False
-                fix_reason = (
-                    f"candidate badness {candidate_report.total_badness}; "
-                    f"page growth {page_growth}"
-                )
-        elif initial_report.issues:
-            accepted_fix = False
-            fix_reason = "no eligible stranded heading fixes"
         stage_start = _log_timing(ctx, "pagination fix pass", stage_start)
-    final_doc = first_doc
-    placements: list[fillers.FillerPlacement] = []
-    filler_decisions: list[fillers.FillerDecision] = []
-    catalog = filler_catalog
-    if catalog is not None and catalog.enabled:
-        placements, filler_decisions = fillers.plan_filler_decisions(
-            first_doc,
-            catalog,
-            recipe_title=recipe_title or ctx.chapter_title,
-        )
-        for warning in fillers.filler_warnings(placements):
-            _log_warning(ctx, warning)
-        if filler_report_path is not None:
-            fillers.write_filler_report(
-                filler_report_path,
-                first_doc,
-                catalog,
-                recipe_title=recipe_title or ctx.chapter_title,
-            )
-        if missing_art_report_path is not None:
-            fillers.write_missing_art_report(
-                missing_art_report_path,
-                first_doc,
-                catalog,
-                recipe_title=recipe_title or ctx.chapter_title,
-            )
-        if placements:
-            filled_html = fillers.inject_fillers(html, placements)
-            filled_html = _normalize_local_urls_in_markup(filled_html)
-            candidate_doc = HTML(
-                string=filled_html,
-                base_url=base_url,
-                url_fetcher=_WEASYPRINT_URL_FETCHER,
-            ).render(
-                stylesheets=stylesheets,
-                font_config=font_config,
-                **weasy_options,
-            )
-            if len(candidate_doc.pages) <= len(first_doc.pages):
-                final_doc = candidate_doc
+
+    filler_result = _plan_and_render_fillers(
+        html,
+        first_doc,
+        session,
+        ctx,
+        catalog=filler_catalog,
+        recipe_title=recipe_title,
+        filler_report_path=filler_report_path,
+        missing_art_report_path=missing_art_report_path,
+    )
+    final_doc = filler_result.document
+    if filler_result.ran:
         stage_start = _log_timing(ctx, "filler planning/injection", stage_start)
-    overlay_placements = [
-        placement for placement in placements if placement.mode == "bottom-bleed"
-    ]
+
+    overlay_placements = _bottom_bleed_placements(filler_result.placements)
     damage_catalog = page_damage_catalog
     damage_placements: list[page_damage.PageDamagePlacement] = []
-    pdf_already_cleaned = False
     if damage_catalog is not None and damage_catalog.enabled:
-        damage_placements = page_damage.plan_page_damage(
+        damage_placements = _plan_page_damage(
             final_doc,
             damage_catalog,
             recipe_title=recipe_title or ctx.chapter_title,
@@ -488,51 +415,306 @@ def render_html_to_pdf(
             f"page damage planning ({len(damage_placements)} placements)",
             stage_start,
         )
+
+    write_result = _write_final_pdf(
+        final_doc,
+        out_pdf,
+        ctx=ctx,
+        session=session,
+        damage_catalog=damage_catalog,
+        damage_placements=damage_placements,
+        overlay_placements=overlay_placements,
+    )
+    stage_start = _log_timing(ctx, write_result.timing_label, stage_start)
+
+    _write_render_reports_metadata_and_debug(
+        out_pdf,
+        final_doc,
+        ctx,
+        recipe_title=recipe_title,
+        pagination_result=pagination_result,
+        pdf_already_cleaned=write_result.pdf_already_cleaned,
+        filler_result=filler_result,
+        stage_start=stage_start,
+    )
+    return out_pdf
+
+
+@dataclass(frozen=True)
+class _WeasyRenderSession:
+    """Shared WeasyPrint setup for repeated layout passes."""
+
+    base_url: str
+    html_class: Any
+    font_config: Any
+    stylesheets: list[Any]
+    weasy_options: dict[str, Any]
+
+
+@dataclass(frozen=True)
+class _PaginationPassResult:
+    """Output from the optional pagination fix pass."""
+
+    html: str
+    document: Any
+    fix_ids: list[str]
+    accepted_fix: bool | None
+    fix_reason: str | None
+
+
+@dataclass(frozen=True)
+class _FillerPassResult:
+    """Output from optional filler planning and injection."""
+
+    document: Any
+    placements: list[fillers.FillerPlacement]
+    decisions: list[fillers.FillerDecision]
+    ran: bool
+
+
+@dataclass(frozen=True)
+class _PdfWriteResult:
+    """Outcome metadata for the final PDF write strategy."""
+
+    timing_label: str
+    pdf_already_cleaned: bool = False
+
+
+def _prepare_weasy_render(
+    html: str,
+    ctx: RenderContext,
+) -> tuple[str, _WeasyRenderSession]:
+    """Normalize HTML and construct reusable WeasyPrint render inputs."""
+    normalized_html = _normalize_local_urls_in_markup(html)
+    _, html_class = _weasyprint_classes()
+    font_config = _new_weasyprint_font_config()
+    return normalized_html, _WeasyRenderSession(
+        base_url=ctx.template.parent.resolve().as_uri(),
+        html_class=html_class,
+        font_config=font_config,
+        stylesheets=_render_stylesheets(ctx, font_config=font_config),
+        weasy_options=ctx.pdf_settings.weasy_options(),
+    )
+
+
+def _render_weasy_document(html: str, session: _WeasyRenderSession) -> Any:
+    """Render one HTML string through the configured WeasyPrint session."""
+    return session.html_class(
+        string=html,
+        base_url=session.base_url,
+        url_fetcher=_WEASYPRINT_URL_FETCHER,
+    ).render(
+        stylesheets=session.stylesheets,
+        font_config=session.font_config,
+        **session.weasy_options,
+    )
+
+
+def _apply_pagination_fix(
+    html: str,
+    document: Any,
+    session: _WeasyRenderSession,
+    ctx: RenderContext,
+) -> _PaginationPassResult:
+    """Try the optional stranded-heading pagination fix pass."""
+    fix_ids: list[str] = []
+    accepted_fix: bool | None = None
+    fix_reason: str | None = None
+    if ctx.pagination_mode != "fix":
+        return _PaginationPassResult(
+            html=html,
+            document=document,
+            fix_ids=fix_ids,
+            accepted_fix=accepted_fix,
+            fix_reason=fix_reason,
+        )
+
+    initial_report = pagination.analyze_document(document)
+    fix_result = pagination.inject_page_break_fixes(html, initial_report)
+    if fix_result.changed:
+        fixed_html = _normalize_local_urls_in_markup(fix_result.html)
+        candidate_doc = _render_weasy_document(fixed_html, session)
+        candidate_report = pagination.analyze_document(candidate_doc)
+        page_growth = len(candidate_doc.pages) - len(document.pages)
+        if (
+            candidate_report.total_badness < initial_report.total_badness
+            and page_growth <= 1
+        ):
+            return _PaginationPassResult(
+                html=fixed_html,
+                document=candidate_doc,
+                fix_ids=fix_result.applied_ids,
+                accepted_fix=True,
+                fix_reason=(
+                    f"badness {initial_report.total_badness} -> "
+                    f"{candidate_report.total_badness}"
+                ),
+            )
+        accepted_fix = False
+        fix_reason = (
+            f"candidate badness {candidate_report.total_badness}; "
+            f"page growth {page_growth}"
+        )
+    elif initial_report.issues:
+        accepted_fix = False
+        fix_reason = "no eligible stranded heading fixes"
+    return _PaginationPassResult(
+        html=html,
+        document=document,
+        fix_ids=fix_ids,
+        accepted_fix=accepted_fix,
+        fix_reason=fix_reason,
+    )
+
+
+def _plan_and_render_fillers(
+    html: str,
+    document: Any,
+    session: _WeasyRenderSession,
+    ctx: RenderContext,
+    *,
+    catalog: FillerCatalog | None,
+    recipe_title: str | None,
+    filler_report_path: Path | None,
+    missing_art_report_path: Path | None,
+) -> _FillerPassResult:
+    """Plan filler art and render a candidate filled layout when useful."""
+    if catalog is None or not catalog.enabled:
+        return _FillerPassResult(
+            document=document,
+            placements=[],
+            decisions=[],
+            ran=False,
+        )
+
+    placements, decisions = fillers.plan_filler_decisions(
+        document,
+        catalog,
+        recipe_title=recipe_title or ctx.chapter_title,
+    )
+    for warning in fillers.filler_warnings(placements):
+        _log_warning(ctx, warning)
+    if filler_report_path is not None:
+        fillers.write_filler_report(
+            filler_report_path,
+            document,
+            catalog,
+            recipe_title=recipe_title or ctx.chapter_title,
+        )
+    if missing_art_report_path is not None:
+        fillers.write_missing_art_report(
+            missing_art_report_path,
+            document,
+            catalog,
+            recipe_title=recipe_title or ctx.chapter_title,
+        )
+
+    final_doc = document
+    if placements:
+        filled_html = fillers.inject_fillers(html, placements)
+        filled_html = _normalize_local_urls_in_markup(filled_html)
+        candidate_doc = _render_weasy_document(filled_html, session)
+        if len(candidate_doc.pages) <= len(document.pages):
+            final_doc = candidate_doc
+    return _FillerPassResult(
+        document=final_doc,
+        placements=placements,
+        decisions=decisions,
+        ran=True,
+    )
+
+
+def _bottom_bleed_placements(
+    placements: list[fillers.FillerPlacement],
+) -> list[fillers.FillerPlacement]:
+    """Return filler placements stamped as bottom-bleed PDF overlays."""
+    return [placement for placement in placements if placement.mode == "bottom-bleed"]
+
+
+def _plan_page_damage(
+    document: Any,
+    catalog: PageDamageCatalog,
+    *,
+    recipe_title: str,
+) -> list[page_damage.PageDamagePlacement]:
+    """Plan page-damage overlays for the selected render strategy."""
+    return page_damage.plan_page_damage(
+        document,
+        catalog,
+        recipe_title=recipe_title,
+    )
+
+
+def _write_final_pdf(
+    document: Any,
+    out_pdf: Path,
+    *,
+    ctx: RenderContext,
+    session: _WeasyRenderSession,
+    damage_catalog: PageDamageCatalog | None,
+    damage_placements: list[page_damage.PageDamagePlacement],
+    overlay_placements: list[fillers.FillerPlacement],
+) -> _PdfWriteResult:
+    """Choose and run the final PDF write strategy."""
+    if damage_catalog is not None and damage_catalog.enabled:
         if ctx.page_damage_mode == "full":
             _write_pdf_with_page_art(
-                final_doc,
+                document,
                 out_pdf,
                 damage_catalog=damage_catalog,
                 damage_placements=damage_placements,
                 overlay_placements=overlay_placements,
-                base_url=base_url,
+                base_url=session.base_url,
                 ctx=ctx,
             )
-        else:
-            _write_pdf_with_page_damage_fast(
-                final_doc,
-                out_pdf,
-                damage_catalog=damage_catalog,
-                damage_placements=damage_placements,
-                overlay_placements=overlay_placements,
-                base_url=base_url,
-                ctx=ctx,
-            )
-            pdf_already_cleaned = True
-        stage_start = _log_timing(
-            ctx,
-            f"pdf write ({ctx.page_damage_mode})",
-            stage_start,
+            return _PdfWriteResult(timing_label=f"pdf write ({ctx.page_damage_mode})")
+        _write_pdf_with_page_damage_fast(
+            document,
+            out_pdf,
+            damage_catalog=damage_catalog,
+            damage_placements=damage_placements,
+            overlay_placements=overlay_placements,
+            base_url=session.base_url,
+            ctx=ctx,
         )
-    elif overlay_placements:
+        return _PdfWriteResult(
+            timing_label=f"pdf write ({ctx.page_damage_mode})",
+            pdf_already_cleaned=True,
+        )
+
+    if overlay_placements:
         _write_pdf_with_bottom_bleeds(
-            final_doc,
+            document,
             out_pdf,
             overlay_placements,
-            base_url,
+            session.base_url,
             ctx,
         )
-        stage_start = _log_timing(ctx, "pdf write (bottom bleeds)", stage_start)
-    else:
-        final_doc.write_pdf(out_pdf, **weasy_options)
-        stage_start = _log_timing(ctx, "pdf write", stage_start)
+        return _PdfWriteResult(timing_label="pdf write (bottom bleeds)")
+
+    document.write_pdf(out_pdf, **session.weasy_options)
+    return _PdfWriteResult(timing_label="pdf write")
+
+
+def _write_render_reports_metadata_and_debug(
+    out_pdf: Path,
+    document: Any,
+    ctx: RenderContext,
+    *,
+    recipe_title: str | None,
+    pagination_result: _PaginationPassResult,
+    pdf_already_cleaned: bool,
+    filler_result: _FillerPassResult,
+    stage_start: float,
+) -> None:
+    """Write reports, cleanup, metadata, and debug overlays after PDF output."""
     if ctx.pagination_mode != "off" and ctx.pagination_report_path is not None:
         pagination.write_report(
             ctx.pagination_report_path,
-            pagination.analyze_document(final_doc),
-            fix_ids=pagination_fix_ids,
-            accepted_fix=accepted_fix,
-            fix_reason=fix_reason,
+            pagination.analyze_document(document),
+            fix_ids=pagination_result.fix_ids,
+            accepted_fix=pagination_result.accepted_fix,
+            fix_reason=pagination_result.fix_reason,
         )
         stage_start = _log_timing(ctx, "pagination report", stage_start)
     if ctx.clean_pdf and not pdf_already_cleaned:
@@ -548,10 +730,9 @@ def render_html_to_pdf(
         _write_filler_debug_overlay(
             out_pdf,
             ctx.filler_debug_overlay_path,
-            filler_decisions,
-            placements,
+            filler_result.decisions,
+            filler_result.placements,
         )
-    return out_pdf
 
 
 def _log_timing(ctx: RenderContext, stage: str, start: float) -> float:

@@ -7,6 +7,7 @@ from pathlib import Path
 
 from PIL import Image, ImageDraw
 
+from papercrown.art import audit as audit_mod
 from papercrown.art.audit import audit_recipe_art
 from papercrown.art.roles import ROLE_REGISTRY, classify_art_path
 from papercrown.project.manifest import build_manifest
@@ -260,6 +261,24 @@ def test_generated_docs_role_nominal_sizes_match_art_brief():
     assert ROLE_REGISTRY["ornament-tailpiece"].nominal_height_in == 0.867
     assert ROLE_REGISTRY["filler-bottom"].nominal_width_in == 6.0
     assert ROLE_REGISTRY["filler-bottom"].nominal_height_in == 2.067
+
+
+def test_art_audit_expected_role_helpers_are_shared():
+    assert audit_mod._expected_splash_roles("front-cover") == frozenset(
+        {"cover-front", "scene"}
+    )
+    assert audit_mod._expected_splash_roles("back-cover") == frozenset(
+        {"cover-back", "scene"}
+    )
+    assert audit_mod._expected_splash_roles("chapter-start") == frozenset(
+        {"scene", "splash"}
+    )
+    assert audit_mod._expected_filler_roles("tailpiece") == frozenset(
+        {"ornament-tailpiece"}
+    )
+    assert audit_mod._expected_filler_roles("page-finish") == frozenset({"page-finish"})
+    assert "cover" in audit_mod.RECIPE_CHAPTER_ART_ROLES
+    assert "cover-front" in audit_mod.MANIFEST_CHAPTER_ART_ROLES
 
 
 def test_art_audit_expects_cover_roles_for_cover_targets(tmp_path: Path):

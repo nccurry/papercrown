@@ -10,6 +10,7 @@ import pytest
 from papercrown.project.manifest import build_manifest
 from papercrown.project.recipe import (
     CHAPTER_KINDS,
+    ChapterSpec,
     RecipeError,
     SourceRef,
     load_recipe,
@@ -53,6 +54,55 @@ class TestSourceRef:
 
 
 # ---------------------------------------------------------------------------
+# ChapterSpec
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.parametrize(
+    ("raw", "expected_kind"),
+    [
+        ({"source": "v:Intro.md"}, "file"),
+        ({"sources": ["v:Intro.md"]}, "sequence"),
+        ({"children": [{"source": "v:Intro.md"}]}, "group"),
+        ({"type": "appendix-index"}, "generated"),
+    ],
+)
+def test_chapter_spec_infers_kind_by_shape(raw, expected_kind):
+    chapter = ChapterSpec.from_dict(raw, index=0)
+
+    assert chapter.kind == expected_kind
+
+
+def test_chapter_spec_splits_divider_art_from_insert_art():
+    chapter = ChapterSpec.from_dict(
+        {
+            "source": "v:Intro.md",
+            "art": [
+                {
+                    "role": "splash",
+                    "art": "splashes/intro.png",
+                    "after_heading": "Opening",
+                }
+            ],
+        },
+        index=0,
+    )
+    divider = ChapterSpec.from_dict(
+        {
+            "source": "v:Divider.md",
+            "art": "dividers/intro.png",
+        },
+        index=1,
+    )
+
+    assert chapter.art is None
+    assert chapter.art_inserts[0].target == "after-heading"
+    assert chapter.art_inserts[0].heading == "Opening"
+    assert divider.art == "dividers/intro.png"
+    assert divider.art_inserts == []
+
+
+# ---------------------------------------------------------------------------
 # Helpers for building recipes on the fly
 # ---------------------------------------------------------------------------
 
@@ -74,9 +124,7 @@ def _write_recipe(
 
 
 class TestLoadRecipeHappy:
-    def test_convention_first_recipe_derives_defaults_from_inline_title(
-        self, tmp_path
-    ):
+    def test_convention_first_recipe_derives_defaults_from_inline_title(self, tmp_path):
         p = _write_recipe(
             tmp_path,
             """

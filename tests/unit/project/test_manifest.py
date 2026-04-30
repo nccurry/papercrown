@@ -802,12 +802,14 @@ class TestKindFile:
         )
         manifest = build_manifest(recipe)
 
-        assert build_mod._recipe_cover_art_path(recipe) == (
-            art / "cover-front-opening-frontier-crew-01.png"
-        ).resolve()
-        assert build_mod._recipe_ornament_path(recipe, "folio_frame") == (
-            art / "ornament-folio-frame.png"
-        ).resolve()
+        assert (
+            build_mod._recipe_cover_art_path(recipe)
+            == (art / "cover-front-opening-frontier-crew-01.png").resolve()
+        )
+        assert (
+            build_mod._recipe_ornament_path(recipe, "folio_frame")
+            == (art / "ornament-folio-frame.png").resolve()
+        )
         setting = manifest.find_chapter("setting")
         assert setting is not None
         assert setting.art_path == (art / "header-setting.png").resolve()
@@ -816,9 +818,10 @@ class TestKindFile:
         assert mage.art_path == (art / "class-mage.png").resolve()
         assert mage.spot_art_path == (art / "spot-class-mage.png").resolve()
         assert manifest.splashes[-1].id == "auto-cover-back"
-        assert manifest.splashes[-1].art_path == (
-            art / "cover-back-closing-the-black-01.png"
-        ).resolve()
+        assert (
+            manifest.splashes[-1].art_path
+            == (art / "cover-back-closing-the-black-01.png").resolve()
+        )
 
     def test_fillers_art_dir_limits_auto_discovery_and_explicit_paths(
         self,

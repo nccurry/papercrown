@@ -24,6 +24,47 @@ from papercrown.build.options import (
 )
 
 
+def test_project_build_block_parses_all_option_types(tmp_path):
+    config_path = tmp_path / "papercrown.yaml"
+    config_path.write_text(
+        textwrap.dedent(
+            """
+            default_book: books/main.yaml
+            build:
+              target: web
+              scope: sections
+              profile: digital
+              chapter: " Intro "
+              include_art: false
+              force: true
+              jobs: 3
+              clean_pdf: false
+              pagination: fix
+              draft_mode: visual
+              page_damage: false
+              timings: true
+            """
+        ).lstrip(),
+        encoding="utf-8",
+    )
+
+    patch = load_project_config(config_path)
+
+    assert patch.default_book == tmp_path / "books" / "main.yaml"
+    assert patch.target is BuildTarget.WEB
+    assert patch.scope is BuildScope.SECTIONS
+    assert patch.profile is OutputProfile.DIGITAL
+    assert patch.single_chapter == "Intro"
+    assert patch.include_art is False
+    assert patch.force is True
+    assert patch.jobs == 3
+    assert patch.clean_pdf is False
+    assert patch.pagination_mode is PaginationMode.FIX
+    assert patch.draft_mode is DraftMode.VISUAL
+    assert patch.page_damage_mode is PageDamageMode.OFF
+    assert patch.timings is True
+
+
 def test_project_recipe_and_cli_layers_apply_in_order(tmp_path):
     recipe = _write_recipe(
         tmp_path,

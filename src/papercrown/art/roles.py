@@ -172,149 +172,19 @@ def classify_art_path(
     if "campaign" in dirs:
         return _classification("excluded")
 
-    if stem == "cover-back" or stem.startswith("cover-back-"):
-        return _classification("cover-back", **_parse_prefix(stem, ("cover-back",)))
-    if stem in {"cover", "cover-front"} or stem.startswith("cover-front-"):
-        role = "cover-front" if stem.startswith("cover-front") else "cover"
-        convention = "canonical" if role == "cover-front" else "legacy"
-        return _classification(
-            role,
-            matched_convention=convention,
-            **_parse_prefix(stem, ("cover-front", "cover")),
-        )
-
-    if _in_nested_folder(dirs, "classes", "dividers"):
-        return _classification("class-divider", **_parse_prefix(stem, ("class",)))
-    if _in_folder(dirs, "classes") and stem.startswith("class-"):
-        return _classification("class-divider", **_parse_prefix(stem, ("class",)))
-    if stem.startswith("class-"):
-        return _classification(
-            "class-divider",
-            matched_convention="legacy",
-            **_parse_prefix(stem, ("class",)),
-        )
-
-    if (
-        _in_folder(dirs, "dividers") and "classes" not in dirs and "frames" not in dirs
-    ) or stem == "chapter-divider":
-        return _classification(
-            "chapter-divider",
-            **_parse_prefix(stem, ("divider", "chapter-divider")),
-        )
-    if stem.startswith("divider-"):
-        return _classification(
-            "chapter-divider",
-            matched_convention="legacy",
-            **_parse_prefix(stem, ("divider",)),
-        )
-
-    if (
-        _in_folder(dirs, "headers")
-        or stem.endswith("-header")
-        or stem.startswith("header-")
-    ):
-        return _classification(
-            "chapter-header",
-            **_parse_prefix(stem, ("header",), suffixes=("-header",)),
-        )
-
-    if _in_nested_folder(dirs, "classes", "spots"):
-        return _classification(
-            "class-opening-spot", **_parse_prefix(stem, ("spot-class",))
-        )
-    if "class-spots" in dirs or stem.startswith("spot-class-"):
-        return _classification(
-            "class-opening-spot",
-            matched_convention="legacy",
-            **_parse_prefix(stem, ("spot-class",)),
-        )
-
-    if _in_nested_folder(dirs, "frames", "dividers") or "frame-dividers" in dirs:
-        return _classification("frame-divider", **_parse_prefix(stem, ("frame",)))
-    if stem.startswith("frame-"):
-        return _classification(
-            "frame-divider",
-            matched_convention="legacy",
-            **_parse_prefix(stem, ("frame",)),
-        )
-
-    if _in_folder(dirs, "spreads") or stem.startswith("spread-"):
-        return _classification("spread", **_parse_prefix(stem, ("spread",)))
-
-    if _in_folder(dirs, "splashes") or stem.startswith(
-        ("splash-", "opening-", "closing-")
-    ):
-        return _classification(
-            "splash",
-            **_parse_prefix(
-                stem,
-                (
-                    "splash-cover-front",
-                    "splash-cover-back",
-                    "splash-chapter",
-                    "splash-section",
-                    "splash",
-                    "opening",
-                    "closing",
-                ),
-            ),
-        )
-
-    ornament_role = _classify_ornament(dirs, stem)
-    if ornament_role is not None:
-        role, convention = ornament_role
-        return _classification(
-            role,
-            matched_convention=convention,
-            **_parse_prefix(
-                stem,
-                (
-                    "ornament-headpiece",
-                    "ornament-break",
-                    "ornament-tailpiece",
-                    "ornament-corner",
-                    "ornament-folio",
-                ),
-            ),
-        )
-
-    filler_role = _classify_filler(dirs, stem)
-    if filler_role is not None:
-        role, convention = filler_role
-        return _classification(
-            role,
-            matched_convention=convention,
-            **_parse_prefix(
-                stem,
-                (
-                    "filler-spot",
-                    "filler-wide",
-                    "filler-plate",
-                    "filler-bottom",
-                    "page-finish",
-                ),
-            ),
-        )
-
-    if stem.startswith("wear-"):
-        match = PAGE_WEAR_FILENAME_RE.fullmatch(stem)
-        if match is not None:
-            return _classification(
-                "page-wear",
-                context=match.group("family"),
-                subject=match.group("size"),
-                variant=match.group("variant"),
-            )
-        return _classification("page-wear", subject=stem)
-
-    content_role = _classify_content(dirs, stem, name)
-    if content_role is not None:
-        role, convention = content_role
-        return _classification(
-            role,
-            matched_convention=convention,
-            **_parse_prefix(stem, (role,)),
-        )
+    classification = (
+        _classify_cover_art(stem)
+        or _classify_class_art(dirs, stem)
+        or _classify_chapter_art(dirs, stem)
+        or _classify_frame_art(dirs, stem)
+        or _classify_broad_art(dirs, stem)
+        or _classify_ornament_art(dirs, stem)
+        or _classify_filler_art(dirs, stem)
+        or _classify_page_wear_art(stem)
+        or _classify_content_art(dirs, stem, name)
+    )
+    if classification is not None:
+        return classification
 
     return _classification("unclassified")
 
@@ -365,6 +235,207 @@ def _is_excluded(parts: list[str], stem: str) -> bool:
         stem in {"manifest", "contact-sheet"}
         or stem.startswith("contact-sheet-")
         or stem.endswith("-contact-sheet")
+    )
+
+
+def _classify_cover_art(stem: str) -> ArtAssetClassification | None:
+    """Classify cover art filenames."""
+    if stem == "cover-back" or stem.startswith("cover-back-"):
+        return _classification("cover-back", **_parse_prefix(stem, ("cover-back",)))
+    if stem in {"cover", "cover-front"} or stem.startswith("cover-front-"):
+        role = "cover-front" if stem.startswith("cover-front") else "cover"
+        convention = "canonical" if role == "cover-front" else "legacy"
+        return _classification(
+            role,
+            matched_convention=convention,
+            **_parse_prefix(stem, ("cover-front", "cover")),
+        )
+    return None
+
+
+def _classify_class_art(
+    dirs: list[str],
+    stem: str,
+) -> ArtAssetClassification | None:
+    """Classify class divider and opening spot art."""
+    if _in_nested_folder(dirs, "classes", "dividers"):
+        return _classification("class-divider", **_parse_prefix(stem, ("class",)))
+    if _in_folder(dirs, "classes") and stem.startswith("class-"):
+        return _classification("class-divider", **_parse_prefix(stem, ("class",)))
+    if stem.startswith("class-"):
+        return _classification(
+            "class-divider",
+            matched_convention="legacy",
+            **_parse_prefix(stem, ("class",)),
+        )
+    if _in_nested_folder(dirs, "classes", "spots"):
+        return _classification(
+            "class-opening-spot",
+            **_parse_prefix(stem, ("spot-class",)),
+        )
+    if "class-spots" in dirs or stem.startswith("spot-class-"):
+        return _classification(
+            "class-opening-spot",
+            matched_convention="legacy",
+            **_parse_prefix(stem, ("spot-class",)),
+        )
+    return None
+
+
+def _classify_chapter_art(
+    dirs: list[str],
+    stem: str,
+) -> ArtAssetClassification | None:
+    """Classify chapter dividers and headers."""
+    is_chapter_divider = (
+        _in_folder(dirs, "dividers") and "classes" not in dirs and "frames" not in dirs
+    ) or stem == "chapter-divider"
+    if is_chapter_divider:
+        return _classification(
+            "chapter-divider",
+            **_parse_prefix(stem, ("divider", "chapter-divider")),
+        )
+    if stem.startswith("divider-"):
+        return _classification(
+            "chapter-divider",
+            matched_convention="legacy",
+            **_parse_prefix(stem, ("divider",)),
+        )
+    if (
+        _in_folder(dirs, "headers")
+        or stem.endswith("-header")
+        or stem.startswith("header-")
+    ):
+        return _classification(
+            "chapter-header",
+            **_parse_prefix(stem, ("header",), suffixes=("-header",)),
+        )
+    return None
+
+
+def _classify_frame_art(
+    dirs: list[str],
+    stem: str,
+) -> ArtAssetClassification | None:
+    """Classify frame family divider art."""
+    if _in_nested_folder(dirs, "frames", "dividers") or "frame-dividers" in dirs:
+        return _classification("frame-divider", **_parse_prefix(stem, ("frame",)))
+    if stem.startswith("frame-"):
+        return _classification(
+            "frame-divider",
+            matched_convention="legacy",
+            **_parse_prefix(stem, ("frame",)),
+        )
+    return None
+
+
+def _classify_broad_art(
+    dirs: list[str],
+    stem: str,
+) -> ArtAssetClassification | None:
+    """Classify splash and spread art."""
+    if _in_folder(dirs, "spreads") or stem.startswith("spread-"):
+        return _classification("spread", **_parse_prefix(stem, ("spread",)))
+    if _in_folder(dirs, "splashes") or stem.startswith(
+        ("splash-", "opening-", "closing-")
+    ):
+        return _classification(
+            "splash",
+            **_parse_prefix(
+                stem,
+                (
+                    "splash-cover-front",
+                    "splash-cover-back",
+                    "splash-chapter",
+                    "splash-section",
+                    "splash",
+                    "opening",
+                    "closing",
+                ),
+            ),
+        )
+    return None
+
+
+def _classify_ornament_art(
+    dirs: list[str],
+    stem: str,
+) -> ArtAssetClassification | None:
+    """Classify ornament art through the ornament family helper."""
+    ornament_role = _classify_ornament(dirs, stem)
+    if ornament_role is None:
+        return None
+    role, convention = ornament_role
+    return _classification(
+        role,
+        matched_convention=convention,
+        **_parse_prefix(
+            stem,
+            (
+                "ornament-headpiece",
+                "ornament-break",
+                "ornament-tailpiece",
+                "ornament-corner",
+                "ornament-folio",
+            ),
+        ),
+    )
+
+
+def _classify_filler_art(
+    dirs: list[str],
+    stem: str,
+) -> ArtAssetClassification | None:
+    """Classify auto-placeable filler art."""
+    filler_role = _classify_filler(dirs, stem)
+    if filler_role is None:
+        return None
+    role, convention = filler_role
+    return _classification(
+        role,
+        matched_convention=convention,
+        **_parse_prefix(
+            stem,
+            (
+                "filler-spot",
+                "filler-wide",
+                "filler-plate",
+                "filler-bottom",
+                "page-finish",
+            ),
+        ),
+    )
+
+
+def _classify_page_wear_art(stem: str) -> ArtAssetClassification | None:
+    """Classify page-wear texture art."""
+    if not stem.startswith("wear-"):
+        return None
+    match = PAGE_WEAR_FILENAME_RE.fullmatch(stem)
+    if match is not None:
+        return _classification(
+            "page-wear",
+            context=match.group("family"),
+            subject=match.group("size"),
+            variant=match.group("variant"),
+        )
+    return _classification("page-wear", subject=stem)
+
+
+def _classify_content_art(
+    dirs: list[str],
+    stem: str,
+    name: str,
+) -> ArtAssetClassification | None:
+    """Classify content-scoped art."""
+    content_role = _classify_content(dirs, stem, name)
+    if content_role is None:
+        return None
+    role, convention = content_role
+    return _classification(
+        role,
+        matched_convention=convention,
+        **_parse_prefix(stem, (role,)),
     )
 
 

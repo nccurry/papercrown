@@ -142,9 +142,13 @@ def _starter_files(
     recipe_rel = "book.yaml"
     recipe_path = target / recipe_rel
     uses_project_root_vault = vault is None
-    vault_path = target if uses_project_root_vault else _resolve_scaffold_vault(
-        target,
-        vault,
+    vault_path = (
+        target
+        if uses_project_root_vault
+        else _resolve_scaffold_vault(
+            target,
+            vault,
+        )
     )
     vault_ref = None
     if not uses_project_root_vault:

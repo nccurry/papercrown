@@ -19,8 +19,6 @@ The renderer doesn't care HOW a chapter was assembled, just walks the tree.
 from __future__ import annotations
 
 import re
-from collections.abc import Iterator
-from dataclasses import dataclass, field
 from pathlib import Path
 
 from papercrown.art.roles import (
@@ -29,10 +27,35 @@ from papercrown.art.roles import (
     classify_art_path,
 )
 from papercrown.project.catalog import parse_catalog_file
+from papercrown.project.manifest_art import (
+    art_path as _art_path,
+)
+from papercrown.project.manifest_art import (
+    classify_filler_art_path,
+    convention_art_path,
+    resolve_art_asset,
+)
+from papercrown.project.manifest_dump import dump
+from papercrown.project.manifest_models import (
+    BookPart,
+    Chapter,
+    ChapterFillerSlot,
+    ChapterHeadingFillerMarker,
+    FillerArtClassification,
+    FillerAsset,
+    FillerCatalog,
+    FillerSlot,
+    GeneratedPart,
+    InlinePart,
+    Manifest,
+    PageDamageAsset,
+    PageDamageCatalog,
+    Splash,
+    TocPart,
+)
 from papercrown.project.recipe import (
     PAGE_DAMAGE_FAMILIES,
     PAGE_DAMAGE_SIZES,
-    ArtInsertSpec,
     ChapterSpec,
     FillerAssetSpec,
     FillerHeadingMarkerSpec,
@@ -41,6 +64,7 @@ from papercrown.project.recipe import (
     SourceRef,
     SplashSpec,
 )
+from papercrown.project.slugs import slugify
 from papercrown.project.vaults import VaultIndex, WikilinkTarget
 
 # Image extensions accepted for filler art discovered from art_dir.
@@ -49,6 +73,31 @@ FILLER_IMAGE_SUFFIXES = IMAGE_SUFFIXES
 PAGE_DAMAGE_IMAGE_SUFFIXES = {".png", ".webp"}
 # Page-wear filename parser shared with the art role classifier.
 PAGE_DAMAGE_FILENAME_RE = PAGE_WEAR_FILENAME_RE
+
+__all__ = [
+    "BookPart",
+    "Chapter",
+    "ChapterFillerSlot",
+    "ChapterHeadingFillerMarker",
+    "FillerArtClassification",
+    "FillerAsset",
+    "FillerCatalog",
+    "FillerSlot",
+    "GeneratedPart",
+    "InlinePart",
+    "Manifest",
+    "ManifestError",
+    "PageDamageAsset",
+    "PageDamageCatalog",
+    "Splash",
+    "TocPart",
+    "build_manifest",
+    "classify_filler_art_path",
+    "convention_art_path",
+    "dump",
+    "resolve_art_asset",
+    "slugify",
+]
 
 # ---------------------------------------------------------------------------
 # Errors
@@ -64,265 +113,8 @@ class ManifestError(ValueError):
 
 
 # ---------------------------------------------------------------------------
-# Chapter / Manifest
-# ---------------------------------------------------------------------------
-
-
-@dataclass
-class Splash:
-    """A resolved large splash-art placement."""
-
-    id: str
-    art_path: Path | None
-    target: str
-    placement: str
-    chapter_slug: str | None = None
-    heading_slug: str | None = None
-
-
-@dataclass(frozen=True)
-class FillerAsset:
-    """A resolved conditional filler art asset."""
-
-    id: str
-    art_path: Path
-    shape: str
-    height_in: float
-
-
-@dataclass(frozen=True)
-class FillerSlot:
-    """A resolved filler slot definition."""
-
-    name: str
-    min_space_in: float
-    max_space_in: float
-    shapes: list[str]
-
-
-@dataclass(frozen=True)
-class FillerCatalog:
-    """Resolved conditional filler art catalog for a recipe."""
-
-    enabled: bool = False
-    slots: dict[str, FillerSlot] = field(default_factory=dict)
-    assets: list[FillerAsset] = field(default_factory=list)
-
-
-@dataclass(frozen=True)
-class ChapterHeadingFillerMarker:
-    """A heading-scoped filler marker policy resolved for one chapter."""
-
-    slot: str
-    heading_level: int
-    slot_kind: str
-    skip_first: bool = False
-    context: str | None = None
-
-
-@dataclass(frozen=True)
-class PageDamageAsset:
-    """A resolved transparent page-wear asset."""
-
-    id: str
-    art_path: Path
-    family: str
-    size: str
-
-
-@dataclass(frozen=True)
-class PageDamageCatalog:
-    """Resolved page-damage catalog for a recipe."""
-
-    enabled: bool = False
-    seed: str = "page-damage-v1"
-    density: float = 0.55
-    max_assets_per_page: int = 2
-    opacity: float = 0.28
-    glaze_opacity: float = 0.0
-    glaze_texture: str = "surface-warm-paper-tint-cloud.png"
-    skip: list[str] = field(default_factory=list)
-    assets: list[PageDamageAsset] = field(default_factory=list)
-
-
-@dataclass(frozen=True)
-class FillerArtClassification:
-    """Filename/path-derived role for an art asset."""
-
-    category: str
-    shape: str | None = None
-    height_in: float | None = None
-    auto_selectable: bool = False
-
-
-@dataclass(frozen=True)
-class ChapterFillerSlot:
-    """A concrete marker emitted into assembled chapter markdown."""
-
-    id: str
-    slot: str
-    chapter_slug: str
-    preferred_asset_id: str | None = None
-    section_slug: str | None = None
-    section_title: str | None = None
-    slot_kind: str | None = None
-    context: str | None = None
-
-
-@dataclass
-class Chapter:
-    """A resolved render unit in the book's chapter tree."""
-
-    title: str
-    slug: str
-    eyebrow: str | None = None
-    art_path: Path | None = None
-    spot_art_path: Path | None = None
-    replace_opening_art: bool = False
-    tailpiece_path: Path | None = None
-    headpiece_path: Path | None = None
-    break_ornament_path: Path | None = None
-    filler_slots: list[ChapterFillerSlot] = field(default_factory=list)
-    source_files: list[Path] = field(default_factory=list)
-    source_titles: list[str | None] = field(default_factory=list)
-    source_strip_related: list[bool] = field(default_factory=list)
-    source_filler_enabled: list[bool] = field(default_factory=list)
-    source_boundary_filler_slot: str | None = None
-    source_boundary_filler_slots: list[str] = field(default_factory=list)
-    subclass_filler_slot: str | None = "subclass-end"
-    subclass_filler_slots: list[str] = field(default_factory=list)
-    heading_filler_markers: list[ChapterHeadingFillerMarker] | None = None
-    fillers_enabled: bool = True
-    children: list[Chapter] = field(default_factory=list)
-    individual_pdf: bool = False
-    individual_pdf_subdir: str | None = None
-    style: str = "default"
-    # When True, this chapter (when rendered as a non-top-level descendant in
-    # the combined book) gets its OWN full-page section-divider before its
-    # content -- the same kind of divider that top-level chapters always get.
-    # Top-level chapters always get a divider regardless of this flag.
-    divider: bool = False
-    # Heading titles/slugs inside this chapter that should start on a fresh
-    # page without forcing every same-level section to do so.
-    full_page_sections: list[str] = field(default_factory=list)
-    # Combined-book table-of-contents depth for this top-level chapter.
-    # None means use the assembly default.
-    toc_depth: int | None = None
-    # Content-scoped art inserts declared on this chapter's recipe item.
-    art_inserts: list[ArtInsertSpec] = field(default_factory=list)
-
-    def __post_init__(self) -> None:
-        """Normalize singular filler marker fields into list form."""
-        if not self.source_boundary_filler_slots and self.source_boundary_filler_slot:
-            self.source_boundary_filler_slots = [self.source_boundary_filler_slot]
-        elif (
-            self.source_boundary_filler_slots
-            and self.source_boundary_filler_slot is None
-        ):
-            self.source_boundary_filler_slot = self.source_boundary_filler_slots[0]
-
-        if not self.subclass_filler_slots and self.subclass_filler_slot:
-            self.subclass_filler_slots = [self.subclass_filler_slot]
-        elif self.subclass_filler_slots and self.subclass_filler_slot is None:
-            self.subclass_filler_slot = self.subclass_filler_slots[0]
-
-    @property
-    def is_leaf(self) -> bool:
-        """Return whether the chapter has no child chapters."""
-        return not self.children
-
-    def walk(self) -> Iterator[Chapter]:
-        """Depth-first iterator yielding self then each child recursively."""
-        yield self
-        for c in self.children:
-            yield from c.walk()
-
-
-@dataclass(frozen=True)
-class TocPart:
-    """A table-of-contents marker in the ordered book contents."""
-
-    title: str = "Table of Contents"
-    slug: str = "table-of-contents"
-    depth: int | None = None
-
-
-@dataclass(frozen=True)
-class InlinePart:
-    """An inline, recipe-authored book part such as the canonical title item."""
-
-    style: str
-    title: str | None = None
-    subtitle: str | None = None
-    cover_eyebrow: str | None = None
-    cover_footer: str | None = None
-    slug: str | None = None
-
-
-@dataclass(frozen=True)
-class GeneratedPart:
-    """A computed page in the ordered book contents."""
-
-    type: str
-    title: str
-    slug: str
-    style: str = "generated"
-
-
-BookPart = Chapter | TocPart | InlinePart | GeneratedPart
-
-
-@dataclass
-class Manifest:
-    """The resolved recipe, vault index, chapter tree, and warnings."""
-
-    recipe: Recipe
-    vault_index: VaultIndex
-    chapters: list[Chapter]  # top-level (siblings)
-    contents: list[BookPart] = field(default_factory=list)
-    splashes: list[Splash] = field(default_factory=list)
-    fillers: FillerCatalog = field(default_factory=FillerCatalog)
-    page_damage: PageDamageCatalog = field(default_factory=PageDamageCatalog)
-    warnings: list[str] = field(default_factory=list)
-
-    def all_chapters(self) -> list[Chapter]:
-        """Return every chapter in depth-first order."""
-        out: list[Chapter] = []
-        for c in self.chapters:
-            out.extend(c.walk())
-        return out
-
-    def find_chapter(self, name: str) -> Chapter | None:
-        """Find a chapter by exact slug or case-insensitive title match."""
-        lowered = name.lower()
-        for c in self.all_chapters():
-            if (
-                c.slug == lowered
-                or c.slug == slugify(name)
-                or c.title.lower() == lowered
-            ):
-                return c
-        return None
-
-
-# ---------------------------------------------------------------------------
 # Helpers
 # ---------------------------------------------------------------------------
-
-
-def slugify(s: str) -> str:
-    """Canonical chapter / anchor slug.
-
-    Lowercase, runs of non-(letter/digit/underscore/hyphen) collapsed to a
-    single hyphen, with leading/trailing hyphens stripped.
-
-    Must stay in sync with `slugify` in `filters/internal-links.lua`. Any
-    change to this rule needs the matching change in the Lua filter or
-    cross-document anchor resolution will silently start missing.
-    """
-    slug = s.lower().strip()
-    slug = re.sub(r"[^a-z0-9_-]+", "-", slug)
-    return slug.strip("-") or "untitled"
 
 
 def _resolve_source(source: SourceRef, recipe: Recipe, vault_index: VaultIndex) -> Path:
@@ -343,145 +135,6 @@ def _resolve_source(source: SourceRef, recipe: Recipe, vault_index: VaultIndex) 
             f"source {source!s} not found in any vault (no explicit vault prefix)"
         )
     return hit
-
-
-def _art_path(recipe: Recipe, art_filename: str | None) -> Path | None:
-    """Resolve an explicit art filename relative to the recipe art directory."""
-    if not art_filename:
-        return None
-    art = (recipe.art_dir / art_filename).resolve()
-    return art if art.is_file() else None
-
-
-def convention_art_path(
-    recipe: Recipe,
-    roles: set[str],
-    *,
-    slug: str | None = None,
-    prefixes: tuple[str, ...] = (),
-) -> Path | None:
-    """Find the first art asset matching canonical filename conventions."""
-    root = recipe.art_dir
-    if not root.is_dir():
-        return None
-    for path in sorted(root.rglob("*"), key=lambda item: item.as_posix().lower()):
-        if not path.is_file() or path.suffix.lower() not in IMAGE_SUFFIXES:
-            continue
-        classification = classify_art_path(path.resolve(), art_root=root)
-        if classification.role not in roles:
-            continue
-        if slug is not None and not _art_stem_matches_slug(
-            path.stem,
-            slug=slug,
-            prefixes=prefixes,
-        ):
-            continue
-        return path.resolve()
-    return None
-
-
-def resolve_art_asset(
-    recipe: Recipe,
-    *,
-    art: str | None = None,
-    role: str = "splash",
-    context: str | None = None,
-    subject: str | None = None,
-) -> Path | None:
-    """Resolve an explicit art path or convention-match a role/context slot."""
-    if art:
-        return _art_path(recipe, art)
-    root = recipe.art_dir
-    if not root.is_dir():
-        return None
-    for path in sorted(root.rglob("*"), key=lambda item: item.as_posix().lower()):
-        if not path.is_file() or path.suffix.lower() not in IMAGE_SUFFIXES:
-            continue
-        resolved = path.resolve()
-        classification = classify_art_path(resolved, art_root=root)
-        if classification.role != role:
-            continue
-        if context and not _art_candidate_matches(
-            path,
-            context,
-            classification_context=classification.context,
-            classification_subject=classification.subject,
-        ):
-            continue
-        if subject and not _art_candidate_matches(
-            path,
-            subject,
-            classification_context=classification.context,
-            classification_subject=classification.subject,
-        ):
-            continue
-        return resolved
-    return None
-
-
-def _art_candidate_matches(
-    path: Path,
-    wanted: str,
-    *,
-    classification_context: str | None,
-    classification_subject: str | None,
-) -> bool:
-    """Return whether a classified art file matches a requested slot token."""
-    wanted_slug = slugify(wanted)
-    candidates = [
-        classification_context,
-        classification_subject,
-        _strip_variant_suffix(slugify(path.stem)),
-    ]
-    for candidate in candidates:
-        if candidate is None:
-            continue
-        candidate_slug = slugify(candidate)
-        if candidate_slug == wanted_slug:
-            return True
-        if candidate_slug.startswith(f"{wanted_slug}-"):
-            return True
-        if candidate_slug.endswith(f"-{wanted_slug}"):
-            return True
-        if f"-{wanted_slug}-" in candidate_slug:
-            return True
-    return False
-
-
-def _art_stem_matches_slug(
-    stem: str,
-    *,
-    slug: str,
-    prefixes: tuple[str, ...],
-) -> bool:
-    """Return whether a convention filename points at a chapter slug."""
-    normalized = slugify(stem)
-    chapter_slug = slugify(slug)
-    for prefix in sorted(prefixes, key=len, reverse=True):
-        prefix_slug = slugify(prefix)
-        if normalized == prefix_slug:
-            continue
-        token_prefix = f"{prefix_slug}-"
-        if not normalized.startswith(token_prefix):
-            continue
-        subject = _strip_variant_suffix(normalized.removeprefix(token_prefix))
-        if subject == chapter_slug:
-            return True
-        if subject.startswith(f"{chapter_slug}-"):
-            return True
-        if subject.endswith(f"-{chapter_slug}"):
-            return True
-    return False
-
-
-def _strip_variant_suffix(value: str) -> str:
-    """Remove a trailing numeric/v-prefixed filename variant token."""
-    bits = value.split("-")
-    if len(bits) <= 1:
-        return value
-    if re.fullmatch(r"v?\d+[a-z]?", bits[-1]):
-        return "-".join(bits[:-1])
-    return value
 
 
 def _chapter_art_path(recipe: Recipe, spec: ChapterSpec, title: str) -> Path | None:
@@ -564,63 +217,6 @@ def _page_damage_asset_from_path(
         family=family,
         size=size,
     )
-
-
-def classify_filler_art_path(
-    path: Path,
-    *,
-    art_root: Path | None = None,
-) -> FillerArtClassification:
-    """Classify an art path using the central art role registry."""
-    classification = classify_art_path(path, art_root=art_root)
-    category = _legacy_filler_category(path, classification.role)
-    return FillerArtClassification(
-        category=category,
-        shape=classification.shape,
-        height_in=classification.height_in,
-        auto_selectable=classification.auto_placeable,
-    )
-
-
-def _legacy_filler_category(path: Path, role: str) -> str:
-    """Map the role registry back to the historical filler category names."""
-    stem = path.stem.lower()
-    if role in {"cover", "cover-front", "cover-back"}:
-        return "cover-art"
-    if role == "splash":
-        return "manual-splash"
-    if role == "spread":
-        return "spread-art"
-    if role == "chapter-divider":
-        return "divider-art"
-    if role == "class-opening-spot":
-        return "class-opening"
-    if role == "ornament-tailpiece":
-        return "tailpiece"
-    if role in {"ornament-corner", "ornament-folio"}:
-        return role
-    if role == "faction":
-        return "setting-wide"
-    if role == "gear":
-        return "equipment-wide"
-    if role == "vista":
-        return "vista-wide"
-    for prefix in (
-        "stamp-",
-        "label-",
-        "map-",
-        "diagram-",
-        "screenshot-",
-        "icon-",
-        "logo-",
-        "portrait-",
-        "ship-",
-        "vehicle-",
-        "location-",
-    ):
-        if stem.startswith(prefix):
-            return prefix.removesuffix("-")
-    return role
 
 
 def _auto_filler_asset_id(path: Path, *, art_root: Path) -> str:
@@ -707,6 +303,62 @@ def _art_path_from_pattern(
 def _chapter_slug(spec: ChapterSpec, title: str) -> str:
     """Return an explicit recipe slug or derive one from the chapter title."""
     return spec.slug or slugify(title)
+
+
+def _chapter_from_spec(
+    spec: ChapterSpec,
+    recipe: Recipe,
+    title: str,
+    *,
+    source_files: list[Path] | None = None,
+    source_titles: list[str | None] | None = None,
+    source_strip_related: list[bool] | None = None,
+    source_filler_enabled: list[bool] | None = None,
+    source_boundary_filler_slot: str | None = None,
+    source_boundary_filler_slots: list[str] | None = None,
+    children: list[Chapter] | None = None,
+    slug: str | None = None,
+    eyebrow: str | None = None,
+    style: str | None = None,
+    art_path: Path | None = None,
+    use_spec_art: bool = True,
+    spot_art_path: Path | None = None,
+    replace_opening_art: bool = False,
+    individual_pdf: bool = False,
+    individual_pdf_subdir: str | None = None,
+    divider: bool = False,
+) -> Chapter:
+    """Create a Chapter with shared recipe-derived defaults."""
+    return Chapter(
+        title=title,
+        slug=slug if slug is not None else _chapter_slug(spec, title),
+        eyebrow=eyebrow if eyebrow is not None else spec.eyebrow,
+        art_path=(
+            art_path if not use_spec_art else _chapter_art_path(recipe, spec, title)
+        ),
+        spot_art_path=spot_art_path,
+        replace_opening_art=replace_opening_art,
+        tailpiece_path=_art_path(recipe, spec.tailpiece),
+        headpiece_path=_art_path(recipe, spec.headpiece),
+        break_ornament_path=_art_path(recipe, spec.break_ornament),
+        source_files=list(source_files or []),
+        source_titles=list(source_titles or []),
+        source_strip_related=list(source_strip_related or []),
+        source_filler_enabled=list(source_filler_enabled or []),
+        source_boundary_filler_slot=source_boundary_filler_slot,
+        source_boundary_filler_slots=list(source_boundary_filler_slots or []),
+        subclass_filler_slot=recipe.fillers.markers.subclass.slot,
+        subclass_filler_slots=list(recipe.fillers.markers.subclass.slots),
+        fillers_enabled=spec.fillers_enabled,
+        children=list(children or []),
+        individual_pdf=individual_pdf,
+        individual_pdf_subdir=individual_pdf_subdir,
+        style=style if style is not None else spec.style,
+        divider=divider,
+        full_page_sections=list(spec.full_page_sections),
+        toc_depth=spec.toc_depth,
+        art_inserts=list(spec.art_inserts),
+    )
 
 
 def _find_chapter(chapters: list[Chapter], name: str) -> Chapter | None:
@@ -1124,24 +776,13 @@ def _build_file_chapter(
         raise ManifestError("file chapter requires a source")
     src = _resolve_source(spec.source, recipe, vault_index)
     title = spec.title or src.stem
-    return Chapter(
-        title=title,
-        slug=_chapter_slug(spec, title),
-        eyebrow=spec.eyebrow,
-        art_path=_chapter_art_path(recipe, spec, title),
-        tailpiece_path=_art_path(recipe, spec.tailpiece),
-        headpiece_path=_art_path(recipe, spec.headpiece),
-        break_ornament_path=_art_path(recipe, spec.break_ornament),
+    return _chapter_from_spec(
+        spec,
+        recipe,
+        title,
         source_files=[src],
-        subclass_filler_slot=recipe.fillers.markers.subclass.slot,
-        subclass_filler_slots=list(recipe.fillers.markers.subclass.slots),
-        fillers_enabled=spec.fillers_enabled,
-        style=spec.style,
         individual_pdf=spec.individual_pdfs,
         individual_pdf_subdir=spec.individual_pdf_subdir,
-        full_page_sections=list(spec.full_page_sections),
-        toc_depth=spec.toc_depth,
-        art_inserts=list(spec.art_inserts),
     )
 
 
@@ -1164,23 +805,12 @@ def _build_catalog_chapter(
     parsed = parse_catalog_file(src)
     title = spec.title or src.stem
 
-    chapter = Chapter(
-        title=title,
-        slug=_chapter_slug(spec, title),
-        eyebrow=spec.eyebrow,
-        art_path=_chapter_art_path(recipe, spec, title),
-        tailpiece_path=_art_path(recipe, spec.tailpiece),
-        headpiece_path=_art_path(recipe, spec.headpiece),
-        break_ornament_path=_art_path(recipe, spec.break_ornament),
-        subclass_filler_slot=recipe.fillers.markers.subclass.slot,
-        subclass_filler_slots=list(recipe.fillers.markers.subclass.slots),
-        fillers_enabled=spec.fillers_enabled,
-        style=spec.style,
+    chapter = _chapter_from_spec(
+        spec,
+        recipe,
+        title,
         individual_pdf=spec.individual_pdfs,
         individual_pdf_subdir=spec.individual_pdf_subdir,
-        full_page_sections=list(spec.full_page_sections),
-        toc_depth=spec.toc_depth,
-        art_inserts=list(spec.art_inserts),
     )
 
     if parsed.format in ("embed-compendium", "annotated-embeds", "empty"):
@@ -1228,24 +858,13 @@ def _build_composite_chapter(
         raise ManifestError(f"composite source must be a directory: {folder}")
     files = sorted(folder.rglob("*.md"))
     title = spec.title or folder.name
-    return Chapter(
-        title=title,
-        slug=_chapter_slug(spec, title),
-        eyebrow=spec.eyebrow,
-        art_path=_chapter_art_path(recipe, spec, title),
-        tailpiece_path=_art_path(recipe, spec.tailpiece),
-        headpiece_path=_art_path(recipe, spec.headpiece),
-        break_ornament_path=_art_path(recipe, spec.break_ornament),
+    return _chapter_from_spec(
+        spec,
+        recipe,
+        title,
         source_files=files,
-        subclass_filler_slot=recipe.fillers.markers.subclass.slot,
-        subclass_filler_slots=list(recipe.fillers.markers.subclass.slots),
-        fillers_enabled=spec.fillers_enabled,
-        style=spec.style,
         individual_pdf=spec.individual_pdfs,
         individual_pdf_subdir=spec.individual_pdf_subdir,
-        full_page_sections=list(spec.full_page_sections),
-        toc_depth=spec.toc_depth,
-        art_inserts=list(spec.art_inserts),
     )
 
 
@@ -1327,27 +946,21 @@ def _build_classes_catalog_chapters(
                 f"classes-catalog {src.name} [{class_name}]: "
                 f"class spot art not found for slug {slug!r}"
             )
-        ch = Chapter(
-            title=clean_name,
+        ch = _chapter_from_spec(
+            spec,
+            recipe,
+            clean_name,
             slug=slug,
             eyebrow="Class",
             art_path=art,
+            use_spec_art=False,
             spot_art_path=spot_art,
             replace_opening_art=spec.replace_existing_opening_art,
-            tailpiece_path=_art_path(recipe, spec.tailpiece),
-            headpiece_path=_art_path(recipe, spec.headpiece),
-            break_ornament_path=_art_path(recipe, spec.break_ornament),
             source_files=files,
-            subclass_filler_slot=recipe.fillers.markers.subclass.slot,
-            subclass_filler_slots=list(recipe.fillers.markers.subclass.slots),
-            fillers_enabled=spec.fillers_enabled,
             style=spec.child_style,
             individual_pdf=spec.individual_pdfs,
             individual_pdf_subdir=spec.individual_pdf_subdir,
             divider=spec.child_divider,
-            full_page_sections=list(spec.full_page_sections),
-            toc_depth=spec.toc_depth,
-            art_inserts=list(spec.art_inserts),
         )
         children.append(ch)
 
@@ -1359,22 +972,11 @@ def _build_classes_catalog_chapters(
         return children
 
     wrapper_title = spec.title or "Classes"
-    wrapper = Chapter(
-        title=wrapper_title,
-        slug=_chapter_slug(spec, wrapper_title),
-        eyebrow=spec.eyebrow,
-        art_path=_chapter_art_path(recipe, spec, wrapper_title),
-        tailpiece_path=_art_path(recipe, spec.tailpiece),
-        headpiece_path=_art_path(recipe, spec.headpiece),
-        break_ornament_path=_art_path(recipe, spec.break_ornament),
+    wrapper = _chapter_from_spec(
+        spec,
+        recipe,
+        wrapper_title,
         children=children,
-        subclass_filler_slot=recipe.fillers.markers.subclass.slot,
-        subclass_filler_slots=list(recipe.fillers.markers.subclass.slots),
-        fillers_enabled=spec.fillers_enabled,
-        style=spec.style,
-        full_page_sections=list(spec.full_page_sections),
-        toc_depth=spec.toc_depth,
-        art_inserts=list(spec.art_inserts),
     )
     return [wrapper]
 
@@ -1393,22 +995,7 @@ def _build_group_chapter(
     nested groups.
     """
     wrapper_title = spec.title or "Group"
-    wrapper = Chapter(
-        title=wrapper_title,
-        slug=_chapter_slug(spec, wrapper_title),
-        eyebrow=spec.eyebrow,
-        art_path=_chapter_art_path(recipe, spec, wrapper_title),
-        tailpiece_path=_art_path(recipe, spec.tailpiece),
-        headpiece_path=_art_path(recipe, spec.headpiece),
-        break_ornament_path=_art_path(recipe, spec.break_ornament),
-        subclass_filler_slot=recipe.fillers.markers.subclass.slot,
-        subclass_filler_slots=list(recipe.fillers.markers.subclass.slots),
-        fillers_enabled=spec.fillers_enabled,
-        style=spec.style,
-        full_page_sections=list(spec.full_page_sections),
-        toc_depth=spec.toc_depth,
-        art_inserts=list(spec.art_inserts),
-    )
+    wrapper = _chapter_from_spec(spec, recipe, wrapper_title)
 
     for child_spec in spec.children:
         child_chapters = _dispatch_chapter(child_spec, recipe, vault_index, warnings)
@@ -1443,14 +1030,10 @@ def _build_sequence_chapter(
         source_filler_enabled.append(item.filler_enabled)
 
     title = spec.title or (source_titles[0] if source_titles else None) or files[0].stem
-    return Chapter(
-        title=title,
-        slug=_chapter_slug(spec, title),
-        eyebrow=spec.eyebrow,
-        art_path=_chapter_art_path(recipe, spec, title),
-        tailpiece_path=_art_path(recipe, spec.tailpiece),
-        headpiece_path=_art_path(recipe, spec.headpiece),
-        break_ornament_path=_art_path(recipe, spec.break_ornament),
+    return _chapter_from_spec(
+        spec,
+        recipe,
+        title,
         source_files=files,
         source_titles=source_titles,
         source_strip_related=source_strip_related,
@@ -1461,15 +1044,8 @@ def _build_sequence_chapter(
         source_boundary_filler_slots=list(
             recipe.fillers.markers.source_boundary.sequence_slots
         ),
-        subclass_filler_slot=recipe.fillers.markers.subclass.slot,
-        subclass_filler_slots=list(recipe.fillers.markers.subclass.slots),
-        fillers_enabled=spec.fillers_enabled,
-        style=spec.style,
         individual_pdf=spec.individual_pdfs,
         individual_pdf_subdir=spec.individual_pdf_subdir,
-        full_page_sections=list(spec.full_page_sections),
-        toc_depth=spec.toc_depth,
-        art_inserts=list(spec.art_inserts),
     )
 
 
@@ -1494,24 +1070,13 @@ def _build_folder_chapter(
         raise ManifestError(f"folder source must be a directory: {folder}")
     files = sorted(folder.glob("*.md"))
     title = spec.title or folder.name
-    return Chapter(
-        title=title,
-        slug=_chapter_slug(spec, title),
-        eyebrow=spec.eyebrow,
-        art_path=_chapter_art_path(recipe, spec, title),
-        tailpiece_path=_art_path(recipe, spec.tailpiece),
-        headpiece_path=_art_path(recipe, spec.headpiece),
-        break_ornament_path=_art_path(recipe, spec.break_ornament),
+    return _chapter_from_spec(
+        spec,
+        recipe,
+        title,
         source_files=files,
-        subclass_filler_slot=recipe.fillers.markers.subclass.slot,
-        subclass_filler_slots=list(recipe.fillers.markers.subclass.slots),
-        fillers_enabled=spec.fillers_enabled,
-        style=spec.style,
         individual_pdf=spec.individual_pdfs,
         individual_pdf_subdir=spec.individual_pdf_subdir,
-        full_page_sections=list(spec.full_page_sections),
-        toc_depth=spec.toc_depth,
-        art_inserts=list(spec.art_inserts),
     )
 
 
@@ -1625,54 +1190,3 @@ def build_manifest(recipe: Recipe) -> Manifest:
         page_damage=page_damage,
         warnings=warnings,
     )
-
-
-def dump(manifest: Manifest) -> str:
-    """Human-readable dump of the resolved manifest."""
-    out: list[str] = []
-    out.append(f"=== Manifest for {manifest.recipe.title!r} ===")
-    out.append(f"Recipe       : {manifest.recipe.recipe_path}")
-    out.append(f"Vault overlay: {manifest.recipe.vault_overlay}")
-    for name, vs in manifest.recipe.vaults.items():
-        out.append(f"  vault[{name}]: {vs.path}")
-    out.append(f"Output root : {manifest.recipe.generated_root}")
-    out.append("")
-    out.append(
-        f"Chapters: {len(manifest.chapters)} top-level "
-        f"({len(manifest.all_chapters())} total)"
-    )
-    _dump_chapter_tree(manifest.chapters, out, indent=0)
-    if manifest.warnings:
-        out.append("")
-        out.append("=== Warnings ===")
-        for w in manifest.warnings:
-            out.append(f"  {w}")
-    return "\n".join(out)
-
-
-def _dump_chapter_tree(chapters: list[Chapter], out: list[str], *, indent: int) -> None:
-    """Append a text representation of chapters and sources to ``out``."""
-    pad = "  " * indent
-    for c in chapters:
-        flags = []
-        if c.individual_pdf:
-            flags.append("individual")
-        if c.art_path:
-            flags.append(f"art={c.art_path.name}")
-        if c.spot_art_path:
-            flags.append(f"spot={c.spot_art_path.name}")
-        if c.tailpiece_path:
-            flags.append(f"tailpiece={c.tailpiece_path.name}")
-        if c.headpiece_path:
-            flags.append(f"headpiece={c.headpiece_path.name}")
-        if c.break_ornament_path:
-            flags.append(f"break={c.break_ornament_path.name}")
-        flag_str = f"  [{','.join(flags)}]" if flags else ""
-        out.append(
-            f"{pad}- {c.title}  (slug={c.slug}, style={c.style}, "
-            f"files={len(c.source_files)}){flag_str}"
-        )
-        for f in c.source_files:
-            out.append(f"{pad}    {f.name}")
-        if c.children:
-            _dump_chapter_tree(c.children, out, indent=indent + 1)

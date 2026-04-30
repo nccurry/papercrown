@@ -1017,10 +1017,15 @@ def test_one_filler_max_per_page_is_enforced(tmp_path, monkeypatch):
         ],
     )
 
-    placements = plan_fillers(object(), catalog, recipe_title="Book")
+    placements, decisions = fillers_mod.plan_filler_decisions(
+        object(),
+        catalog,
+        recipe_title="Book",
+    )
 
     assert len(placements) == 1
     assert placements[0].page_number == 4
+    assert decisions[1].reason == "suppressed by page winner"
 
 
 def test_flow_and_bottom_bleed_modes_each_get_page_winner(tmp_path, monkeypatch):

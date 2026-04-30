@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import re
-from collections.abc import Mapping
+from collections.abc import Mapping, Sequence
 from copy import deepcopy
 from pathlib import Path
 
@@ -72,97 +72,36 @@ def load_recipe(
     _reject_legacy_recipe_shape(raw)
 
     contents_raw = _normalize_contents(raw.get("contents"))
-    inline_title_raw = _first_inline_title(contents_raw)
-
-    # Required: title, either top-level legacy field or first inline title item.
-    title = _str_or_none(raw.get("title"))
-    if title is None and inline_title_raw is not None:
-        title = _str_or_none(inline_title_raw.get("title"))
-    if title is None:
-        raise RecipeError(
-            "recipe missing required title: add top-level title or a first "
-            "contents item with kind: inline, style: title, title: ..."
-        )
-
-    subtitle = _str_or_none(raw.get("subtitle"))
-    cover_eyebrow = _str_or_none(raw.get("cover_eyebrow"))
-    cover_footer = _str_or_none(raw.get("cover_footer"))
-    if inline_title_raw is not None:
-        subtitle = subtitle or _str_or_none(inline_title_raw.get("subtitle"))
-        cover_eyebrow = cover_eyebrow or _str_or_none(
-            inline_title_raw.get("cover_eyebrow")
-        )
-        cover_footer = cover_footer or _str_or_none(
-            inline_title_raw.get("cover_footer")
-        )
+    title, subtitle, cover_eyebrow, cover_footer, inline_title_raw = _title_fields(
+        raw, contents_raw
+    )
 
     recipe_dir = recipe_path.parent
     project_dir = _project_dir_for_recipe(recipe_path)
 
-    # Optional: vaults. Single-vault projects default to the project root.
-    vaults_raw = raw.get("vaults")
-    if vaults_raw is None:
-        vaults_raw = {"content": str(project_dir)}
-    if not isinstance(vaults_raw, Mapping) or not vaults_raw:
-        raise RecipeError("vaults must be a mapping of name -> path when provided")
+    vaults = _load_vaults(raw, recipe_dir=recipe_dir, project_dir=project_dir)
+    vault_overlay = _vault_overlay(raw, vaults)
 
-    vaults: dict[str, VaultSpec] = {}
-    for name, vp in vaults_raw.items():
-        if not isinstance(name, str) or not re.match(r"^[A-Za-z0-9_-]+$", name):
-            raise RecipeError(
-                f"invalid vault alias {name!r}: must be alphanumeric/underscore/dash"
-            )
-        resolved = _resolve_vault_path(str(vp), recipe_dir)
-        if not resolved.is_dir():
-            raise RecipeError(f"vault {name!r} path does not exist: {resolved}")
-        vaults[name] = VaultSpec(name=name, path=resolved)
-
-    # Optional: vault_overlay (defaults to declared insertion order)
-    overlay_raw = raw.get("vault_overlay")
-    if overlay_raw is None:
-        vault_overlay = list(vaults.keys())
-    else:
-        if not isinstance(overlay_raw, list) or not all(
-            isinstance(x, str) for x in overlay_raw
-        ):
-            raise RecipeError("vault_overlay must be a list of vault alias strings")
-        for name in overlay_raw:
-            if name not in vaults:
-                raise RecipeError(
-                    f"vault_overlay references unknown vault {name!r}; "
-                    f"declared vaults: {sorted(vaults)}"
-                )
-        # Allow partial overlay; missing vaults still work via explicit prefix.
-        vault_overlay = [str(name) for name in overlay_raw]
-
-    art_dir_override = None
-    art_dir_raw = _str_or_none(raw.get("art_dir"))
-    if art_dir_raw:
-        art_dir_override = _resolve_vault_path(art_dir_raw, recipe_dir)
-        if not art_dir_override.is_dir():
-            raise RecipeError(f"art_dir path does not exist: {art_dir_override}")
-
-    output_dir_override = None
-    output_dir_raw = _str_or_none(raw.get("output_dir"))
-    if output_dir_raw:
-        output_dir_override = _resolve_vault_path(output_dir_raw, recipe_dir)
+    art_dir_override = _optional_resolved_path(
+        raw,
+        "art_dir",
+        recipe_dir,
+        must_exist=True,
+    )
+    output_dir_override = _optional_resolved_path(raw, "output_dir", recipe_dir)
+    cache_dir_override = _optional_resolved_path(raw, "cache_dir", recipe_dir)
+    theme_dir_override = _optional_resolved_path(
+        raw,
+        "theme_dir",
+        recipe_dir,
+        must_exist=True,
+    )
 
     output_name = _str_or_none(raw.get("output_name"))
     if output_name is not None:
         output_name = _filename_slug(output_name)
 
-    cache_dir_override = None
-    cache_dir_raw = _str_or_none(raw.get("cache_dir"))
-    if cache_dir_raw:
-        cache_dir_override = _resolve_vault_path(cache_dir_raw, recipe_dir)
-
     theme = _slug_or_none(raw.get("theme"), loc="theme") or DEFAULT_THEME
-    theme_dir_override = None
-    theme_dir_raw = _str_or_none(raw.get("theme_dir"))
-    if theme_dir_raw:
-        theme_dir_override = _resolve_vault_path(theme_dir_raw, recipe_dir)
-        if not theme_dir_override.is_dir():
-            raise RecipeError(f"theme_dir path does not exist: {theme_dir_override}")
 
     metadata_raw = raw.get("metadata")
     if metadata_raw is not None and not isinstance(metadata_raw, Mapping):
@@ -182,52 +121,11 @@ def load_recipe(
     page_damage_raw = raw.get("page_damage")
     if page_damage_raw is not None and not isinstance(page_damage_raw, Mapping):
         raise RecipeError("page_damage must be a mapping when provided")
-    splashes_raw = raw.get("splashes") or []
-    if not isinstance(splashes_raw, list):
-        raise RecipeError("splashes must be a list when provided")
-    splashes: list[SplashSpec] = []
-    for i, splash_raw in enumerate(splashes_raw):
-        if not isinstance(splash_raw, Mapping):
-            raise RecipeError(
-                f"splashes[{i}] must be a mapping, got {type(splash_raw).__name__}"
-            )
-        splashes.append(SplashSpec.from_dict(splash_raw, index=i))
+    splashes = _parse_splashes(raw.get("splashes"))
+    contents = _parse_contents(contents_raw)
+    _validate_chapter_sources(contents, "contents", declared_vaults=set(vaults))
 
-    contents: list[ChapterSpec] = []
-    for i, chapter_raw in enumerate(contents_raw):
-        contents.append(ChapterSpec.from_dict(chapter_raw, index=i))
-
-    # Validate every chapter source's vault prefix (if explicit) refers to a
-    # known vault. Walks recursively into group `children` too.
-    def _validate_sources(chs: list[ChapterSpec], crumb: str) -> None:
-        for i, ch in enumerate(chs):
-            here = f"{crumb}[{i}]"
-            if (
-                ch.source is not None
-                and ch.source.vault is not None
-                and ch.source.vault not in vaults
-            ):
-                raise RecipeError(
-                    f"{here} source {ch.source!s} references unknown vault "
-                    f"{ch.source.vault!r}; declared vaults: {sorted(vaults)}"
-                )
-            for j, item in enumerate(ch.sources):
-                if item.source.vault is not None and item.source.vault not in vaults:
-                    raise RecipeError(
-                        f"{here}.sources[{j}] source {item.source!s} "
-                        "references unknown vault "
-                        f"{item.source.vault!r}; declared vaults: {sorted(vaults)}"
-                    )
-            _validate_sources(ch.children, f"{here}.children")
-
-    _validate_sources(contents, "contents")
-
-    cover = CoverSpec.from_dict(cover_raw)
-    if cover_raw is None and inline_title_raw is not None:
-        cover.enabled = True
-        inline_art = inline_title_raw.get("art")
-        if isinstance(inline_art, str):
-            cover.art = _str_or_none(inline_art)
+    cover = _cover_spec(cover_raw, inline_title_raw)
 
     return Recipe(
         title=title.strip(),
@@ -253,6 +151,171 @@ def load_recipe(
         contents=contents,
         recipe_path=recipe_path,
     )
+
+
+def _title_fields(
+    raw: Mapping[str, object],
+    contents_raw: Sequence[Mapping[str, object]],
+) -> tuple[str, str | None, str | None, str | None, Mapping[str, object] | None]:
+    """Resolve title metadata from top-level fields and inline title contents."""
+    inline_title_raw = _first_inline_title(contents_raw)
+    title = _str_or_none(raw.get("title"))
+    if title is None and inline_title_raw is not None:
+        title = _str_or_none(inline_title_raw.get("title"))
+    if title is None:
+        raise RecipeError(
+            "recipe missing required title: add top-level title or a first "
+            "contents item with kind: inline, style: title, title: ..."
+        )
+
+    subtitle = _str_or_none(raw.get("subtitle"))
+    cover_eyebrow = _str_or_none(raw.get("cover_eyebrow"))
+    cover_footer = _str_or_none(raw.get("cover_footer"))
+    if inline_title_raw is not None:
+        subtitle = subtitle or _str_or_none(inline_title_raw.get("subtitle"))
+        cover_eyebrow = cover_eyebrow or _str_or_none(
+            inline_title_raw.get("cover_eyebrow")
+        )
+        cover_footer = cover_footer or _str_or_none(
+            inline_title_raw.get("cover_footer")
+        )
+    return title, subtitle, cover_eyebrow, cover_footer, inline_title_raw
+
+
+def _load_vaults(
+    raw: Mapping[str, object],
+    *,
+    recipe_dir: Path,
+    project_dir: Path,
+) -> dict[str, VaultSpec]:
+    """Resolve and validate recipe vault declarations."""
+    vaults_raw = raw.get("vaults")
+    if vaults_raw is None:
+        vaults_raw = {"content": str(project_dir)}
+    if not isinstance(vaults_raw, Mapping) or not vaults_raw:
+        raise RecipeError("vaults must be a mapping of name -> path when provided")
+
+    vaults: dict[str, VaultSpec] = {}
+    for name, vp in vaults_raw.items():
+        if not isinstance(name, str) or not re.match(r"^[A-Za-z0-9_-]+$", name):
+            raise RecipeError(
+                f"invalid vault alias {name!r}: must be alphanumeric/underscore/dash"
+            )
+        resolved = _resolve_vault_path(str(vp), recipe_dir)
+        if not resolved.is_dir():
+            raise RecipeError(f"vault {name!r} path does not exist: {resolved}")
+        vaults[name] = VaultSpec(name=name, path=resolved)
+    return vaults
+
+
+def _vault_overlay(
+    raw: Mapping[str, object],
+    vaults: Mapping[str, VaultSpec],
+) -> list[str]:
+    """Return the declared vault overlay order."""
+    overlay_raw = raw.get("vault_overlay")
+    if overlay_raw is None:
+        return list(vaults.keys())
+    if not isinstance(overlay_raw, list) or not all(
+        isinstance(x, str) for x in overlay_raw
+    ):
+        raise RecipeError("vault_overlay must be a list of vault alias strings")
+    for name in overlay_raw:
+        if name not in vaults:
+            raise RecipeError(
+                f"vault_overlay references unknown vault {name!r}; "
+                f"declared vaults: {sorted(vaults)}"
+            )
+    return [str(name) for name in overlay_raw]
+
+
+def _optional_resolved_path(
+    raw: Mapping[str, object],
+    field_name: str,
+    recipe_dir: Path,
+    *,
+    must_exist: bool = False,
+) -> Path | None:
+    """Resolve an optional recipe-relative path field."""
+    field_raw = _str_or_none(raw.get(field_name))
+    if not field_raw:
+        return None
+    resolved = _resolve_vault_path(field_raw, recipe_dir)
+    if must_exist and not resolved.is_dir():
+        raise RecipeError(f"{field_name} path does not exist: {resolved}")
+    return resolved
+
+
+def _parse_splashes(raw: object) -> list[SplashSpec]:
+    """Parse the optional top-level splash art list."""
+    splashes_raw = raw or []
+    if not isinstance(splashes_raw, list):
+        raise RecipeError("splashes must be a list when provided")
+    splashes: list[SplashSpec] = []
+    for i, splash_raw in enumerate(splashes_raw):
+        if not isinstance(splash_raw, Mapping):
+            raise RecipeError(
+                f"splashes[{i}] must be a mapping, got {type(splash_raw).__name__}"
+            )
+        splashes.append(SplashSpec.from_dict(splash_raw, index=i))
+    return splashes
+
+
+def _parse_contents(contents_raw: Sequence[Mapping[str, object]]) -> list[ChapterSpec]:
+    """Parse normalized chapter mappings into typed chapter specs."""
+    return [
+        ChapterSpec.from_dict(chapter_raw, index=i)
+        for i, chapter_raw in enumerate(contents_raw)
+    ]
+
+
+def _validate_chapter_sources(
+    chapters: Sequence[ChapterSpec],
+    crumb: str,
+    *,
+    declared_vaults: set[str],
+) -> None:
+    """Ensure explicit source vault prefixes refer to declared vaults."""
+    for i, chapter in enumerate(chapters):
+        here = f"{crumb}[{i}]"
+        if (
+            chapter.source is not None
+            and chapter.source.vault is not None
+            and chapter.source.vault not in declared_vaults
+        ):
+            raise RecipeError(
+                f"{here} source {chapter.source!s} references unknown vault "
+                f"{chapter.source.vault!r}; declared vaults: {sorted(declared_vaults)}"
+            )
+        for j, item in enumerate(chapter.sources):
+            if (
+                item.source.vault is not None
+                and item.source.vault not in declared_vaults
+            ):
+                raise RecipeError(
+                    f"{here}.sources[{j}] source {item.source!s} "
+                    "references unknown vault "
+                    f"{item.source.vault!r}; declared vaults: {sorted(declared_vaults)}"
+                )
+        _validate_chapter_sources(
+            chapter.children,
+            f"{here}.children",
+            declared_vaults=declared_vaults,
+        )
+
+
+def _cover_spec(
+    cover_raw: Mapping[str, object] | None,
+    inline_title_raw: Mapping[str, object] | None,
+) -> CoverSpec:
+    """Build cover settings, including convention-first inline title defaults."""
+    cover = CoverSpec.from_dict(cover_raw)
+    if cover_raw is None and inline_title_raw is not None:
+        cover.enabled = True
+        inline_art = inline_title_raw.get("art")
+        if isinstance(inline_art, str):
+            cover.art = _str_or_none(inline_art)
+    return cover
 
 
 def _reject_legacy_recipe_shape(raw: Mapping[str, object]) -> None:
@@ -293,7 +356,7 @@ def _normalize_contents(raw: object) -> list[dict[str, object]]:
 
 
 def _first_inline_title(
-    contents: list[Mapping[str, object]],
+    contents: Sequence[Mapping[str, object]],
 ) -> Mapping[str, object] | None:
     """Return the first inline title item when it appears at the front."""
     if not contents:

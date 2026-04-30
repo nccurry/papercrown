@@ -160,11 +160,7 @@ def check_web_image_refs(recipe: Recipe) -> WebImageRefResult:
     html = index_path.read_text(encoding="utf-8")
     root = index_path.parent
     refs = list(dict.fromkeys(_local_web_src_refs(html)))
-    missing = [
-        ref
-        for ref in refs
-        if not (root / _web_ref_path(ref)).is_file()
-    ]
+    missing = [ref for ref in refs if not (root / _web_ref_path(ref)).is_file()]
     return WebImageRefResult(
         index_path=index_path,
         checked_count=len(refs),
@@ -393,8 +389,7 @@ def build_parser(prog: str = "papercrown verify") -> argparse.ArgumentParser:
         "--web-assets",
         action="store_true",
         help=(
-            "Require generated web output and check that local src references "
-            "exist."
+            "Require generated web output and check that local src references exist."
         ),
     )
     parser.add_argument(
@@ -583,8 +578,7 @@ def main(argv: list[str] | None = None) -> int:
         if web_result and web_result.index_missing:
             print("Generated web output is missing.")
             print(
-                "Hint: run `papercrown build --target web` before verifying "
-                "web assets."
+                "Hint: run `papercrown build --target web` before verifying web assets."
             )
         elif web_result:
             print(f"{len(web_result.missing_refs)} generated web src ref(s) missing.")
