@@ -13,6 +13,7 @@ from papercrown.project.recipe.models import (
     PAGE_DAMAGE_SKIP_TARGETS,
     SPLASH_PLACEMENTS,
     SPLASH_TARGETS,
+    ArtInsertSpec,
     BookMetadataSpec,
     ChapterSpec,
     CoverSpec,
@@ -37,6 +38,7 @@ from papercrown.project.recipe.models import (
 
 __all__ = [
     "BookMetadataSpec",
+    "ArtInsertSpec",
     "CHAPTER_KINDS",
     "ChapterSpec",
     "CoverSpec",

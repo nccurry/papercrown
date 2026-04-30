@@ -1,4 +1,4 @@
-"""Post-build verification for recipe-driven PDF outputs."""
+"""Post-build verification for recipe-driven generated outputs."""
 
 from __future__ import annotations
 
@@ -9,11 +9,12 @@ import sys
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
+from urllib.parse import unquote, urlparse
 
 from papercrown.build.options import BuildScope, OutputProfile
 from papercrown.project import paths
 from papercrown.project.manifest import Manifest, build_manifest
-from papercrown.project.recipe import RecipeError, load_recipe
+from papercrown.project.recipe import Recipe, RecipeError, load_recipe
 
 
 @dataclass(frozen=True)
@@ -43,6 +44,21 @@ class CheckResult:
 
 
 @dataclass(frozen=True)
+class WebImageRefResult:
+    """The result of checking generated static-web src references."""
+
+    index_path: Path
+    checked_count: int
+    missing_refs: list[str] = field(default_factory=list)
+    index_missing: bool = False
+
+    @property
+    def ok(self) -> bool:
+        """Return whether the web artifact and its src references are valid."""
+        return not self.index_missing and not self.missing_refs
+
+
+@dataclass(frozen=True)
 class PdfImageStat:
     """Size details for one unique embedded PDF image."""
 
@@ -64,6 +80,9 @@ class PdfSizeStats:
     unique_image_count: int
     unique_image_bytes: int
     largest_images: list[PdfImageStat]
+
+
+_WEB_SRC_RE = re.compile(r'\bsrc=["\'](?P<value>[^"\']+)["\']', re.IGNORECASE)
 
 
 def derive_expected(
@@ -126,6 +145,59 @@ def derive_expected(
         )
 
     return expected
+
+
+def check_web_image_refs(recipe: Recipe) -> WebImageRefResult:
+    """Check that local ``src=`` references in generated web output exist."""
+    index_path = paths.web_book_path(recipe)
+    if not index_path.is_file():
+        return WebImageRefResult(
+            index_path=index_path,
+            checked_count=0,
+            index_missing=True,
+        )
+
+    html = index_path.read_text(encoding="utf-8")
+    root = index_path.parent
+    refs = list(dict.fromkeys(_local_web_src_refs(html)))
+    missing = [
+        ref
+        for ref in refs
+        if not (root / _web_ref_path(ref)).is_file()
+    ]
+    return WebImageRefResult(
+        index_path=index_path,
+        checked_count=len(refs),
+        missing_refs=missing,
+    )
+
+
+def _local_web_src_refs(html: str) -> list[str]:
+    """Return local generated-web ``src`` references."""
+    refs: list[str] = []
+    for match in _WEB_SRC_RE.finditer(html):
+        value = match.group("value").strip()
+        if not value or _is_external_web_ref(value):
+            continue
+        path_value = value.split("#", 1)[0].split("?", 1)[0]
+        if path_value:
+            refs.append(value)
+    return refs
+
+
+def _is_external_web_ref(value: str) -> bool:
+    """Return whether a web reference should not be checked on disk."""
+    lowered = value.lower()
+    if lowered.startswith(("#", "data:", "mailto:", "tel:", "javascript:")):
+        return True
+    parsed = urlparse(value)
+    return parsed.scheme in {"http", "https"}
+
+
+def _web_ref_path(value: str) -> Path:
+    """Return the filesystem path fragment for one generated-web reference."""
+    path_value = value.split("#", 1)[0].split("?", 1)[0]
+    return Path(unquote(path_value))
 
 
 def _required_book_anchors(manifest: Manifest) -> set[str]:
@@ -277,7 +349,7 @@ def build_parser(prog: str = "papercrown verify") -> argparse.ArgumentParser:
     """Create the argparse parser for the verification CLI."""
     parser = argparse.ArgumentParser(
         prog=prog,
-        description="Verify produced PDFs match the recipe's manifest.",
+        description="Verify generated outputs match the recipe's manifest.",
     )
     parser.add_argument("recipe", help="Path to recipe YAML")
     parser.add_argument(
@@ -316,6 +388,19 @@ def build_parser(prog: str = "papercrown verify") -> argparse.ArgumentParser:
         type=int,
         default=5,
         help="Number of largest embedded images to print with --size-report.",
+    )
+    parser.add_argument(
+        "--web-assets",
+        action="store_true",
+        help=(
+            "Require generated web output and check that local src references "
+            "exist."
+        ),
+    )
+    parser.add_argument(
+        "--no-web-assets",
+        action="store_true",
+        help="Skip automatic generated web src reference checks.",
     )
     return parser
 
@@ -381,6 +466,27 @@ def _print_size_report(path: Path, *, top_images: int) -> None:
         )
 
 
+def _print_web_result(result: WebImageRefResult) -> None:
+    """Print the generated-web asset check result."""
+    if result.index_missing:
+        print(f"  MISS web/index.html                        ({result.index_path})")
+        return
+    if result.ok:
+        print(
+            "  OK  web src assets                         "
+            f"({result.checked_count} refs)"
+        )
+        return
+    print(
+        "  FAIL web src assets                       "
+        f"({len(result.missing_refs)} missing / {result.checked_count} refs)"
+    )
+    for ref in result.missing_refs[:20]:
+        print(f"        - missing src: {ref}")
+    if len(result.missing_refs) > 20:
+        print(f"        - ... {len(result.missing_refs) - 20} more")
+
+
 def _format_bytes(size_bytes: int) -> str:
     """Return a compact human-readable byte count."""
     if size_bytes >= 1024 * 1024:
@@ -413,6 +519,8 @@ def main(argv: list[str] | None = None) -> int:
     prog = Path(sys.argv[0]).name if argv is None else "papercrown verify"
     parser = build_parser(prog=prog)
     args = parser.parse_args(argv)
+    if args.web_assets and args.no_web_assets:
+        parser.error("--web-assets conflicts with --no-web-assets")
     profile = _normalize_profile(args, parser)
     scope = _normalize_scope(args)
 
@@ -451,8 +559,15 @@ def main(argv: list[str] | None = None) -> int:
         else:
             failures.append(result)
 
+    web_result: WebImageRefResult | None = None
+    web_index = paths.web_book_path(recipe)
+    if args.web_assets or (not args.no_web_assets and web_index.is_file()):
+        web_result = check_web_image_refs(recipe)
+        _print_web_result(web_result)
+
     print()
-    if not failures and not missing:
+    web_failed = web_result is not None and not web_result.ok
+    if not failures and not missing and not web_failed:
         print("All checks passed.")
         return 0
     if missing:
@@ -464,7 +579,16 @@ def main(argv: list[str] | None = None) -> int:
         )
     if failures:
         print(f"{len(failures)} PDF(s) failed content checks.")
+    if web_failed:
+        if web_result and web_result.index_missing:
+            print("Generated web output is missing.")
+            print(
+                "Hint: run `papercrown build --target web` before verifying "
+                "web assets."
+            )
+        elif web_result:
+            print(f"{len(web_result.missing_refs)} generated web src ref(s) missing.")
 
-    if missing or (args.strict and failures):
+    if missing or web_failed or (args.strict and failures):
         return 1
     return 0

@@ -4,7 +4,6 @@ from __future__ import annotations
 
 import json
 import os
-import re
 from dataclasses import dataclass
 from enum import StrEnum
 from pathlib import Path
@@ -80,7 +79,7 @@ def init_project(
         files = _empty_files()
         next_steps = [
             "Create book.yaml or set default_book in papercrown.yaml.",
-            "Run papercrown manifest --config papercrown.yaml after adding a book.",
+            "Run papercrown manifest after adding a book.",
         ]
     else:
         book_type_enum = _coerce_book_type(book_type)
@@ -95,11 +94,8 @@ def init_project(
             with_cover=with_cover,
         )
         next_steps = [
-            "Run papercrown manifest --config papercrown.yaml.",
-            (
-                "Run papercrown build --config papercrown.yaml "
-                "--scope book --profile draft."
-            ),
+            "Run papercrown manifest.",
+            "Run papercrown build --scope book --profile draft.",
         ]
 
     created: list[Path] = []
@@ -125,7 +121,6 @@ build:
   scope: book
   profile: print
 """,
-        "vault/.gitkeep": "",
         "Art/.gitkeep": "",
         "themes/.gitkeep": "",
     }
@@ -144,11 +139,20 @@ def _starter_files(
     if not theme.strip():
         raise InitError("--theme cannot be empty")
 
-    slug = _filename_slug(title)
     recipe_rel = "book.yaml"
     recipe_path = target / recipe_rel
-    vault_path = _resolve_scaffold_vault(target, vault)
-    vault_ref = _recipe_path_ref(vault_path, recipe_path.parent, project_root=target)
+    uses_project_root_vault = vault is None
+    vault_path = target if uses_project_root_vault else _resolve_scaffold_vault(
+        target,
+        vault,
+    )
+    vault_ref = None
+    if not uses_project_root_vault:
+        vault_ref = _recipe_path_ref(
+            vault_path,
+            recipe_path.parent,
+            project_root=target,
+        )
     files, chapters = _starter_content(book_type, title=title)
 
     scaffold: dict[str | Path, str] = {
@@ -164,7 +168,6 @@ build:
         recipe_rel: _render_recipe(
             title=title,
             subtitle=subtitle,
-            output_name=slug,
             theme=theme.strip(),
             vault_ref=vault_ref,
             contents=chapters,
@@ -320,30 +323,33 @@ def _render_recipe(
     *,
     title: str,
     subtitle: str,
-    output_name: str,
     theme: str,
-    vault_ref: str,
+    vault_ref: str | None,
     contents: list[_StarterChapter],
     with_cover: bool,
 ) -> str:
-    return f"""title: {_yaml_string(title)}
-subtitle: {_yaml_string(subtitle)}
-output_dir: output
-output_name: {_yaml_string(output_name)}
-theme: {_yaml_string(theme)}
+    optional_blocks: list[str] = []
+    if not with_cover:
+        optional_blocks.append("cover:\n  enabled: false\n")
+    if vault_ref is not None:
+        optional_blocks.append(f"vaults:\n  content: {_yaml_string(vault_ref)}\n")
+    optional_yaml = "\n".join(optional_blocks)
+    if optional_yaml:
+        optional_yaml += "\n"
 
-cover:
-  enabled: {_yaml_bool(with_cover)}
+    source_prefix = "content:" if vault_ref is not None else ""
+    return f"""theme: {_yaml_string(theme)}
 
-vaults:
-  content: {_yaml_string(vault_ref)}
-
-contents:
+{optional_yaml}contents:
+  - kind: inline
+    style: title
+    title: {_yaml_string(title)}
+    subtitle: {_yaml_string(subtitle)}
   - kind: toc
-{_render_chapters(contents)}"""
+{_render_chapters(contents, source_prefix=source_prefix)}"""
 
 
-def _render_chapters(chapters: list[_StarterChapter]) -> str:
+def _render_chapters(chapters: list[_StarterChapter], *, source_prefix: str) -> str:
     rendered: list[str] = []
     for chapter in chapters:
         if len(chapter.sources) == 1:
@@ -353,7 +359,8 @@ def _render_chapters(chapters: list[_StarterChapter]) -> str:
                         "  - kind: file",
                         f"    title: {_yaml_string(chapter.title)}",
                         f"    slug: {_yaml_string(chapter.slug)}",
-                        f"    source: {_yaml_string('content:' + chapter.sources[0])}",
+                        "    source: "
+                        f"{_yaml_string(source_prefix + chapter.sources[0])}",
                     ]
                 )
             )
@@ -366,7 +373,7 @@ def _render_chapters(chapters: list[_StarterChapter]) -> str:
                     f"    slug: {_yaml_string(chapter.slug)}",
                     "    sources:",
                     *[
-                        f"      - {_yaml_string('content:' + source)}"
+                        f"      - {_yaml_string(source_prefix + source)}"
                         for source in chapter.sources
                     ],
                 ]
@@ -423,15 +430,5 @@ def _clean_title(title: str | None) -> str:
     return clean
 
 
-def _filename_slug(value: str) -> str:
-    slug = re.sub(r"[^A-Za-z0-9_-]+", "-", value.strip().lower())
-    slug = re.sub(r"-{2,}", "-", slug).strip("-")
-    return slug or "book"
-
-
 def _yaml_string(value: str) -> str:
     return json.dumps(value)
-
-
-def _yaml_bool(value: bool) -> str:
-    return "true" if value else "false"

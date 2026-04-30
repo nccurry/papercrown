@@ -11,6 +11,7 @@ from pathlib import Path
 
 from papercrown.assembly import markdown as assembly
 from papercrown.project.manifest import Chapter, ChapterFillerSlot, Splash
+from papercrown.project.recipe import load_recipe
 from papercrown.project.vaults import Vault, VaultIndex
 
 
@@ -38,6 +39,38 @@ class TestAssembleChapterMarkdown:
         out = assembly.assemble_chapter_markdown(ch)
         assert out.startswith("# A")
         assert "body" in out
+
+    def test_markdown_art_slot_renders_resolved_splash(self, tmp_path):
+        art = tmp_path / "Art" / "splashes" / "splash-general-boarding-01.png"
+        art.parent.mkdir(parents=True)
+        art.write_text("fake", encoding="utf-8")
+        recipe_path = tmp_path / "book.yaml"
+        recipe_path.write_text(
+            textwrap.dedent(
+                """
+                title: Test
+                contents:
+                  - source: a.md
+                """
+            ).lstrip(),
+            encoding="utf-8",
+        )
+        recipe = load_recipe(recipe_path)
+        f = _write(
+            tmp_path / "a.md",
+            """
+            # A
+            body
+
+            :::: {.art-slot role="splash" context="boarding" placement="bottom-half"}
+            ::::
+        """,
+        )
+        ch = Chapter(title="A", slug="a", source_files=[f])
+        out = assembly.assemble_chapter_markdown(ch, recipe=recipe)
+        assert ".splash-art .splash-bottom-half" in out
+        assert art.as_posix() in out
+        assert ".art-slot" not in out
 
     def test_demotes_h1_in_subsequent_files(self, tmp_path):
         f1 = _write(tmp_path / "a.md", "# A\nbody A\n")

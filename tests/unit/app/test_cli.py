@@ -262,6 +262,38 @@ def test_verify_command_uses_config_scope_and_profile(tmp_path, monkeypatch):
     ]
 
 
+def test_verify_command_can_force_web_asset_check(tmp_path, monkeypatch):
+    _write_recipe(
+        tmp_path,
+        """
+        title: Verify Web Book
+        vaults:
+          v: vault
+        contents:
+          - kind: file
+            title: Foo
+            source: v:Foo.md
+        """,
+    )
+    config_path = tmp_path / "papercrown.yaml"
+    config_path.write_text("default_book: recipe.yaml\n", encoding="utf-8")
+    captured = {}
+
+    def fake_verify_main(argv):
+        captured["argv"] = argv
+        return 0
+
+    monkeypatch.setattr(actions.verify_mod, "main", fake_verify_main)
+
+    result = runner.invoke(
+        cli.app,
+        ["verify", "--config", str(config_path), "--web-assets"],
+    )
+
+    assert result.exit_code == 0, result.output
+    assert captured["argv"][-1] == "--web-assets"
+
+
 def test_art_audit_command_reports_role_counts(tmp_path):
     recipe = _write_recipe(
         tmp_path,
@@ -345,6 +377,17 @@ def test_init_command_accepts_new_book_options(tmp_path):
     assert "enabled: false" in recipe
     assert (dest / "notes" / "Overview.md").is_file()
     assert "Next steps:" in result.output
+
+
+def test_new_command_aliases_init(tmp_path):
+    dest = tmp_path / "starter"
+
+    result = runner.invoke(cli.app, ["new", str(dest), "--title", "Starter"])
+
+    assert result.exit_code == 0, result.output
+    recipe = (dest / "book.yaml").read_text(encoding="utf-8")
+    assert 'title: "Starter"' in recipe
+    assert (dest / "Overview.md").is_file()
 
 
 def test_no_config_ignores_project_config_but_keeps_recipe_build(

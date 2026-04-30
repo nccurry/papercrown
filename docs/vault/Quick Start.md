@@ -16,7 +16,7 @@ terminal.
 Create a new Paper Crown project:
 
 ```sh
-papercrown init my-book
+papercrown new my-book
 cd my-book
 papercrown manifest
 papercrown doctor
@@ -24,14 +24,20 @@ papercrown build
 papercrown verify
 ```
 
+`papercrown init` is the same scaffold command if you prefer the older verb.
+
 ## Core Flow
+
+:::: {.art-slot role="splash" placement="bottom-half" art="papercrown-docs/splashes/splash-core-flow-launch-sequence.png"}
+::::
 
 1. Write Markdown in a vault.
 2. Describe the book in a recipe YAML file.
 3. Run `papercrown manifest` to inspect the resolved book.
 4. Run `papercrown doctor` to catch missing tools, paths, and content issues.
 5. Run `papercrown build` for PDFs, or add `--target web` for static HTML.
-6. Run `papercrown verify` before publishing PDFs.
+6. Run `papercrown verify` before publishing PDFs. If web output exists,
+   `verify` also checks generated local `src` assets.
 
 :::: {.rule #first-build-loop title="First Build Loop" tags="docs,build,quickstart"}
 ### First Build Loop
@@ -70,6 +76,6 @@ Generated output is always caller-owned and goes under:
   cache/
 ```
 
-`output_dir` and `output_name` are recipe fields. They may point outside the
-project folder when you want source, generated files, and publishing artifacts
-to stay separate.
+By default, `output_dir` is the project root and `output_name` is the slugged
+book title. `output_dir` and `output_name` may point elsewhere when you want
+source, generated files, and publishing artifacts to stay separate.

@@ -32,6 +32,7 @@ from papercrown.project.catalog import parse_catalog_file
 from papercrown.project.recipe import (
     PAGE_DAMAGE_FAMILIES,
     PAGE_DAMAGE_SIZES,
+    ArtInsertSpec,
     ChapterSpec,
     FillerAssetSpec,
     FillerHeadingMarkerSpec,
@@ -207,6 +208,8 @@ class Chapter:
     # Combined-book table-of-contents depth for this top-level chapter.
     # None means use the assembly default.
     toc_depth: int | None = None
+    # Content-scoped art inserts declared on this chapter's recipe item.
+    art_inserts: list[ArtInsertSpec] = field(default_factory=list)
 
     def __post_init__(self) -> None:
         """Normalize singular filler marker fields into list form."""
@@ -245,6 +248,18 @@ class TocPart:
 
 
 @dataclass(frozen=True)
+class InlinePart:
+    """An inline, recipe-authored book part such as the canonical title item."""
+
+    style: str
+    title: str | None = None
+    subtitle: str | None = None
+    cover_eyebrow: str | None = None
+    cover_footer: str | None = None
+    slug: str | None = None
+
+
+@dataclass(frozen=True)
 class GeneratedPart:
     """A computed page in the ordered book contents."""
 
@@ -254,7 +269,7 @@ class GeneratedPart:
     style: str = "generated"
 
 
-BookPart = Chapter | TocPart | GeneratedPart
+BookPart = Chapter | TocPart | InlinePart | GeneratedPart
 
 
 @dataclass
@@ -363,6 +378,74 @@ def convention_art_path(
             continue
         return path.resolve()
     return None
+
+
+def resolve_art_asset(
+    recipe: Recipe,
+    *,
+    art: str | None = None,
+    role: str = "splash",
+    context: str | None = None,
+    subject: str | None = None,
+) -> Path | None:
+    """Resolve an explicit art path or convention-match a role/context slot."""
+    if art:
+        return _art_path(recipe, art)
+    root = recipe.art_dir
+    if not root.is_dir():
+        return None
+    for path in sorted(root.rglob("*"), key=lambda item: item.as_posix().lower()):
+        if not path.is_file() or path.suffix.lower() not in IMAGE_SUFFIXES:
+            continue
+        resolved = path.resolve()
+        classification = classify_art_path(resolved, art_root=root)
+        if classification.role != role:
+            continue
+        if context and not _art_candidate_matches(
+            path,
+            context,
+            classification_context=classification.context,
+            classification_subject=classification.subject,
+        ):
+            continue
+        if subject and not _art_candidate_matches(
+            path,
+            subject,
+            classification_context=classification.context,
+            classification_subject=classification.subject,
+        ):
+            continue
+        return resolved
+    return None
+
+
+def _art_candidate_matches(
+    path: Path,
+    wanted: str,
+    *,
+    classification_context: str | None,
+    classification_subject: str | None,
+) -> bool:
+    """Return whether a classified art file matches a requested slot token."""
+    wanted_slug = slugify(wanted)
+    candidates = [
+        classification_context,
+        classification_subject,
+        _strip_variant_suffix(slugify(path.stem)),
+    ]
+    for candidate in candidates:
+        if candidate is None:
+            continue
+        candidate_slug = slugify(candidate)
+        if candidate_slug == wanted_slug:
+            return True
+        if candidate_slug.startswith(f"{wanted_slug}-"):
+            return True
+        if candidate_slug.endswith(f"-{wanted_slug}"):
+            return True
+        if f"-{wanted_slug}-" in candidate_slug:
+            return True
+    return False
 
 
 def _art_stem_matches_slug(
@@ -648,6 +731,7 @@ def _build_splashes(
 ) -> list[Splash]:
     """Resolve top-level splash specs to filesystem paths and chapter slugs."""
     splashes: list[Splash] = []
+    has_back_cover = any(spec.target == "back-cover" for spec in specs)
     for spec in specs:
         chapter_slug: str | None = None
         if spec.chapter:
@@ -672,7 +756,8 @@ def _build_splashes(
                 heading_slug=slugify(spec.heading) if spec.heading else None,
             )
         )
-    if not any(spec.target == "back-cover" for spec in specs):
+    splashes.extend(_build_scoped_art_splashes(chapters, recipe, warnings))
+    if not has_back_cover:
         back_cover = convention_art_path(recipe, {"cover-back"})
         if back_cover is not None:
             splashes.append(
@@ -683,6 +768,56 @@ def _build_splashes(
                     placement="back-cover",
                 )
             )
+    return splashes
+
+
+def _build_scoped_art_splashes(
+    chapters: list[Chapter],
+    recipe: Recipe,
+    warnings: list[str],
+) -> list[Splash]:
+    """Resolve content-item ``art:`` inserts into chapter splash placements."""
+    splashes: list[Splash] = []
+    for chapter in chapters:
+        for candidate in chapter.walk():
+            for index, insert in enumerate(candidate.art_inserts):
+                art_path = resolve_art_asset(
+                    recipe,
+                    art=insert.art,
+                    role=insert.role,
+                    context=insert.context,
+                    subject=None if insert.context else candidate.slug,
+                )
+                splash_id = insert.id or slugify(
+                    "-".join(
+                        part
+                        for part in (
+                            candidate.slug,
+                            insert.context,
+                            insert.target,
+                            insert.heading,
+                            str(index + 1),
+                        )
+                        if part
+                    )
+                )
+                if art_path is None:
+                    label = insert.art or insert.context or candidate.slug
+                    warnings.append(
+                        f"art insert {splash_id!r}: art not found for {label!r}"
+                    )
+                splashes.append(
+                    Splash(
+                        id=splash_id,
+                        art_path=art_path,
+                        target=insert.target,
+                        placement=insert.placement,
+                        chapter_slug=candidate.slug,
+                        heading_slug=(
+                            slugify(insert.heading) if insert.heading else None
+                        ),
+                    )
+                )
     return splashes
 
 
@@ -1006,6 +1141,7 @@ def _build_file_chapter(
         individual_pdf_subdir=spec.individual_pdf_subdir,
         full_page_sections=list(spec.full_page_sections),
         toc_depth=spec.toc_depth,
+        art_inserts=list(spec.art_inserts),
     )
 
 
@@ -1044,6 +1180,7 @@ def _build_catalog_chapter(
         individual_pdf_subdir=spec.individual_pdf_subdir,
         full_page_sections=list(spec.full_page_sections),
         toc_depth=spec.toc_depth,
+        art_inserts=list(spec.art_inserts),
     )
 
     if parsed.format in ("embed-compendium", "annotated-embeds", "empty"):
@@ -1108,6 +1245,7 @@ def _build_composite_chapter(
         individual_pdf_subdir=spec.individual_pdf_subdir,
         full_page_sections=list(spec.full_page_sections),
         toc_depth=spec.toc_depth,
+        art_inserts=list(spec.art_inserts),
     )
 
 
@@ -1209,6 +1347,7 @@ def _build_classes_catalog_chapters(
             divider=spec.child_divider,
             full_page_sections=list(spec.full_page_sections),
             toc_depth=spec.toc_depth,
+            art_inserts=list(spec.art_inserts),
         )
         children.append(ch)
 
@@ -1235,6 +1374,7 @@ def _build_classes_catalog_chapters(
         style=spec.style,
         full_page_sections=list(spec.full_page_sections),
         toc_depth=spec.toc_depth,
+        art_inserts=list(spec.art_inserts),
     )
     return [wrapper]
 
@@ -1267,6 +1407,7 @@ def _build_group_chapter(
         style=spec.style,
         full_page_sections=list(spec.full_page_sections),
         toc_depth=spec.toc_depth,
+        art_inserts=list(spec.art_inserts),
     )
 
     for child_spec in spec.children:
@@ -1328,6 +1469,7 @@ def _build_sequence_chapter(
         individual_pdf_subdir=spec.individual_pdf_subdir,
         full_page_sections=list(spec.full_page_sections),
         toc_depth=spec.toc_depth,
+        art_inserts=list(spec.art_inserts),
     )
 
 
@@ -1369,6 +1511,7 @@ def _build_folder_chapter(
         individual_pdf_subdir=spec.individual_pdf_subdir,
         full_page_sections=list(spec.full_page_sections),
         toc_depth=spec.toc_depth,
+        art_inserts=list(spec.art_inserts),
     )
 
 
@@ -1412,6 +1555,20 @@ def _content_part(
     warnings: list[str],
 ) -> tuple[list[BookPart], list[Chapter]]:
     """Resolve one ordered content spec into render parts and chapter entries."""
+    if spec.kind == "inline":
+        return (
+            [
+                InlinePart(
+                    style=spec.style,
+                    title=spec.title,
+                    subtitle=spec.subtitle,
+                    cover_eyebrow=spec.cover_eyebrow,
+                    cover_footer=spec.cover_footer,
+                    slug=spec.slug,
+                )
+            ],
+            [],
+        )
     if spec.kind == "toc":
         title = spec.title or "Table of Contents"
         return ([TocPart(title=title, slug=slugify(title), depth=spec.depth)], [])

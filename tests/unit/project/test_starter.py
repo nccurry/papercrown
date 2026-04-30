@@ -17,12 +17,19 @@ def test_init_project_creates_verifiable_titled_starter(tmp_path):
 
     assert recipe.title == "My Paper Crown Book"
     assert recipe.cover.enabled is True
-    assert recipe.chapters[0].kind == "toc"
+    assert recipe.contents[0].kind == "inline"
+    assert recipe.contents[1].kind == "toc"
+    assert recipe.vaults["content"].path == tmp_path.resolve()
+    assert (tmp_path / "Overview.md").is_file()
+    recipe_text = (tmp_path / "book.yaml").read_text(encoding="utf-8")
+    assert "output_dir:" not in recipe_text
+    assert "output_name:" not in recipe_text
+    assert "vaults:" not in recipe_text
     assert [chapter.title for chapter in manifest.chapters] == [
         "Overview",
         "Running the Campaign",
     ]
-    assert "papercrown manifest --config papercrown.yaml" in result.next_steps[0]
+    assert "papercrown manifest" in result.next_steps[0]
 
 
 def test_init_project_uses_title_theme_book_type_vault_and_cover_options(tmp_path):
@@ -72,3 +79,4 @@ def test_empty_init_prints_next_steps_without_default_book(tmp_path):
 
     assert "# default_book: book.yaml" in config
     assert "Create book.yaml" in result.next_steps[0]
+    assert not (tmp_path / "vault").exists()

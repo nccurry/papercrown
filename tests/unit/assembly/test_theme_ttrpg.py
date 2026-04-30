@@ -174,6 +174,32 @@ def test_theme_css_list_can_use_arbitrary_source_filenames(tmp_path):
     assert [path.name for path in theme.css_files] == ["base.css", "print-polish.css"]
 
 
+def test_local_themes_directory_is_discovered_by_default(tmp_path):
+    theme_root = tmp_path / "themes" / "my-theme"
+    theme_root.mkdir(parents=True)
+    (theme_root / "theme.yaml").write_text(
+        "name: My Theme\ncss: base.css\n",
+        encoding="utf-8",
+    )
+    (theme_root / "base.css").write_text(":root { --accent: red; }\n", encoding="utf-8")
+    recipe_path = _write_recipe(
+        tmp_path,
+        """
+        contents:
+          - kind: inline
+            style: title
+            title: Local Theme Book
+          - source: Book.md
+        theme: my-theme
+        """,
+    )
+    recipe = load_recipe(recipe_path)
+
+    theme = themes.load_theme(recipe)
+
+    assert theme.root == theme_root.resolve()
+
+
 def test_theme_css_list_is_required(tmp_path):
     theme_root = tmp_path / "themes" / "my-theme"
     theme_root.mkdir(parents=True)

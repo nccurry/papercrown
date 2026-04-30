@@ -1,10 +1,6 @@
-title: Paper Crown
-subtitle: A framework for building TTRPG material
-cover_eyebrow: Documentation
 output_dir: site
 output_name: papercrown-docs
 art_dir: assets
-theme_dir: themes
 theme: papercrown-docs
 
 metadata:
@@ -20,48 +16,6 @@ metadata:
   credits:
     design:
       - Paper Crown maintainers
-
-cover:
-  enabled: true
-  art: papercrown-docs/covers/cover-front-genre-anthology.png
-
-splashes:
-  - id: product-model-codex-route
-    art: papercrown-docs/splashes/splash-product-model-codex-route.png
-    target: after-heading
-    chapter: architecture
-    heading: Product Model
-    placement: bottom-half
-  - id: core-flow-launch-sequence
-    art: papercrown-docs/splashes/splash-core-flow-launch-sequence.png
-    target: after-heading
-    chapter: quick-start
-    heading: Core Flow
-    placement: bottom-half
-  - id: repository-bootstrap-launch-panel
-    art: papercrown-docs/splashes/splash-repository-bootstrap-launch-panel.png
-    target: after-heading
-    chapter: developer-guide
-    heading: Repository Bootstrap
-    placement: bottom-half
-  - id: compact-reference-casefile-ritual
-    art: papercrown-docs/splashes/splash-compact-reference-casefile-ritual.png
-    target: after-heading
-    chapter: recipes
-    heading: Compact Field Reference
-    placement: bottom-half
-  - id: theme-gallery-spread
-    art: papercrown-docs/splashes/splash-theme-gallery-spread.png
-    target: after-heading
-    chapter: themes
-    heading: Local Theme Example
-    placement: bottom-half
-  - id: pages-field-guide-press
-    art: papercrown-docs/splashes/splash-pages-field-guide-press.png
-    target: after-heading
-    chapter: builds-and-publishing
-    heading: GitHub Pages
-    placement: bottom-half
 
 fillers:
   enabled: true
@@ -122,6 +76,12 @@ vaults:
   docs: vault
 
 contents:
+  - kind: inline
+    style: title
+    title: Paper Crown
+    subtitle: A framework for building TTRPG material
+    cover_eyebrow: Documentation
+
   - kind: toc
     title: Contents
   - kind: file

@@ -71,19 +71,41 @@ def load_recipe(
         raw = _deep_merge(defaults_raw, raw)
     _reject_legacy_recipe_shape(raw)
 
-    # Required: title
-    title = raw.get("title")
-    if not isinstance(title, str) or not title.strip():
-        raise RecipeError("recipe missing required field: title (non-empty string)")
+    contents_raw = _normalize_contents(raw.get("contents"))
+    inline_title_raw = _first_inline_title(contents_raw)
 
-    # Required: vaults (at least one)
-    vaults_raw = raw.get("vaults")
-    if not isinstance(vaults_raw, Mapping) or not vaults_raw:
+    # Required: title, either top-level legacy field or first inline title item.
+    title = _str_or_none(raw.get("title"))
+    if title is None and inline_title_raw is not None:
+        title = _str_or_none(inline_title_raw.get("title"))
+    if title is None:
         raise RecipeError(
-            "recipe missing required field: vaults (mapping of name -> path)"
+            "recipe missing required title: add top-level title or a first "
+            "contents item with kind: inline, style: title, title: ..."
+        )
+
+    subtitle = _str_or_none(raw.get("subtitle"))
+    cover_eyebrow = _str_or_none(raw.get("cover_eyebrow"))
+    cover_footer = _str_or_none(raw.get("cover_footer"))
+    if inline_title_raw is not None:
+        subtitle = subtitle or _str_or_none(inline_title_raw.get("subtitle"))
+        cover_eyebrow = cover_eyebrow or _str_or_none(
+            inline_title_raw.get("cover_eyebrow")
+        )
+        cover_footer = cover_footer or _str_or_none(
+            inline_title_raw.get("cover_footer")
         )
 
     recipe_dir = recipe_path.parent
+    project_dir = _project_dir_for_recipe(recipe_path)
+
+    # Optional: vaults. Single-vault projects default to the project root.
+    vaults_raw = raw.get("vaults")
+    if vaults_raw is None:
+        vaults_raw = {"content": str(project_dir)}
+    if not isinstance(vaults_raw, Mapping) or not vaults_raw:
+        raise RecipeError("vaults must be a mapping of name -> path when provided")
+
     vaults: dict[str, VaultSpec] = {}
     for name, vp in vaults_raw.items():
         if not isinstance(name, str) or not re.match(r"^[A-Za-z0-9_-]+$", name):
@@ -171,15 +193,8 @@ def load_recipe(
             )
         splashes.append(SplashSpec.from_dict(splash_raw, index=i))
 
-    contents_raw = raw.get("contents")
-    if not isinstance(contents_raw, list) or not contents_raw:
-        raise RecipeError("book missing required field: contents (non-empty list)")
     contents: list[ChapterSpec] = []
     for i, chapter_raw in enumerate(contents_raw):
-        if not isinstance(chapter_raw, Mapping):
-            raise RecipeError(
-                f"contents[{i}] must be a mapping, got {type(chapter_raw).__name__}"
-            )
         contents.append(ChapterSpec.from_dict(chapter_raw, index=i))
 
     # Validate every chapter source's vault prefix (if explicit) refers to a
@@ -207,11 +222,18 @@ def load_recipe(
 
     _validate_sources(contents, "contents")
 
+    cover = CoverSpec.from_dict(cover_raw)
+    if cover_raw is None and inline_title_raw is not None:
+        cover.enabled = True
+        inline_art = inline_title_raw.get("art")
+        if isinstance(inline_art, str):
+            cover.art = _str_or_none(inline_art)
+
     return Recipe(
         title=title.strip(),
-        subtitle=_str_or_none(raw.get("subtitle")),
-        cover_eyebrow=_str_or_none(raw.get("cover_eyebrow")),
-        cover_footer=_str_or_none(raw.get("cover_footer")),
+        subtitle=subtitle,
+        cover_eyebrow=cover_eyebrow,
+        cover_footer=cover_footer,
         vaults=vaults,
         vault_overlay=vault_overlay,
         output_dir_override=output_dir_override,
@@ -224,7 +246,7 @@ def load_recipe(
         metadata=BookMetadataSpec.from_dict(metadata_raw),
         art_dir_override=art_dir_override,
         ornaments=OrnamentsSpec.from_dict(ornaments_raw),
-        cover=CoverSpec.from_dict(cover_raw),
+        cover=cover,
         splashes=splashes,
         fillers=FillersSpec.from_dict(fillers_raw),
         page_damage=PageDamageSpec.from_dict(page_damage_raw),
@@ -244,6 +266,42 @@ def _reject_legacy_recipe_shape(raw: Mapping[str, object]) -> None:
     for key, hint in legacy.items():
         if key in raw:
             raise RecipeError(f"{key} is no longer supported; {hint}")
+
+
+def _project_dir_for_recipe(recipe_path: Path) -> Path:
+    """Return the convention-first project root for a recipe path."""
+    parent = recipe_path.parent.resolve()
+    return parent.parent if parent.name == "recipes" else parent
+
+
+def _normalize_contents(raw: object) -> list[dict[str, object]]:
+    """Normalize contents strings/mappings into mutable mapping items."""
+    if not isinstance(raw, list) or not raw:
+        raise RecipeError("book missing required field: contents (non-empty list)")
+    contents: list[dict[str, object]] = []
+    for i, item in enumerate(raw):
+        if isinstance(item, str):
+            contents.append({"source": item})
+            continue
+        if not isinstance(item, Mapping):
+            raise RecipeError(
+                f"contents[{i}] must be a mapping or source string, "
+                f"got {type(item).__name__}"
+            )
+        contents.append({str(key): value for key, value in item.items()})
+    return contents
+
+
+def _first_inline_title(
+    contents: list[Mapping[str, object]],
+) -> Mapping[str, object] | None:
+    """Return the first inline title item when it appears at the front."""
+    if not contents:
+        return None
+    first = contents[0]
+    if first.get("kind") == "inline" and first.get("style") == "title":
+        return first
+    return None
 
 
 def _load_recipe_mapping(path: Path, *, stack: tuple[Path, ...]) -> dict[str, object]:

@@ -705,6 +705,7 @@ def _prepare_combined_book_job(
         splashes=manifest.splashes,
         include_source_markers=True,
         include_back_cover_splashes=False,
+        recipe=recipe,
     )
     markdown = _prepare_book_markdown_with_manual_toc(
         markdown,
@@ -798,6 +799,7 @@ def build_web_book(
         splashes=manifest.splashes,
         include_source_markers=True,
         include_back_cover_splashes=False,
+        recipe=recipe,
     )
     markdown = _prepare_book_markdown_with_manual_toc(
         markdown,

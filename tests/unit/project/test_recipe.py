@@ -7,12 +7,15 @@ from pathlib import Path
 
 import pytest
 
+from papercrown.project.manifest import build_manifest
 from papercrown.project.recipe import (
     CHAPTER_KINDS,
     RecipeError,
     SourceRef,
     load_recipe,
 )
+
+FIXTURES_DIR = Path(__file__).parents[2] / "fixtures"
 
 # ---------------------------------------------------------------------------
 # SourceRef
@@ -71,6 +74,44 @@ def _write_recipe(
 
 
 class TestLoadRecipeHappy:
+    def test_convention_first_recipe_derives_defaults_from_inline_title(
+        self, tmp_path
+    ):
+        p = _write_recipe(
+            tmp_path,
+            """
+            theme: clean-srd
+            contents:
+              - kind: inline
+                style: title
+                title: Nimble Space Opera
+                subtitle: Rules Book
+                cover_eyebrow: Player's Handbook
+              - Intro.md
+        """,
+            vault_dirs=(),
+        )
+        r = load_recipe(p)
+        assert r.title == "Nimble Space Opera"
+        assert r.subtitle == "Rules Book"
+        assert r.cover_eyebrow == "Player's Handbook"
+        assert r.output_dir == tmp_path.resolve()
+        assert r.generated_name == "nimble-space-opera"
+        assert r.art_dir == (tmp_path / "Art").resolve()
+        assert r.vault_overlay == ["content"]
+        assert r.vaults["content"].path == tmp_path.resolve()
+        assert r.cover.enabled is True
+        assert [item.kind for item in r.contents] == ["inline", "file"]
+
+    def test_minimal_convention_fixture_is_verifiable(self):
+        r = load_recipe(FIXTURES_DIR / "convention_minimal" / "book.yaml")
+        m = build_manifest(r)
+
+        assert r.title == "Minimal Convention Book"
+        assert r.generated_name == "minimal-convention-book"
+        assert r.vault_overlay == ["content"]
+        assert [chapter.title for chapter in m.chapters] == ["Intro", "Rules"]
+
     def test_minimal_recipe(self, tmp_path):
         p = _write_recipe(
             tmp_path,
@@ -1088,6 +1129,7 @@ class TestLoadRecipeErrors:
 
 def test_chapter_kinds_set_is_canonical():
     assert CHAPTER_KINDS == {
+        "inline",
         "file",
         "catalog",
         "composite",

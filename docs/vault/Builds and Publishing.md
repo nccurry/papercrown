@@ -15,6 +15,7 @@ papercrown doctor [RECIPE]
 papercrown verify [RECIPE]
 papercrown deps check
 papercrown init [PATH]
+papercrown new [PATH]
 papercrown themes list
 papercrown themes copy NAME DEST
 ```
@@ -61,6 +62,12 @@ Generated files live under one caller-owned tree:
   cache/
 ```
 
+The `Paper Crown` folder is intentionally one level above each book output. It
+keeps generated artifacts easy to ignore, delete, and distinguish from source
+Markdown when `output_dir` is the project root. Inside one book output, `web/`
+is directly publishable, `pdf/book/` holds the combined book, `pdf/sections/`
+and `pdf/individuals/` hold optional split PDFs, and `cache/` is disposable.
+
 ## How to Publish
 
 Static web output is just files. You can upload the generated `web` directory
@@ -81,7 +88,14 @@ Use `verify` after rendering PDFs:
 papercrown verify book.yaml --scope book --profile print --strict
 ```
 
+When `web/index.html` exists, `verify` also checks generated local `src`
+references. Use `--web-assets` to require web output, or `--no-web-assets` to
+skip that check during PDF-only workflows.
+
 ## GitHub Pages
+
+:::: {.art-slot role="splash" placement="bottom-half" art="papercrown-docs/splashes/splash-pages-field-guide-press.png"}
+::::
 
 The documentation site is built by Paper Crown and deployed by GitHub Actions.
 The source lives under `docs/`; generated HTML lives under `docs/site/` and is
@@ -158,11 +172,11 @@ pages:
   script:
     - papercrown build --target web --force
     - mkdir -p public
-    - cp -R "output/Paper Crown/my-book/web/." public/
+    - cp -R "Paper Crown/my-book/web/." public/
   artifacts:
     paths:
       - public
 ```
 
-Replace the `cp` source with the web output path produced by the recipe's
-`output_dir` and `output_name`.
+Replace the `cp` source with the web output path produced by the recipe. By
+default this is `Paper Crown/<slugged-title>/web`.

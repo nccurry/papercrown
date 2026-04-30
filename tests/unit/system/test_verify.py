@@ -397,6 +397,72 @@ class TestMain:
         out = capsys.readouterr().out
         assert "All checks passed" in out
 
+    def test_auto_checks_existing_web_src_assets(
+        self, tiny_workspace, capsys, monkeypatch
+    ):
+        _, rp = tiny_workspace
+        recipe = load_recipe(rp)
+        manifest = build_manifest(recipe)
+        for exp in verifier.derive_expected(
+            manifest,
+            include_book=True,
+            profile=OutputProfile.PRINT,
+        ):
+            self._make_pdf(exp.path)
+        web_root = recipe.generated_root / "web"
+        (web_root / "assets" / "images").mkdir(parents=True)
+        (web_root / "assets" / "images" / "present.png").write_bytes(b"png")
+        (web_root / "index.html").write_text(
+            '<img src="assets/images/present.png">\n'
+            '<img src="assets/images/missing.png">\n',
+            encoding="utf-8",
+        )
+        monkeypatch.setattr(
+            verifier,
+            "_extract_text",
+            lambda p: f"{p.stem} content here",
+        )
+        monkeypatch.setattr(
+            verifier,
+            "_named_destinations",
+            lambda _p: {"setting", "mage"},
+        )
+
+        rc = verifier.main([str(rp)])
+
+        assert rc == 1
+        out = capsys.readouterr().out
+        assert "FAIL web src assets" in out
+        assert "assets/images/missing.png" in out
+
+    def test_web_assets_flag_requires_web_output(
+        self, tiny_workspace, capsys, monkeypatch
+    ):
+        _, rp = tiny_workspace
+        manifest = build_manifest(load_recipe(rp))
+        for exp in verifier.derive_expected(
+            manifest,
+            include_book=True,
+            profile=OutputProfile.PRINT,
+        ):
+            self._make_pdf(exp.path)
+        monkeypatch.setattr(
+            verifier,
+            "_extract_text",
+            lambda p: f"{p.stem} content here",
+        )
+        monkeypatch.setattr(
+            verifier,
+            "_named_destinations",
+            lambda _p: {"setting", "mage"},
+        )
+
+        rc = verifier.main([str(rp), "--web-assets"])
+
+        assert rc == 1
+        out = capsys.readouterr().out
+        assert "MISS web/index.html" in out
+
     def test_strict_mode_fails_on_content_errors(
         self, tiny_workspace, capsys, monkeypatch
     ):

@@ -139,6 +139,16 @@ TopImagesOpt = Annotated[
     int,
     typer.Option("--top-images", help="Largest embedded images to report."),
 ]
+WebAssetsOpt = Annotated[
+    bool | None,
+    typer.Option(
+        "--web-assets/--no-web-assets",
+        help=(
+            "Check generated web src assets. By default, verify checks them "
+            "when web/index.html already exists."
+        ),
+    ),
+]
 
 InitPathArg = Annotated[
     Path,
@@ -205,6 +215,7 @@ def create_app() -> typer.Typer:
     root.command("doctor")(doctor_command)
     root.command("verify")(verify_command)
     root.command("init")(init_command)
+    root.command("new")(init_command)
 
     deps.command("check")(deps_check_command)
     themes.command("list")(themes_list_command)
@@ -370,10 +381,11 @@ def verify_command(
     strict: VerifyStrictOpt = False,
     size_report: SizeReportOpt = False,
     top_images: TopImagesOpt = DEFAULT_VERIFY_TOP_IMAGES,
+    web_assets: WebAssetsOpt = None,
     config: ConfigOpt = None,
     no_config: NoConfigOpt = False,
 ) -> None:
-    """Verify generated PDFs against the recipe manifest."""
+    """Verify generated outputs against the recipe manifest."""
     _run(
         lambda: actions.run_verify(
             recipe,
@@ -383,6 +395,7 @@ def verify_command(
             strict=strict,
             size_report=size_report,
             top_images=top_images,
+            web_assets=web_assets,
             config=config,
             no_config=no_config,
         )

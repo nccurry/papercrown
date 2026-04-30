@@ -8,6 +8,7 @@ from pathlib import Path
 import pytest
 
 from papercrown.project.manifest import (
+    InlinePart,
     ManifestError,
     build_manifest,
     classify_filler_art_path,
@@ -81,6 +82,25 @@ def _write_recipe(workspace: Path, body: str) -> Path:
 
 
 class TestKindFile:
+    def test_inline_title_part_does_not_create_chapter(self, tmp_path):
+        (tmp_path / "Intro.md").write_text("# Intro\nBody.\n", encoding="utf-8")
+        rp = _write_recipe(
+            tmp_path,
+            """
+            contents:
+              - kind: inline
+                style: title
+                title: Nimble Space Opera
+                subtitle: Rules Book
+              - Intro.md
+        """,
+        )
+        m = build_manifest(load_recipe(rp))
+        assert isinstance(m.contents[0], InlinePart)
+        assert m.contents[0].title == "Nimble Space Opera"
+        assert len(m.chapters) == 1
+        assert m.chapters[0].source_files == [(tmp_path / "Intro.md").resolve()]
+
     def test_basic_file_chapter(self, mini_workspace):
         ws, base, _ = mini_workspace
         rp = _write_recipe(
@@ -129,6 +149,37 @@ class TestKindFile:
         )
         m = build_manifest(load_recipe(rp))
         assert m.chapters[0].tailpiece_path == tailpiece.resolve()
+
+    def test_scoped_content_art_insert_resolves_to_chapter_splash(self, mini_workspace):
+        ws, base, _ = mini_workspace
+        art = ws / "art"
+        (art / "splashes").mkdir(parents=True)
+        splash = art / "splashes" / "boarding.png"
+        splash.write_text("fake", encoding="utf-8")
+        rp = _write_recipe(
+            ws,
+            """
+            title: Test
+            art_dir: art
+            vaults:
+              base: base
+            contents:
+              - kind: file
+                title: Setting
+                source: base:Setting.md
+                art:
+                  - id: boarding
+                    after_heading: Factions
+                    art: splashes/boarding.png
+                    placement: bottom-half
+        """,
+        )
+        m = build_manifest(load_recipe(rp))
+        assert len(m.splashes) == 1
+        assert m.splashes[0].id == "boarding"
+        assert m.splashes[0].chapter_slug == "setting"
+        assert m.splashes[0].heading_slug == "factions"
+        assert m.splashes[0].art_path == splash.resolve()
 
     def test_headpiece_and_break_ornament_resolve_relative_to_art_dir(
         self, mini_workspace

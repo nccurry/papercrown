@@ -128,7 +128,15 @@ def copy_bundled_theme(name: str, dest: Path, *, overwrite: bool = False) -> Pat
 
 def _theme_root(recipe: Recipe) -> Path:
     name = getattr(recipe, "theme", DEFAULT_THEME)
-    theme_dir = getattr(recipe, "theme_dir_override", None) or THEMES_DIR
+    theme_dir = getattr(recipe, "theme_dir_override", None)
+    if theme_dir is None:
+        project_dir = getattr(recipe, "project_dir", None)
+        if project_dir is not None:
+            local_theme_dir = Path(project_dir) / "themes"
+            if (local_theme_dir / name).is_dir():
+                theme_dir = local_theme_dir
+        if theme_dir is None:
+            theme_dir = THEMES_DIR
     root = (theme_dir / name).resolve()
     if not root.is_dir():
         raise RecipeError(

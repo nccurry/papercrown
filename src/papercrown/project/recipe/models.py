@@ -606,6 +606,61 @@ class SplashSpec:
         )
 
 
+@dataclass(frozen=True)
+class ArtInsertSpec:
+    """One content-scoped art placement declared on a contents item."""
+
+    id: str | None
+    role: str
+    art: str | None
+    context: str | None
+    target: str
+    placement: str
+    heading: str | None = None
+
+    @classmethod
+    def from_dict(
+        cls,
+        raw: Mapping[str, object],
+        *,
+        index: int,
+        loc: str,
+    ) -> ArtInsertSpec:
+        """Parse one item from a content item's ``art:`` insert list."""
+        item_loc = f"{loc}.art[{index}]"
+        role = _str_or_none(raw.get("role")) or "splash"
+        if role != "splash":
+            raise RecipeError(f"{item_loc}.role currently supports only 'splash'")
+        placement = _str_or_none(raw.get("placement")) or "bottom-half"
+        if placement not in {"corner-left", "corner-right", "bottom-half"}:
+            raise RecipeError(
+                f"{item_loc}.placement must be one of "
+                "['bottom-half', 'corner-left', 'corner-right']"
+            )
+        heading = _str_or_none(raw.get("after_heading") or raw.get("heading"))
+        target = _str_or_none(raw.get("target"))
+        if heading is not None:
+            target = "after-heading"
+        target = target or "chapter-start"
+        if target not in {"chapter-start", "after-heading"}:
+            raise RecipeError(
+                f"{item_loc}.target must be 'chapter-start' or 'after-heading'"
+            )
+        if target == "after-heading" and heading is None:
+            raise RecipeError(
+                f"{item_loc}.after_heading is required for target='after-heading'"
+            )
+        return cls(
+            id=_slug_or_none(raw.get("id"), loc=item_loc),
+            role=role,
+            art=_str_or_none(raw.get("art")),
+            context=_str_or_none(raw.get("context")),
+            target=target,
+            placement=placement,
+            heading=heading,
+        )
+
+
 # ---------------------------------------------------------------------------
 # Source reference: vault:relative/path.md
 # ---------------------------------------------------------------------------
@@ -736,6 +791,7 @@ class SourceItem:
 
 # Structural content kinds accepted in book contents.
 CHAPTER_KINDS = {
+    "inline",
     "file",
     "catalog",
     "composite",
@@ -749,7 +805,7 @@ CHAPTER_KINDS = {
 
 # Kinds that don't need (or use) their own `source:` field. `group` is a
 # pure structural wrapper around its `children:`. `sequence` uses `sources:`.
-_KINDS_WITHOUT_SOURCE = {"group", "sequence", "toc", "generated"}
+_KINDS_WITHOUT_SOURCE = {"group", "inline", "sequence", "toc", "generated"}
 
 
 @dataclass
@@ -761,7 +817,7 @@ class ChapterSpec:
     `section-kind` metadata; CSS targets `body.section-<style>`).
     """
 
-    # file | catalog | composite | classes-catalog | folder | group | sequence
+    # inline | file | catalog | composite | classes-catalog | folder | group | sequence
     kind: str
     # computed content kind for `kind: generated`
     type: str | None = None
@@ -769,11 +825,17 @@ class ChapterSpec:
     source: SourceRef | None = None
     # optional; some kinds derive it
     title: str | None = None
+    # inline/title-page fields
+    subtitle: str | None = None
+    cover_eyebrow: str | None = None
+    cover_footer: str | None = None
     # optional explicit PDF/link anchor
     slug: str | None = None
     eyebrow: str | None = None
     # filename in recipe.art_dir
     art: str | None = None
+    # content-scoped art placements
+    art_inserts: list[ArtInsertSpec] = field(default_factory=list)
     # CSS hook
     style: str = "default"
     # Wrapper / nesting options (used by classes-catalog AND group)
@@ -828,9 +890,12 @@ class ChapterSpec:
         if not isinstance(raw, Mapping):
             raise RecipeError(f"{loc} must be a mapping, got {type(raw).__name__}")
         kind_raw = raw.get("kind")
-        if not isinstance(kind_raw, str):
+        if kind_raw is None:
+            kind = _infer_content_kind(raw, loc=loc)
+        elif isinstance(kind_raw, str):
+            kind = kind_raw
+        else:
             raise RecipeError(f"{loc}.kind must be a string")
-        kind = kind_raw
         if kind not in CHAPTER_KINDS:
             raise RecipeError(
                 f"{loc}.kind={kind!r} is not one of {sorted(CHAPTER_KINDS)}"
@@ -917,14 +982,32 @@ class ChapterSpec:
         if depth is not None and kind != "toc":
             raise RecipeError(f"{loc}.depth is only valid for kind='toc'")
 
+        art_raw = raw.get("art")
+        chapter_art: str | None = None
+        art_inserts: list[ArtInsertSpec] = []
+        if isinstance(art_raw, list):
+            for i, art_item in enumerate(art_raw):
+                if not isinstance(art_item, Mapping):
+                    raise RecipeError(
+                        f"{loc}.art[{i}] must be a mapping, "
+                        f"got {type(art_item).__name__}"
+                    )
+                art_inserts.append(ArtInsertSpec.from_dict(art_item, index=i, loc=loc))
+        elif art_raw is not None:
+            chapter_art = _str_or_none(art_raw)
+
         return cls(
             kind=kind,
             type=generated_type,
             source=source,
             title=_str_or_none(raw.get("title")),
+            subtitle=_str_or_none(raw.get("subtitle")),
+            cover_eyebrow=_str_or_none(raw.get("cover_eyebrow")),
+            cover_footer=_str_or_none(raw.get("cover_footer")),
             slug=_slug_or_none(raw.get("slug"), loc=loc),
             eyebrow=_str_or_none(raw.get("eyebrow")),
-            art=_str_or_none(raw.get("art")),
+            art=chapter_art,
+            art_inserts=art_inserts,
             style=str(raw.get("style", "default")),
             wrapper=bool(raw.get("wrapper", False)),
             child_style=str(raw.get("child_style", "default")),
@@ -1081,6 +1164,14 @@ class Recipe:
         """Backward-facing internal alias for ordered book contents."""
         return self.contents
 
+    @property
+    def inline_title(self) -> ChapterSpec | None:
+        """Return the first inline title item, if the recipe declares one."""
+        for item in self.contents:
+            if item.kind == "inline" and item.style == "title" and item.title:
+                return item
+        return None
+
     def vault_priority_paths(self) -> list[Path]:
         """Return vault paths in overlay priority order (first = lowest priority)."""
         return [self.vaults[name].path for name in self.vault_overlay]
@@ -1108,7 +1199,9 @@ class Recipe:
     @property
     def generated_name(self) -> str:
         """Return the generated-output directory name for this recipe."""
-        return self.output_name or _filename_slug(self.title)
+        if self.output_name:
+            return self.output_name
+        return _filename_slug(self.title)
 
     @property
     def generated_root(self) -> Path:
@@ -1126,6 +1219,19 @@ def _filename_slug(value: str) -> str:
     slug = re.sub(r"[^A-Za-z0-9_-]+", "-", value.strip().lower())
     slug = re.sub(r"-{2,}", "-", slug).strip("-")
     return slug or "book"
+
+
+def _infer_content_kind(raw: Mapping[str, object], *, loc: str) -> str:
+    """Infer a contents item kind from its shape when ``kind`` is omitted."""
+    if "sources" in raw:
+        return "sequence"
+    if "children" in raw:
+        return "group"
+    if "type" in raw:
+        return "generated"
+    if "source" in raw:
+        return "file"
+    raise RecipeError(f"{loc}.kind must be a string")
 
 
 def _str_or_none(value: object) -> str | None:

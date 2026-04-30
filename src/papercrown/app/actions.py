@@ -259,10 +259,11 @@ def run_verify(
     strict: bool,
     size_report: bool,
     top_images: int,
+    web_assets: bool | None,
     config: Path | None,
     no_config: bool,
 ) -> int:
-    """Verify generated PDFs against the recipe manifest."""
+    """Verify generated outputs against the recipe manifest."""
     context = _load_recipe_context(
         recipe,
         config=config,
@@ -276,6 +277,7 @@ def run_verify(
             strict=strict,
             size_report=size_report,
             top_images=top_images,
+            web_assets=web_assets,
         )
     )
 
@@ -443,6 +445,7 @@ def _verify_argv(
     strict: bool,
     size_report: bool,
     top_images: int,
+    web_assets: bool | None,
 ) -> list[str]:
     argv = [
         str(config.recipe_path),
@@ -458,4 +461,8 @@ def _verify_argv(
     if size_report:
         argv.append("--size-report")
         argv.extend(["--top-images", str(top_images)])
+    if web_assets is True:
+        argv.append("--web-assets")
+    elif web_assets is False:
+        argv.append("--no-web-assets")
     return argv

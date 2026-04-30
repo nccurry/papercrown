@@ -18,5 +18,6 @@ toP*.pdf
 .coverage
 htmlcov/
 papercrown-html-*/
+**/Paper Crown/
 docs/site/
 .idea

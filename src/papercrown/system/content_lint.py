@@ -43,6 +43,7 @@ def lint_manifest_content(
         vault_index=manifest.vault_index,
         include_art=True,
         include_source_markers=True,
+        recipe=manifest.recipe,
     )
     prepared = ttrpg.prepare_book_markdown(
         markdown,

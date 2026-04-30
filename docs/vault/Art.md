@@ -19,9 +19,33 @@ folders below or directly in `art_dir` when filenames are globally unique.
 
 ## How to Use It
 
-Set `art_dir` in the recipe, put finished images in role-shaped folders, and
-reference chapter dividers, covers, splashes, and ornaments explicitly from the
-recipe. Use `papercrown art audit book.yaml` when adding or moving art.
+Put finished images under `Art/` and use the lightest API that expresses your
+intent:
+
+- Use ordinary Markdown images for inline art that belongs exactly where it
+  appears: `![](map-station.png)`.
+- Use Markdown `.art-slot` blocks for explicit art placement near the content
+  it supports.
+- Use scoped recipe `art:` inserts only when the Markdown source should remain
+  untouched.
+
+Set `art_dir` only when the art library lives somewhere other than `Art/`. Use
+`papercrown art audit book.yaml` when adding or moving art.
+
+```markdown
+:::: {.art-slot role="splash" placement="bottom-half" art="splash-dock-queue.png"}
+::::
+```
+
+```yaml
+contents:
+  - title: Character Creation
+    source: Heroes/Character Creation.md
+    art:
+      - after_heading: Why are you out here?
+        art: splash-dock-queue.png
+        placement: bottom-half
+```
 
 ## How to Adapt It
 
