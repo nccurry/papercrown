@@ -6,8 +6,8 @@ visual system that turns the same assembled Markdown into a clean SRD, a
 parchment book, an industrial manual, a zine, or a custom publication.
 ::::
 
-Paper Crown ships with six bundled themes: clean SRD, parchment classic,
-Pinlight industrial, occult casefile, pulp adventure, and risograph zine.
+Paper Crown ships with six bundled themes: clean SRD, industrial, parchment
+classic, occult casefile, pulp adventure, and risograph zine.
 
 <div class="art-rule art-rule-theme" aria-hidden="true"></div>
 
@@ -33,7 +33,7 @@ Copy a bundled theme into a project for customization:
 papercrown themes copy clean-srd themes/my-clean-srd
 ```
 
-Then point a recipe at the custom theme:
+Then point a book config at the custom theme:
 
 ```yaml
 theme_dir: ../themes
@@ -66,7 +66,7 @@ At render time, Paper Crown layers styles in this order:
 ```text
 Paper Crown core CSS modules
 selected theme CSS files
-recipe theme_options
+book config theme_options
 ```
 
 Web export writes that stack into a generated `styles/book.css` bundle in the
@@ -78,8 +78,8 @@ generated bundle.
 :::: {.art-slot role="splash" placement="bottom-half" art="papercrown-docs/splashes/splash-theme-gallery-spread.png"}
 ::::
 
-This documentation is rendered with its own local theme. The recipe selects a
-theme directory instead of using a bundled theme:
+This documentation is rendered with its own local theme. The book config
+selects a theme directory instead of using a bundled theme:
 
 ```yaml
 theme_dir: ../themes

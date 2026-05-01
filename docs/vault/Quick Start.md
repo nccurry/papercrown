@@ -32,7 +32,7 @@ papercrown verify
 ::::
 
 1. Write Markdown in a vault.
-2. Describe the book in a recipe YAML file.
+2. Describe the book in `book.yml`.
 3. Run `papercrown manifest` to inspect the resolved book.
 4. Run `papercrown doctor` to catch missing tools, paths, and content issues.
 5. Run `papercrown build` for PDFs, or add `--target web` for static HTML.
@@ -48,8 +48,9 @@ after rendering.
 ::::
 
 :::: {.flourish-note .flourish-launch}
-Paper Crown reads `papercrown.yaml` in the current directory when no recipe path
-is provided. That project file usually points to the default recipe.
+When no book path is provided, Paper Crown reads `book.yml` in the current
+directory. A project `papercrown.yaml` can still point to another book file with
+`book:`.
 ::::
 
 ## Example Project
@@ -57,14 +58,14 @@ is provided. That project file usually points to the default recipe.
 You can also run the bundled public example from a repository checkout:
 
 ```sh
-papercrown manifest examples/starfall/book.yaml
-papercrown build examples/starfall/book.yaml
+papercrown manifest examples/starfall/book.yml
+papercrown build examples/starfall/book.yml
 ```
 
 For a static web export, use:
 
 ```sh
-papercrown build examples/starfall/book.yaml --target web
+papercrown build examples/starfall/book.yml --target web
 ```
 
 Generated output is always caller-owned and goes under:

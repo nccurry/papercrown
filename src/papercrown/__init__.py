@@ -1,4 +1,4 @@
-"""Recipe-driven PDF generation for TTRPG markdown vaults."""
+"""Book-config-driven PDF generation for TTRPG Markdown vaults."""
 
 from __future__ import annotations
 

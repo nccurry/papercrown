@@ -1,4 +1,4 @@
-"""Post-build verification for recipe-driven generated outputs."""
+"""Post-build verification for book-config-driven generated outputs."""
 
 from __future__ import annotations
 
@@ -345,9 +345,9 @@ def build_parser(prog: str = "papercrown verify") -> argparse.ArgumentParser:
     """Create the argparse parser for the verification CLI."""
     parser = argparse.ArgumentParser(
         prog=prog,
-        description="Verify generated outputs match the recipe's manifest.",
+        description="Verify generated outputs match the book manifest.",
     )
-    parser.add_argument("recipe", help="Path to recipe YAML")
+    parser.add_argument("recipe", help="Path to book YAML")
     parser.add_argument(
         "--profile",
         choices=[profile.value for profile in OutputProfile],
@@ -504,7 +504,7 @@ def _print_missing_hint(
     )
     if scope is BuildScope.ALL:
         print(
-            "      If you only built part of the recipe, rerun verify with "
+            "      If you only built part of the book, rerun verify with "
             "`--scope book`, `--scope sections`, or `--scope individuals`."
         )
 
@@ -522,7 +522,7 @@ def main(argv: list[str] | None = None) -> int:
     try:
         recipe = load_recipe(args.recipe)
     except RecipeError as error:
-        print(f"Recipe error: {error}", file=sys.stderr)
+        print(f"Book config error: {error}", file=sys.stderr)
         return 2
 
     manifest = build_manifest(recipe)
@@ -535,7 +535,7 @@ def main(argv: list[str] | None = None) -> int:
 
     print(
         f"papercrown verify: {len(expected)} PDF(s) expected for "
-        f"{scope.value} scope / {profile.value} profile in recipe "
+        f"{scope.value} scope / {profile.value} profile in book config "
         f"{Path(args.recipe).name}"
     )
     print()

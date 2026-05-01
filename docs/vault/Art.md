@@ -4,14 +4,14 @@ Paper Crown treats `art_dir` as a named art library. The book owns the files;
 Paper Crown classifies them by role, validates the names, and only auto-places
 art from roles that are explicitly safe for automatic layout.
 
-Art is recipe-driven for the same reason chapters are: finished books need
+Art is book-config-driven for the same reason chapters are: finished books need
 repeatable references, predictable naming, and checks that catch missing or
 mis-sized assets before a release build.
 
 :::: {.sidebar #art-library title="Art Library Contract" tags="docs,art"}
 ### Art Library Contract
 
-Keep art under the recipe's `art_dir`, use role-shaped filenames, and reserve
+Keep art under the book config's `art_dir`, use role-shaped filenames, and reserve
 transparent PNGs for assets that should float on paper instead of carrying
 their own rectangular background. Art can either live in the canonical role
 folders below or directly in `art_dir` when filenames are globally unique.
@@ -26,11 +26,11 @@ intent:
   appears: `![](map-station.png)`.
 - Use Markdown `.art-slot` blocks for explicit art placement near the content
   it supports.
-- Use scoped recipe `art:` inserts only when the Markdown source should remain
+- Use scoped book config `art:` inserts only when the Markdown source should remain
   untouched.
 
 Set `art_dir` only when the art library lives somewhere other than `Art/`. Use
-`papercrown art audit book.yaml` when adding or moving art.
+`papercrown art audit book.yml` when adding or moving art.
 
 ```markdown
 :::: {.art-slot role="splash" placement="bottom-half" art="splash-dock-queue.png"}
@@ -56,7 +56,7 @@ the paper surface.
 
 ## How It Works
 
-The art audit classifies filenames, checks image metadata, verifies recipe
+The art audit classifies filenames, checks image metadata, verifies book config
 references, and reports assets that do not match the role contract. Automatic
 filler placement only considers roles that are safe to place without explicit
 source Markdown references.
@@ -107,21 +107,21 @@ the cover. Interior cinematic art belongs in `splashes/`.
 
 `unused/`, contact sheets, and non-image files are ignored by automatic
 discovery. Legacy campaign art folders are ignored by automatic discovery, but
-flat `scene-*` filenames can be referenced explicitly by campaign recipes.
+flat `scene-*` filenames can be referenced explicitly by campaign book configs.
 
 ## Automatic Placement
 
 The automatic filler pass discovers only roles marked auto-placeable by the
 registry: `filler-spot`, `filler-wide`, `filler-plate`, `filler-bottom`, and
 `page-finish`. The page-wear pass discovers `page-wear` assets separately.
-Explicit recipe filler assets can still use `tailpiece`. Filler selection
+Explicit book config filler assets can still use `tailpiece`. Filler selection
 matches the available blank space to the nominal role size, and renderers do not
 upscale small art to fill large spaces. When a gap is large enough, Paper Crown
 prefers larger dedicated art and may downscale it to the measured space instead
 of reusing a smaller role.
 
-Recipe `art_dir` is the root for the whole art library. If `fillers.art_dir` is
-set, recipe filler asset paths are resolved under `art_dir / fillers.art_dir`;
+Book config `art_dir` is the root for the whole art library. If `fillers.art_dir`
+is set, filler asset paths are resolved under `art_dir / fillers.art_dir`;
 auto-discovery and audit still report roles according to the canonical folders
 inside that library.
 
@@ -182,7 +182,7 @@ was available for a large gap.
 art should float over the page, but opacity is not a naming-contract error for
 illustrations that already include their own background.
 
-Paper Crown renders image pixels as authored by default. Recipe
+Paper Crown renders image pixels as authored by default. Book config
 `image_treatments` can opt specific roles into a named visual treatment when an
 asset set is intentionally designed for it:
 
@@ -213,9 +213,9 @@ usually remain `raw`.
 
 ## Filler Marker Policy
 
-The recipe controls where invisible filler measurement markers are inserted.
-Markdown headings provide the measured anchor points, but source Markdown is not
-the primary control surface for automatic filler policy.
+The book config controls where invisible filler measurement markers are
+inserted. Markdown headings provide the measured anchor points, but source
+Markdown is not the primary control surface for automatic filler policy.
 If `fillers.markers` is omitted, Paper Crown synthesizes the historical default
 policy: terminal chapter/class markers, sequence source-boundary markers,
 subclass markers, frame-family markers, and background-section markers.
@@ -282,16 +282,16 @@ The slug is the normalized class entry slug used by the catalog.
 
 ## Audit
 
-Run the art audit against a recipe:
+Run the art audit against a book config:
 
 ```sh
-papercrown art audit book.yaml
-papercrown art audit book.yaml --format markdown --strict
-papercrown art contact-sheet book.yaml --output art-contact-sheet.html
+papercrown art audit book.yml
+papercrown art audit book.yml --format markdown --strict
+papercrown art contact-sheet book.yml --output art-contact-sheet.html
 ```
 
 The audit prints role counts, recognized and unclassified assets, image metadata
-warnings, missing recipe references, role mismatches, and suggested filenames
+warnings, missing book config references, role mismatches, and suggested filenames
 for missing filler opportunities. It also warns about low print resolution,
 large aspect-ratio mismatches, missing alpha for transparent roles, visible
 content near trim/gutter safety zones, and exact duplicate art.

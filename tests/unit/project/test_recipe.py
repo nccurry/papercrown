@@ -152,7 +152,7 @@ class TestLoadRecipeHappy:
         assert [item.kind for item in r.contents] == ["inline", "file"]
 
     def test_minimal_convention_fixture_is_verifiable(self):
-        r = load_recipe(FIXTURES_DIR / "convention_minimal" / "book.yaml")
+        r = load_recipe(FIXTURES_DIR / "convention_minimal" / "book.yml")
         m = build_manifest(r)
 
         assert r.title == "Minimal Convention Book"

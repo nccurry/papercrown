@@ -1,8 +1,8 @@
 version: '3'
 
 vars:
-  RECIPE: '{{default "examples/starfall/recipes/starfall-field-guide.yaml" .RECIPE}}'
-  DOCS_RECIPE: '{{default "docs/recipes/papercrown-docs.yaml" .DOCS_RECIPE}}'
+  BOOK_CONFIG: '{{default "examples/starfall/book.yml" .BOOK_CONFIG}}'
+  DOCS_BOOK_CONFIG: '{{default "docs/book.yml" .DOCS_BOOK_CONFIG}}'
   DOCS_WEB: '{{default "docs/site/Paper Crown/papercrown-docs/web" .DOCS_WEB}}'
   PORT: '{{default "8000" .PORT}}'
   SCOPE: '{{default "book" .SCOPE}}'
@@ -116,29 +116,29 @@ tasks:
       - bash scripts/container-build.sh
 
   build:
-    desc: Build a recipe with the installed Paper Crown CLI.
+    desc: Build a book config with the installed Paper Crown CLI.
     cmds:
-      - uv run papercrown build {{.RECIPE | toSlash | quote}} --scope {{.SCOPE | quote}} --profile {{.PROFILE | quote}} --jobs {{.JOBS | quote}}
+      - uv run papercrown build {{.BOOK_CONFIG | toSlash | quote}} --scope {{.SCOPE | quote}} --profile {{.PROFILE | quote}} --jobs {{.JOBS | quote}}
 
   manifest:
-    desc: Print a recipe manifest.
+    desc: Print a book manifest.
     cmds:
-      - uv run papercrown manifest {{.RECIPE | toSlash | quote}}
+      - uv run papercrown manifest {{.BOOK_CONFIG | toSlash | quote}}
 
   doctor:
-    desc: Run preflight diagnostics for a recipe.
+    desc: Run preflight diagnostics for a book config.
     cmds:
-      - uv run papercrown doctor {{.RECIPE | toSlash | quote}}
+      - uv run papercrown doctor {{.BOOK_CONFIG | toSlash | quote}}
 
   doctor:strict:
     desc: Run strict preflight diagnostics for CI/release checks.
     cmds:
-      - uv run papercrown doctor {{.RECIPE | toSlash | quote}} --strict
+      - uv run papercrown doctor {{.BOOK_CONFIG | toSlash | quote}} --strict
 
   verify:
-    desc: Verify generated PDFs for a recipe.
+    desc: Verify generated PDFs for a book config.
     cmds:
-      - uv run papercrown verify {{.RECIPE | toSlash | quote}} --scope {{.SCOPE | quote}} --profile {{.PROFILE | quote}} --strict
+      - uv run papercrown verify {{.BOOK_CONFIG | toSlash | quote}} --scope {{.SCOPE | quote}} --profile {{.PROFILE | quote}} --strict
 
   init:
     desc: Create a sample Paper Crown project in ./scratch.
@@ -148,7 +148,7 @@ tasks:
   docs:build:
     desc: Build the GitHub Pages documentation with Paper Crown.
     cmds:
-      - uv run papercrown build {{.DOCS_RECIPE | toSlash | quote}} --target web --force
+      - uv run papercrown build {{.DOCS_BOOK_CONFIG | toSlash | quote}} --target web --force
 
   docs:serve:
     desc: Serve the generated documentation locally.

@@ -24,16 +24,16 @@ from papercrown.project.starter import StarterBookType
 APP_HELP = "Build polished TTRPG PDFs and web exports from Markdown vaults."
 DEPS_HELP = "Dependency diagnostics."
 THEMES_HELP = "Inspect and copy bundled themes."
-ART_HELP = "Inspect and audit recipe art."
+ART_HELP = "Inspect and audit book art."
 
-DEFAULT_INIT_THEME = "clean-srd"
+DEFAULT_INIT_THEME = "industrial"
 DEFAULT_VERIFY_TOP_IMAGES = 5
 
 
-RecipeArg = Annotated[
+BookArg = Annotated[
     Path | None,
     typer.Argument(
-        help="Path to a book YAML file. Defaults to papercrown.yaml default_book.",
+        help="Path to a book YAML file. Defaults to book.yml or papercrown.yaml book.",
     ),
 ]
 ConfigOpt = Annotated[
@@ -66,7 +66,7 @@ ChapterOpt = Annotated[
 ]
 IncludeArtOpt = Annotated[
     bool | None,
-    typer.Option("--art/--no-art", help="Include recipe art assets."),
+    typer.Option("--art/--no-art", help="Include book art assets."),
 ]
 ForceOpt = Annotated[
     bool | None,
@@ -156,11 +156,11 @@ InitPathArg = Annotated[
 ]
 InitTitleOpt = Annotated[
     str | None,
-    typer.Option("--title", help="Book title for the starter recipe."),
+    typer.Option("--title", help="Book title for the starter config."),
 ]
 InitSubtitleOpt = Annotated[
     str | None,
-    typer.Option("--subtitle", help="Optional subtitle for the starter recipe."),
+    typer.Option("--subtitle", help="Optional subtitle for the starter config."),
 ]
 InitThemeOpt = Annotated[
     str,
@@ -248,7 +248,7 @@ def _run(action: Callable[[], int | None]) -> None:
 
 
 def build_command(
-    recipe: RecipeArg = None,
+    book: BookArg = None,
     target: BuildTargetOpt = None,
     scope: BuildScopeOpt = None,
     profile: OutputProfileOpt = None,
@@ -268,7 +268,7 @@ def build_command(
     """Build PDFs or the static web artifact."""
     _run(
         lambda: actions.run_build(
-            recipe,
+            book,
             config=config,
             no_config=no_config,
             target=target,
@@ -289,14 +289,14 @@ def build_command(
 
 
 def manifest_command(
-    recipe: RecipeArg = None,
+    book: BookArg = None,
     config: ConfigOpt = None,
     no_config: NoConfigOpt = False,
 ) -> None:
     """Print the resolved build manifest."""
     _run(
         lambda: actions.run_manifest(
-            recipe,
+            book,
             config=config,
             no_config=no_config,
         )
@@ -304,16 +304,16 @@ def manifest_command(
 
 
 def art_audit_command(
-    recipe: RecipeArg = None,
+    book: BookArg = None,
     output_format: ArtFormatOpt = "text",
     strict: StrictOpt = False,
     config: ConfigOpt = None,
     no_config: NoConfigOpt = False,
 ) -> None:
-    """Audit the recipe art library against the Paper Crown art contract."""
+    """Audit the book art library against the Paper Crown art contract."""
     _run(
         lambda: actions.run_art_audit(
-            recipe,
+            book,
             output_format=output_format,
             strict=strict,
             config=config,
@@ -323,15 +323,15 @@ def art_audit_command(
 
 
 def art_contact_sheet_command(
-    recipe: RecipeArg = None,
+    book: BookArg = None,
     output: ContactSheetOutputOpt = None,
     config: ConfigOpt = None,
     no_config: NoConfigOpt = False,
 ) -> None:
-    """Write an HTML visual inventory of the recipe art library."""
+    """Write an HTML visual inventory of the book art library."""
     _run(
         lambda: actions.run_art_contact_sheet(
-            recipe,
+            book,
             output_path=output,
             config=config,
             no_config=no_config,
@@ -340,7 +340,7 @@ def art_contact_sheet_command(
 
 
 def doctor_command(
-    recipe: RecipeArg = None,
+    book: BookArg = None,
     target: BuildTargetOpt = None,
     strict: StrictOpt = False,
     config: ConfigOpt = None,
@@ -349,7 +349,7 @@ def doctor_command(
     """Run preflight diagnostics and exit without rendering."""
     _run(
         lambda: actions.run_doctor(
-            recipe,
+            book,
             target=target,
             strict=strict,
             config=config,
@@ -374,7 +374,7 @@ def deps_check_command(
 
 
 def verify_command(
-    recipe: RecipeArg = None,
+    book: BookArg = None,
     profile: OutputProfileOpt = None,
     scope: BuildScopeOpt = None,
     no_book: NoBookOpt = False,
@@ -385,10 +385,10 @@ def verify_command(
     config: ConfigOpt = None,
     no_config: NoConfigOpt = False,
 ) -> None:
-    """Verify generated outputs against the recipe manifest."""
+    """Verify generated outputs against the book manifest."""
     _run(
         lambda: actions.run_verify(
-            recipe,
+            book,
             profile=profile,
             scope=scope,
             no_book=no_book,

@@ -1,18 +1,18 @@
 # Builds and Publishing
 
-Builds turn a resolved recipe into caller-owned output. Paper Crown can render
+Builds turn a resolved book config into caller-owned output. Paper Crown can render
 PDFs for review or release, static HTML for the web, and diagnostics that help
 you understand what the renderer decided.
 
 ## CLI Surface
 
 ```text
-papercrown build [RECIPE]
-papercrown manifest [RECIPE]
-papercrown art audit [RECIPE]
-papercrown art contact-sheet [RECIPE]
-papercrown doctor [RECIPE]
-papercrown verify [RECIPE]
+papercrown build [BOOK]
+papercrown manifest [BOOK]
+papercrown art audit [BOOK]
+papercrown art contact-sheet [BOOK]
+papercrown doctor [BOOK]
+papercrown verify [BOOK]
 papercrown deps check
 papercrown init [PATH]
 papercrown new [PATH]
@@ -27,17 +27,17 @@ The CLI keeps author work in four repeatable phases: inspect with `manifest`,
 preflight with `doctor`, render with `build`, and check results with `verify`.
 ::::
 
-If no recipe argument is provided, Paper Crown reads `papercrown.yaml` in the
-current directory and uses its `default_book`.
+If no book argument is provided, Paper Crown first looks for `book.yml` in the
+current directory. A project `papercrown.yaml` can override that with `book:`.
 
 ## Build Options
 
 ```sh
-papercrown build book.yaml --scope book --profile print
-papercrown build book.yaml --scope sections --jobs auto
-papercrown build book.yaml --chapter primer
-papercrown build book.yaml --target web
-papercrown build book.yaml --profile draft --filler-debug-overlay
+papercrown build book.yml --scope book --profile print
+papercrown build book.yml --scope sections --jobs auto
+papercrown build book.yml --chapter primer
+papercrown build book.yml --target web
+papercrown build book.yml --profile draft --filler-debug-overlay
 ```
 
 | Option | Use |
@@ -79,13 +79,13 @@ Use `doctor` before rendering when setting up a new project or moving content
 between machines:
 
 ```sh
-papercrown doctor book.yaml --strict
+papercrown doctor book.yml --strict
 ```
 
 Use `verify` after rendering PDFs:
 
 ```sh
-papercrown verify book.yaml --scope book --profile print --strict
+papercrown verify book.yml --scope book --profile print --strict
 ```
 
 When `web/index.html` exists, `verify` also checks generated local `src`
@@ -131,8 +131,8 @@ flow:
 :::: {.handout #pages-route title="Pages Route" tags="docs,publishing"}
 ### Pages Route
 
-The Pages artifact is the generated `web` directory for the docs recipe. The
-workflow uploads only that static tree, not the recipe source or local caches.
+The Pages artifact is the generated `web` directory for the docs book. The
+workflow uploads only that static tree, not the book config source or local caches.
 ::::
 
 Configure the repository Pages source to use GitHub Actions. The expected
@@ -178,5 +178,5 @@ pages:
       - public
 ```
 
-Replace the `cp` source with the web output path produced by the recipe. By
+Replace the `cp` source with the web output path produced by the book. By
 default this is `Paper Crown/<slugged-title>/web`.

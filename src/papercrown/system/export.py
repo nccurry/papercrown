@@ -190,7 +190,7 @@ def ensure_exports_fresh(
 
     Exports are cached by source-file content, vault roots, and the
     obsidian-export command identity. Only source files referenced by the
-    recipe manifest are exported, so unrelated broken notes elsewhere in a
+    book manifest are exported, so unrelated broken notes elsewhere in a
     vault cannot poison a book build.
     """
     cache_dir = manifest.recipe.cache_dir

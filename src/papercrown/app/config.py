@@ -41,7 +41,9 @@ _BUILD_KEYS = {
     "timings",
 }
 # Supported keys at the project configuration root.
-_PROJECT_KEYS = {"default_book", "build", "defaults"}
+_PROJECT_KEYS = {"book", "build", "defaults"}
+# Conventional book-structure file checked when a project does not name one.
+DEFAULT_BOOK_CONFIG_NAMES = ("book.yml",)
 # Upper bound for jobs:auto so one command does not overfill the machine.
 AUTO_JOBS_CAP = 4
 
@@ -71,7 +73,7 @@ class BuildConfig:
 class BuildConfigPatch:
     """Partial build config used for one precedence layer."""
 
-    default_book: Path | None = None
+    book_path: Path | None = None
     project_defaults: dict[str, object] | None = None
     project_defaults_base_dir: Path | None = None
     target: BuildTarget | None = None
@@ -128,7 +130,9 @@ def load_project_config(
     config_path = (path or default_project_config_path()).resolve()
     if not config_path.exists():
         if path is None:
-            return BuildConfigPatch()
+            return BuildConfigPatch(
+                book_path=_find_book_config(config_path.parent)
+            )
         raise ConfigError(f"config file not found: {config_path}")
     raw = _read_yaml_mapping(config_path, label="config")
     unknown = set(raw) - _PROJECT_KEYS
@@ -137,10 +141,20 @@ def load_project_config(
             f"{config_path}: unknown config key(s): {', '.join(sorted(unknown))}"
         )
     patch = BuildConfigPatch()
-    if raw.get("default_book") is not None:
+    book_value = raw.get("book")
+    if book_value is not None:
         patch = replace(
             patch,
-            default_book=_resolve_config_path(raw["default_book"], config_path),
+            book_path=_resolve_config_path(
+                book_value,
+                config_path,
+                field_name="book",
+            ),
+        )
+    else:
+        patch = replace(
+            patch,
+            book_path=_find_book_config(config_path.parent),
         )
     if raw.get("defaults") is not None:
         defaults_raw = raw["defaults"]
@@ -186,10 +200,11 @@ def resolve_build_config(
     cli: BuildConfigPatch,
 ) -> BuildConfig:
     """Resolve the effective build config with documented precedence."""
-    recipe_path = recipe_arg or project.default_book
+    recipe_path = recipe_arg or project.book_path
     if recipe_path is None:
         raise ConfigError(
-            "no book provided; pass a book path or set default_book in papercrown.yaml"
+            "no book provided; pass a book path, set book in papercrown.yaml, "
+            "or add book.yml"
         )
     if not recipe_path.is_absolute():
         recipe_path = recipe_path.resolve()
@@ -356,9 +371,23 @@ def _optional_str(value: object, *, key: str, source: str) -> str | None:
     return stripped or None
 
 
-def _resolve_config_path(value: object, config_path: Path) -> Path:
+def _find_book_config(root: Path) -> Path | None:
+    """Return the conventional book config in ``root``, when one exists."""
+    for name in DEFAULT_BOOK_CONFIG_NAMES:
+        candidate = root / name
+        if candidate.is_file():
+            return candidate.resolve()
+    return None
+
+
+def _resolve_config_path(
+    value: object,
+    config_path: Path,
+    *,
+    field_name: str,
+) -> Path:
     if not isinstance(value, str) or not value.strip():
-        raise ConfigError(f"{config_path}: default_book must be a path string")
+        raise ConfigError(f"{config_path}: {field_name} must be a path string")
     path = Path(value)
     if not path.is_absolute():
         path = config_path.parent / path
@@ -370,7 +399,7 @@ def _merge_patches(
     override: BuildConfigPatch,
 ) -> BuildConfigPatch:
     return BuildConfigPatch(
-        default_book=override.default_book or base.default_book,
+        book_path=override.book_path or base.book_path,
         project_defaults=override.project_defaults or base.project_defaults,
         project_defaults_base_dir=(
             override.project_defaults_base_dir or base.project_defaults_base_dir

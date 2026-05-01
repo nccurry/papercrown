@@ -9,7 +9,7 @@ def dump(manifest: Manifest) -> str:
     """Human-readable dump of the resolved manifest."""
     out: list[str] = []
     out.append(f"=== Manifest for {manifest.recipe.title!r} ===")
-    out.append(f"Recipe       : {manifest.recipe.recipe_path}")
+    out.append(f"Book config  : {manifest.recipe.recipe_path}")
     out.append(f"Vault overlay: {manifest.recipe.vault_overlay}")
     for name, vs in manifest.recipe.vaults.items():
         out.append(f"  vault[{name}]: {vs.path}")

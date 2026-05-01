@@ -1,24 +1,24 @@
-# Recipes
+# Book Configs
 
-A recipe is the contract between your Markdown vaults and the generated book.
+A book config is the contract between your Markdown vaults and the generated book.
 It declares the theme, ordered contents, and only the overrides that differ
 from Paper Crown's book defaults.
 
-:::: {.handout #recipe-contract title="Recipe Contract" tags="docs,recipe"}
-### Recipe Contract
+:::: {.handout #book-config-contract title="Book Config Contract" tags="docs,book-config"}
+### Book Config Contract
 
-Recipes are convention-first. The common book shape is inferred from the
+Book configs are convention-first. The common book shape is inferred from the
 contents stream, local `themes/`, local `Art/`, and the project root unless
-the recipe says otherwise.
+the config says otherwise.
 ::::
 
 ## How to Use It
 
 Start with a theme, title item, and ordered content. Paths are resolved
-relative to the recipe file unless they are absolute.
+relative to the book file unless they are absolute.
 
 ```yaml
-theme: clean-srd
+theme: industrial
 
 contents:
   - kind: inline
@@ -30,14 +30,14 @@ contents:
     source: vault/Primer.md
 ```
 
-With no `vaults:` mapping, Paper Crown treats the project root as a single
-content vault. `output_dir` defaults to the project root, `output_name` is
+With no `vaults:` mapping, Paper Crown treats the book file's directory as a single
+content vault. `output_dir` defaults to the book file's directory, `output_name` is
 derived from the inline title's title text, `art_dir` defaults to `Art/`, and a
 matching local `themes/<theme>/` wins over bundled themes. The subtitle is not
 included in the default output folder name; set `output_name` only when you
 need a release-specific name or two books would otherwise collide.
 
-Use `papercrown manifest` whenever a recipe changes. The manifest shows exactly
+Use `papercrown manifest` whenever a book config changes. The manifest shows exactly
 which files, chapters, themes, and art references Paper Crown resolved before
 you spend time rendering.
 
@@ -52,7 +52,7 @@ front matter, or after the main chapters for back matter:
 
 This book is an independent product.
 
-# book.yaml
+# book.yml
 contents:
   - style: legal
     title: Legal & Support
@@ -104,7 +104,7 @@ Images render without filters or blend modes by default. Use
 
 ## How It Works
 
-Paper Crown loads the recipe into typed models, resolves each vault alias to a
+Paper Crown loads the book config into typed models, resolves each vault alias to a
 real folder, then turns the chapter list into a render manifest. The manifest
 is the handoff between project configuration and the assembly/render pipeline.
 
@@ -159,7 +159,7 @@ Common chapter shapes:
 | `contents` | Ordered book structure using `inline`, `toc`, `generated`, `file`, `sequence`, `folder`, `catalog`, `classes-catalog`, or `group` |
 | `fillers`, `page_damage`, `ornaments` | Optional art and page-furniture systems |
 
-For larger projects, recipes can also share structure with `extends`,
+For larger projects, book configs can also share structure with `extends`,
 `include_contents`, and `include_vaults`.
 
 Class catalogs can use role-based art patterns:

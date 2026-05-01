@@ -275,9 +275,9 @@ def test_bundled_theme_catalog_is_curated_and_described():
 
     assert [summary.name for summary in summaries] == [
         "clean-srd",
+        "industrial",
         "occult-casefile",
         "parchment-classic",
-        "pinlight-industrial",
         "pulp-adventure",
         "risograph-zine",
     ]

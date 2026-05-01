@@ -1,4 +1,4 @@
-"""Preflight diagnostics for recipes, tools, content, and assets."""
+"""Preflight diagnostics for book configs, tools, content, and assets."""
 
 from __future__ import annotations
 
@@ -72,7 +72,7 @@ def run_doctor(
 ) -> DiagnosticReport:
     """Run non-rendering preflight checks and return a diagnostic report.
 
-    Doctor validates external tools, fonts, recipe art references, image
+    Doctor validates external tools, fonts, book art references, image
     readability, and assembled content quality. When tools are present it uses
     obsidian-export before content linting so final rendered markdown is checked
     instead of raw Obsidian syntax.

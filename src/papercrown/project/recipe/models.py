@@ -1104,8 +1104,8 @@ def _chapter_art_fields(
 # ---------------------------------------------------------------------------
 
 
-# Theme used when a recipe does not specify one.
-DEFAULT_THEME = "pinlight-industrial"
+# Theme used when a book config does not specify one.
+DEFAULT_THEME = "industrial"
 
 # Computed content page types accepted in book contents.
 GENERATED_CONTENT_TYPES = {
@@ -1249,9 +1249,8 @@ class Recipe:
 
     @property
     def project_dir(self) -> Path:
-        """Resolve the content project root for this recipe."""
-        parent = self.recipe_path.parent
-        return parent.parent if parent.name == "recipes" else parent
+        """Resolve the project root for this book config."""
+        return self.recipe_path.parent.resolve()
 
     @property
     def art_dir(self) -> Path:

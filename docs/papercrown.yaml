@@ -1,7 +1,5 @@
-default_book: book.yaml
-
 build:
   target: web
-  scope: book
+  scope: all
   profile: print
   jobs: auto

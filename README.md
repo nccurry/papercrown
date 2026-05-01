@@ -16,8 +16,8 @@
 Start here: [Paper Crown documentation](https://nccurry.github.io/papercrown/)
 
 Paper Crown builds polished TTRPG PDFs and static web exports from Markdown
-content that lives anywhere on disk. A recipe points at one or more content
-vaults, chooses a theme, and declares the chapters to assemble.
+content that lives anywhere on disk. A book config points at one or more
+content vaults, chooses a theme, and declares the chapters to assemble.
 
 ## Install
 
@@ -63,7 +63,7 @@ papercrown verify
 Or run against the bundled public example from a repository checkout:
 
 ```sh
-papercrown manifest examples/starfall/book.yaml
+papercrown manifest examples/starfall/book.yml
 ```
 
 ## Repository Bootstrap
@@ -94,29 +94,29 @@ task check
 ## CLI
 
 ```text
-papercrown build [RECIPE]
-papercrown manifest [RECIPE]
-papercrown doctor [RECIPE]
-papercrown verify [RECIPE]
-papercrown art audit [RECIPE]
-papercrown art contact-sheet [RECIPE]
+papercrown build [BOOK]
+papercrown manifest [BOOK]
+papercrown doctor [BOOK]
+papercrown verify [BOOK]
+papercrown art audit [BOOK]
+papercrown art contact-sheet [BOOK]
 papercrown deps check
 papercrown init [PATH]
 papercrown themes list
 papercrown themes copy NAME DEST
 ```
 
-If no recipe argument is provided, Paper Crown reads `papercrown.yaml` in the
-current directory and uses its `default_book`.
+If no book argument is provided, Paper Crown first looks for `book.yml` in the
+current directory. A project `papercrown.yaml` can override that with `book:`.
 
 Common build options:
 
 ```sh
-papercrown build book.yaml --scope book --profile print
-papercrown build book.yaml --scope sections --jobs auto
-papercrown build book.yaml --chapter primer
-papercrown build book.yaml --target web
-papercrown build book.yaml --profile draft --filler-debug-overlay
+papercrown build book.yml --scope book --profile print
+papercrown build book.yml --scope sections --jobs auto
+papercrown build book.yml --chapter primer
+papercrown build book.yml --target web
+papercrown build book.yml --profile draft --filler-debug-overlay
 ```
 
 Generated files live under one caller-owned tree:
@@ -130,8 +130,8 @@ Generated files live under one caller-owned tree:
   cache/
 ```
 
-`output_dir` and `output_name` are recipe fields. `output_dir` may be absolute
-or relative to the recipe file.
+`output_dir` and `output_name` are book-config fields. `output_dir` may be
+absolute or relative to the book file.
 
 ## Container Image
 
@@ -173,18 +173,18 @@ pages:
       - public
 ```
 
-Replace the `cp` source with the web output path produced by your recipe's
+Replace the `cp` source with the web output path produced by your book's
 `output_dir` and `output_name`.
 
-## Recipes
+## Book Configs
 
-Minimal recipe:
+Minimal book config:
 
 ```yaml
 title: Starfall Field Guide
 output_dir: ../output
 output_name: starfall-field-guide
-theme: clean-srd
+theme: industrial
 
 vaults:
   rules: ../vault
@@ -213,7 +213,7 @@ Copy a theme for customization:
 papercrown themes copy clean-srd themes/my-clean-srd
 ```
 
-Then set `theme_dir: ../themes` and `theme: my-clean-srd` in a recipe.
+Then set `theme_dir: ../themes` and `theme: my-clean-srd` in a book config.
 
 ## Documentation
 

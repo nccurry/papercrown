@@ -200,7 +200,7 @@ body.paper-anthology {
     repeating-linear-gradient(90deg, transparent 0 1.4rem, rgba(255, 255, 255, 0.04) 1.4rem 1.48rem);
 }
 
-#div-recipes,
+#div-book-configs,
 #div-art {
   color: #d6b665;
   background:
@@ -260,7 +260,7 @@ body.paper-anthology {
     repeating-linear-gradient(45deg, currentColor 0 2px, transparent 2px 0.8rem);
 }
 
-#div-recipes::after,
+#div-book-configs::after,
 #div-art::after {
   background:
     linear-gradient(90deg, transparent, currentColor),
@@ -281,7 +281,7 @@ body.paper-anthology {
 
 #div-quick-start .section-divider-title,
 #div-developer-guide .section-divider-title,
-#div-recipes .section-divider-title,
+#div-book-configs .section-divider-title,
 #div-art .section-divider-title {
   color: #201914;
 }
@@ -727,14 +727,14 @@ body.mode-web.paper-anthology #div-developer-guide .section-divider-art {
   filter: none;
 }
 
-body.mode-web.paper-anthology #div-recipes,
+body.mode-web.paper-anthology #div-book-configs,
 body.mode-web.paper-anthology #div-vaults-and-markdown,
 body.mode-web.paper-anthology #div-art {
   color: #d7b35e;
   background: #241622;
 }
 
-body.mode-web.paper-anthology #div-recipes .section-divider-art,
+body.mode-web.paper-anthology #div-book-configs .section-divider-art,
 body.mode-web.paper-anthology #div-vaults-and-markdown .section-divider-art,
 body.mode-web.paper-anthology #div-art .section-divider-art {
   object-position: center;
@@ -753,7 +753,7 @@ body.mode-web.paper-anthology #div-builds-and-publishing .section-divider-art {
 
 body.mode-web.paper-anthology #div-quick-start .section-divider-title,
 body.mode-web.paper-anthology #div-developer-guide .section-divider-title,
-body.mode-web.paper-anthology #div-recipes .section-divider-title,
+body.mode-web.paper-anthology #div-book-configs .section-divider-title,
 body.mode-web.paper-anthology #div-vaults-and-markdown .section-divider-title,
 body.mode-web.paper-anthology #div-art .section-divider-title {
   color: #fff7de;

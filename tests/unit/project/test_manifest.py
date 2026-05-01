@@ -1515,13 +1515,13 @@ class TestKindSequence:
 
 
 class TestRecipePathProperties:
-    def test_project_dir_when_recipe_in_recipes_subdir(self, tmp_path):
+    def test_project_dir_is_book_config_directory(self, tmp_path):
         from papercrown.project.recipe import CoverSpec, Recipe
 
         project = tmp_path / "project"
-        recipes = project / "recipes"
-        recipes.mkdir(parents=True)
-        rp = recipes / "foo.yaml"
+        config_dir = project / "books"
+        config_dir.mkdir(parents=True)
+        rp = config_dir / "foo.yaml"
         rp.write_text("title: t\n", encoding="utf-8")
         r = Recipe(
             title="t",
@@ -1534,12 +1534,10 @@ class TestRecipePathProperties:
             contents=[],
             recipe_path=rp.resolve(),
         )
-        assert r.project_dir == project.resolve()
-        assert r.art_dir == (project / "Art").resolve()
+        assert r.project_dir == config_dir.resolve()
+        assert r.art_dir == (config_dir / "Art").resolve()
 
     def test_project_dir_when_recipe_alongside(self, tmp_path):
-        # When the recipe lives directly in the project root (not inside
-        # `recipes/`), project_dir is just its parent.
         from papercrown.project.recipe import CoverSpec, Recipe
 
         rp = tmp_path / "myrecipe.yaml"

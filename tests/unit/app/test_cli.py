@@ -61,9 +61,7 @@ def test_themes_list_includes_catalog_metadata():
 
     assert result.exit_code == 0, result.output
     assert "clean-srd - Clean SRD: reference /" in result.output
-    assert (
-        "pinlight-industrial - Pinlight Industrial: science-fiction /" in result.output
-    )
+    assert "industrial - Industrial: science-fiction /" in result.output
     assert "modern-minimal" not in result.output
 
 
@@ -111,14 +109,14 @@ def test_main_returns_typer_exit_code(monkeypatch):
 
 
 def test_old_build_aliases_are_not_accepted():
-    result = runner.invoke(cli.app, ["build", "recipes/player-book.yaml", "--book"])
+    result = runner.invoke(cli.app, ["build", "books/player-book.yml", "--book"])
 
     assert result.exit_code != 0
     assert "No such option" in result.output
 
 
 def test_old_action_aliases_are_not_accepted():
-    result = runner.invoke(cli.app, ["recipes/player-book.yaml", "--dump-manifest"])
+    result = runner.invoke(cli.app, ["books/player-book.yml", "--dump-manifest"])
 
     assert result.exit_code != 0
 
@@ -165,7 +163,7 @@ def test_build_command_applies_config_recipe_and_cli_precedence(
     config_path.write_text(
         textwrap.dedent(
             """
-            default_book: recipe.yaml
+            book: recipe.yaml
             build:
               scope: sections
               profile: print
@@ -234,7 +232,7 @@ def test_verify_command_uses_config_scope_and_profile(tmp_path, monkeypatch):
     config_path.write_text(
         textwrap.dedent(
             """
-            default_book: recipe.yaml
+            book: recipe.yaml
             build:
               scope: book
               profile: draft
@@ -276,7 +274,7 @@ def test_verify_command_can_force_web_asset_check(tmp_path, monkeypatch):
         """,
     )
     config_path = tmp_path / "papercrown.yaml"
-    config_path.write_text("default_book: recipe.yaml\n", encoding="utf-8")
+    config_path.write_text("book: recipe.yaml\n", encoding="utf-8")
     captured = {}
 
     def fake_verify_main(argv):
@@ -361,7 +359,7 @@ def test_init_command_accepts_new_book_options(tmp_path):
             "--subtitle",
             "A frontier campaign",
             "--theme",
-            "pinlight-industrial",
+            "industrial",
             "--book-type",
             "campaign",
             "--vault",
@@ -371,9 +369,9 @@ def test_init_command_accepts_new_book_options(tmp_path):
     )
 
     assert result.exit_code == 0, result.output
-    recipe = (dest / "book.yaml").read_text(encoding="utf-8")
+    recipe = (dest / "book.yml").read_text(encoding="utf-8")
     assert 'title: "The Pinlight Colony"' in recipe
-    assert 'theme: "pinlight-industrial"' in recipe
+    assert 'theme: "industrial"' in recipe
     assert "enabled: false" in recipe
     assert (dest / "notes" / "Overview.md").is_file()
     assert "Next steps:" in result.output
@@ -385,7 +383,7 @@ def test_new_command_aliases_init(tmp_path):
     result = runner.invoke(cli.app, ["new", str(dest), "--title", "Starter"])
 
     assert result.exit_code == 0, result.output
-    recipe = (dest / "book.yaml").read_text(encoding="utf-8")
+    recipe = (dest / "book.yml").read_text(encoding="utf-8")
     assert 'title: "Starter"' in recipe
     assert (dest / "Overview.md").is_file()
 

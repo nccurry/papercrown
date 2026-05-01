@@ -1,8 +1,9 @@
 # Vaults and Markdown
 
 :::: {.flourish-note .flourish-folder}
-Vaults are named content roots. They let a recipe assemble Markdown from one or
-more folders without moving the source into Paper Crown or into the repository.
+Vaults are named content roots. They let a book config assemble Markdown from
+one or more folders without moving the source into Paper Crown or into the
+repository.
 ::::
 
 Markdown stays ordinary first. Paper Crown adds source resolution, Obsidian-style
@@ -13,7 +14,7 @@ game objects.
 
 ## How to Use It
 
-Give each content root an alias in the recipe:
+Give each content root an alias in the book config:
 
 ```yaml
 vaults:
@@ -46,7 +47,7 @@ paragraph, list, or table.
 ## Rules Widgets
 
 Rules widgets use Pandoc fenced divs. They work in the same source Markdown as
-the rest of your book and do not require recipe changes.
+the rest of your book and do not require book config changes.
 
 ### Feature
 

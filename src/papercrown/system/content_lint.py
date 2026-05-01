@@ -109,7 +109,7 @@ def _lint_recipe_source_mojibake(manifest: Manifest) -> list[Diagnostic]:
             Diagnostic(
                 code="recipe.source-mojibake",
                 severity=DiagnosticSeverity.WARNING,
-                message=f"recipe source reference looks mojibaked: {raw}",
+                message=f"book source reference looks mojibaked: {raw}",
                 path=manifest.recipe.recipe_path,
                 hint=f"clean up the filename or source path for {label}",
             )
@@ -140,7 +140,10 @@ def _lint_exact_custom_duplicates(manifest: Manifest) -> list[Diagnostic]:
                 severity=DiagnosticSeverity.WARNING,
                 message=("custom file is byte-identical to the matching original file"),
                 path=custom_file,
-                hint="delete the custom duplicate or change the recipe to use original",
+                hint=(
+                    "delete the custom duplicate or change the book config "
+                    "to use original"
+                ),
             )
         )
     return diagnostics

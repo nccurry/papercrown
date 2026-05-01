@@ -57,7 +57,7 @@ class AppCommandError(Exception):
 
 @dataclass(frozen=True)
 class _RecipeContext:
-    """Recipe inputs resolved from config layers."""
+    """Book inputs resolved from config layers."""
 
     config: BuildConfig
     recipe: Recipe
@@ -177,7 +177,7 @@ def run_art_audit(
     config: Path | None,
     no_config: bool,
 ) -> int:
-    """Audit the recipe art library against the Paper Crown art contract."""
+    """Audit the book art library against the Paper Crown art contract."""
     if output_format not in ART_OUTPUT_FORMATS:
         raise AppCommandError("--format must be 'text' or 'markdown'")
     context = _load_recipe_context(
@@ -201,7 +201,7 @@ def run_art_contact_sheet(
     config: Path | None,
     no_config: bool,
 ) -> None:
-    """Write an HTML visual inventory of the recipe art library."""
+    """Write an HTML visual inventory of the book art library."""
     context = _load_recipe_context(
         recipe,
         config=config,
@@ -264,7 +264,7 @@ def run_verify(
     config: Path | None,
     no_config: bool,
 ) -> int:
-    """Verify generated outputs against the recipe manifest."""
+    """Verify generated outputs against the book manifest."""
     context = _load_recipe_context(
         recipe,
         config=config,
@@ -339,15 +339,15 @@ def _resolve_config(
     no_config: bool,
     cli_patch: BuildConfigPatch,
 ) -> BuildConfig:
-    """Resolve config layers for a command that needs a recipe."""
+    """Resolve config layers for a command that needs a book config."""
     try:
         project_patch = load_project_config(config, enabled=not no_config)
         recipe_arg = recipe.resolve() if recipe is not None else None
-        recipe_path = recipe_arg or project_patch.default_book
+        recipe_path = recipe_arg or project_patch.book_path
         if recipe_path is None:
             raise ConfigError(
-                "no book provided; pass a book path or set default_book "
-                "in papercrown.yaml"
+                "no book provided; pass a book path, set book in papercrown.yaml, "
+                "or add book.yml"
             )
         recipe_patch = load_recipe_build_config(recipe_path)
         return resolve_build_config(
@@ -367,7 +367,7 @@ def _load_recipe_context(
     no_config: bool,
     cli_patch: BuildConfigPatch,
 ) -> _RecipeContext:
-    """Resolve config, recipe, and manifest for a command."""
+    """Resolve config, book, and manifest for a command."""
     build_config = _resolve_config(
         recipe,
         config=config,
@@ -379,7 +379,7 @@ def _load_recipe_context(
 
 
 def _load_recipe_and_manifest(config: BuildConfig) -> tuple[Recipe, Manifest]:
-    """Load the recipe and manifest for a resolved build config."""
+    """Load the book config and manifest for a resolved build config."""
     try:
         recipe = load_recipe(
             config.recipe_path,
@@ -387,7 +387,7 @@ def _load_recipe_and_manifest(config: BuildConfig) -> tuple[Recipe, Manifest]:
             defaults_base_dir=config.project_defaults_base_dir,
         )
     except RecipeError as error:
-        raise AppCommandError(f"Recipe error: {error}") from error
+        raise AppCommandError(f"Book config error: {error}") from error
 
     try:
         manifest = build_manifest(recipe)

@@ -1,0 +1,7 @@
+name: Industrial
+description: Rugged frontier sci-fi styling with technical headings, book-ready art sizing, and worn paper.
+category: science-fiction
+tags: [industrial, sci-fi, frontier]
+css:
+  - tokens.css
+  - components.css

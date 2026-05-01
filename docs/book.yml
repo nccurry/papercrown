@@ -110,12 +110,12 @@ contents:
     source: docs:Architecture.md
   - kind: file
     style: casefile
-    title: Recipes
-    slug: recipes
-    eyebrow: Recipe Contract
+    title: Book Configs
+    slug: book-configs
+    eyebrow: Book Contract
     art: papercrown-docs/dividers/divider-authoring-occult-casefile.png
     toc_depth: 3
-    source: docs:Recipes.md
+    source: docs:Book Configs.md
   - kind: file
     style: vault
     title: Vaults and Markdown

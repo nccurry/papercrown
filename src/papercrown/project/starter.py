@@ -62,7 +62,7 @@ def init_project(
     *,
     title: str | None = None,
     subtitle: str | None = None,
-    theme: str = "clean-srd",
+    theme: str = "industrial",
     book_type: StarterBookType | str = StarterBookType.CAMPAIGN,
     vault: Path | None = None,
     with_cover: bool = True,
@@ -78,7 +78,7 @@ def init_project(
     if empty:
         files = _empty_files()
         next_steps = [
-            "Create book.yaml or set default_book in papercrown.yaml.",
+            "Create book.yml or set book in papercrown.yaml.",
             "Run papercrown manifest after adding a book.",
         ]
     else:
@@ -113,8 +113,7 @@ def init_project(
 def _empty_files() -> dict[str | Path, str]:
     return {
         "papercrown.yaml": """# Empty Paper Crown project.
-# Create a book file, then uncomment and update default_book.
-# default_book: book.yaml
+# Create book.yml here, or set `book:` to another book file.
 
 build:
   target: pdf
@@ -139,7 +138,7 @@ def _starter_files(
     if not theme.strip():
         raise InitError("--theme cannot be empty")
 
-    recipe_rel = "book.yaml"
+    recipe_rel = "book.yml"
     recipe_path = target / recipe_rel
     uses_project_root_vault = vault is None
     vault_path = (
@@ -160,9 +159,7 @@ def _starter_files(
     files, chapters = _starter_content(book_type, title=title)
 
     scaffold: dict[str | Path, str] = {
-        "papercrown.yaml": f"""default_book: {recipe_rel}
-
-build:
+        "papercrown.yaml": """build:
   target: pdf
   scope: book
   profile: print

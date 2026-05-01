@@ -1,4 +1,4 @@
-"""Recipe YAML loading, includes, and path normalization."""
+"""Book YAML loading, includes, and path normalization."""
 
 from __future__ import annotations
 
@@ -59,7 +59,7 @@ def load_recipe(
     """
     recipe_path = Path(path).resolve()
     if not recipe_path.is_file():
-        raise RecipeError(f"recipe file not found: {recipe_path}")
+        raise RecipeError(f"book config file not found: {recipe_path}")
 
     raw = _load_recipe_mapping(recipe_path, stack=())
     if defaults:
@@ -164,7 +164,7 @@ def _title_fields(
         title = _str_or_none(inline_title_raw.get("title"))
     if title is None:
         raise RecipeError(
-            "recipe missing required title: add top-level title or a first "
+            "book config missing required title: add top-level title or a first "
             "contents item with kind: inline, style: title, title: ..."
         )
 
@@ -332,9 +332,8 @@ def _reject_legacy_recipe_shape(raw: Mapping[str, object]) -> None:
 
 
 def _project_dir_for_recipe(recipe_path: Path) -> Path:
-    """Return the convention-first project root for a recipe path."""
-    parent = recipe_path.parent.resolve()
-    return parent.parent if parent.name == "recipes" else parent
+    """Return the book project root for a book config path."""
+    return recipe_path.parent.resolve()
 
 
 def _normalize_contents(raw: object) -> list[dict[str, object]]:
@@ -372,20 +371,20 @@ def _load_recipe_mapping(path: Path, *, stack: tuple[Path, ...]) -> dict[str, ob
     recipe_path = path.resolve()
     if recipe_path in stack:
         cycle = " -> ".join(p.name for p in (*stack, recipe_path))
-        raise RecipeError(f"recipe extends/include cycle detected: {cycle}")
+        raise RecipeError(f"book config extends/include cycle detected: {cycle}")
 
     try:
         raw_obj = yaml.safe_load(recipe_path.read_text(encoding="utf-8"))
     except yaml.YAMLError as e:
         raise RecipeError(f"invalid YAML in {recipe_path}: {e}") from e
     except OSError as e:
-        raise RecipeError(f"could not read recipe {recipe_path}: {e}") from e
+        raise RecipeError(f"could not read book config {recipe_path}: {e}") from e
 
     if raw_obj is None:
-        raise RecipeError(f"recipe is empty: {recipe_path}")
+        raise RecipeError(f"book config is empty: {recipe_path}")
     if not isinstance(raw_obj, Mapping):
         raise RecipeError(
-            f"recipe root must be a mapping, got {type(raw_obj).__name__}"
+            f"book config root must be a mapping, got {type(raw_obj).__name__}"
         )
 
     raw = {str(key): value for key, value in raw_obj.items()}
@@ -423,7 +422,7 @@ def _resolve_include_path(raw: str, base_dir: Path) -> Path:
         path = base_dir / path
     resolved = path.resolve()
     if not resolved.is_file():
-        raise RecipeError(f"included recipe file not found: {resolved}")
+        raise RecipeError(f"included book config file not found: {resolved}")
     return resolved
 
 
@@ -549,7 +548,7 @@ def _read_yaml_mapping_or_list(
     resolved = path.resolve()
     if resolved in stack:
         cycle = " -> ".join(p.name for p in (*stack, resolved))
-        raise RecipeError(f"recipe extends/include cycle detected: {cycle}")
+        raise RecipeError(f"book config extends/include cycle detected: {cycle}")
     try:
         obj = yaml.safe_load(resolved.read_text(encoding="utf-8"))
     except yaml.YAMLError as e:

@@ -1,9 +1,8 @@
 # Starfall's project config. Paper Crown reads this file when commands run from
 # this directory, or when callers pass `--config examples/starfall/papercrown.yaml`.
 #
-# Paths here are resolved relative to this config file. If a command does not
-# pass an explicit recipe path, Paper Crown builds this recipe by default.
-default_book: book.yaml
+# Paths here are resolved relative to this config file. Because the book file
+# is named `book.yml`, no explicit `book:` entry is needed.
 
 # Build defaults mirror the `papercrown build` CLI flags. Command-line options
 # can still override these values for one-off builds.

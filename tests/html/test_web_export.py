@@ -111,8 +111,8 @@ def test_static_web_export_writes_self_contained_tree(tmp_path, require_pandoc):
     assert "filler-slot" not in html
     web_css = (web_root / "styles" / "book.css").read_text(encoding="utf-8")
     assert "/* --- core/00-tokens.css --- */" in web_css
-    assert "/* --- themes/pinlight-industrial/tokens.css --- */" in web_css
-    assert "/* --- themes/pinlight-industrial/components.css --- */" in web_css
+    assert "/* --- themes/industrial/tokens.css --- */" in web_css
+    assert "/* --- themes/industrial/components.css --- */" in web_css
     assert "url('../assets/fonts/Rajdhani-Regular.ttf')" in web_css
     assert (web_root / "styles" / "core" / "50-ttrpg-components.css").is_file()
     assert any((web_root / "assets" / "fonts").iterdir())

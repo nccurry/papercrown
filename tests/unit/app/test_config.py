@@ -29,7 +29,7 @@ def test_project_build_block_parses_all_option_types(tmp_path):
     config_path.write_text(
         textwrap.dedent(
             """
-            default_book: books/main.yaml
+            book: books/main.yaml
             build:
               target: web
               scope: sections
@@ -50,7 +50,7 @@ def test_project_build_block_parses_all_option_types(tmp_path):
 
     patch = load_project_config(config_path)
 
-    assert patch.default_book == tmp_path / "books" / "main.yaml"
+    assert patch.book_path == tmp_path / "books" / "main.yaml"
     assert patch.target is BuildTarget.WEB
     assert patch.scope is BuildScope.SECTIONS
     assert patch.profile is OutputProfile.DIGITAL
@@ -63,6 +63,33 @@ def test_project_build_block_parses_all_option_types(tmp_path):
     assert patch.draft_mode is DraftMode.VISUAL
     assert patch.page_damage_mode is PageDamageMode.OFF
     assert patch.timings is True
+
+
+def test_project_config_infers_book_yml_when_unnamed(tmp_path):
+    (tmp_path / "book.yml").write_text("title: B\ncontents: []\n", encoding="utf-8")
+    config_path = tmp_path / "papercrown.yaml"
+    config_path.write_text("build:\n  scope: book\n", encoding="utf-8")
+
+    patch = load_project_config(config_path)
+
+    assert patch.book_path == (tmp_path / "book.yml").resolve()
+
+
+def test_missing_project_config_infers_book_yml_from_cwd(tmp_path, monkeypatch):
+    (tmp_path / "book.yml").write_text("title: B\ncontents: []\n", encoding="utf-8")
+    monkeypatch.chdir(tmp_path)
+
+    patch = load_project_config()
+
+    assert patch.book_path == (tmp_path / "book.yml").resolve()
+
+
+def test_missing_project_config_without_book_yml_has_no_book(tmp_path, monkeypatch):
+    monkeypatch.chdir(tmp_path)
+
+    patch = load_project_config()
+
+    assert patch.book_path is None
 
 
 def test_project_recipe_and_cli_layers_apply_in_order(tmp_path):
@@ -86,7 +113,7 @@ def test_project_recipe_and_cli_layers_apply_in_order(tmp_path):
     config_path.write_text(
         textwrap.dedent(
             """
-            default_book: recipe.yaml
+            book: recipe.yaml
             build:
               target: pdf
               scope: sections

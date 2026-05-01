@@ -1,8 +1,8 @@
 # Architecture
 
 Paper Crown is organized around a simple publishing pipeline: collect Markdown
-from vaults, resolve a recipe into a manifest, apply a theme and art library,
-then render PDF and web outputs.
+from vaults, resolve a book config into a manifest, apply a theme and art
+library, then render PDF and web outputs.
 
 ## Product Model
 
@@ -12,21 +12,21 @@ then render PDF and web outputs.
 | Layer | What you own | What Paper Crown does |
 | --- | --- | --- |
 | Vault | Markdown notes, images, and Obsidian-style links | Resolves source files and embeds |
-| Recipe | Book structure, metadata, themes, art, and outputs | Builds a render manifest |
+| Book Config | Book structure, metadata, themes, art, and outputs | Builds a render manifest |
 | Theme | CSS, template, page furniture, and visual identity | Applies consistent print and web layout |
 | Build | CLI options for target, scope, profile, and speed | Emits PDFs, HTML, caches, and reports |
 
 ## Data Flow
 
-The recipe is the center of the system. It gives each vault an alias, declares
-chapter order, selects a bundled or local theme, and points at optional art
-systems. `papercrown manifest` shows the resolved structure before rendering so
-you can check paths, headings, art references, and output names without waiting
-for a full PDF build.
+The book config is the center of the system. It gives each vault an alias,
+declares chapter order, selects a bundled or local theme, and points at
+optional art systems. `papercrown manifest` shows the resolved structure before
+rendering so you can check paths, headings, art references, and output names
+without waiting for a full PDF build.
 
 Markdown assembly happens before either renderer runs. That means PDF and web
 exports share the same source resolution, filters, typed TTRPG blocks, internal
-links, generated matter, and recipe-driven art declarations.
+links, generated matter, and book-config-driven art declarations.
 
 ## Output Model
 
@@ -41,7 +41,7 @@ Pages, GitLab Pages, or any plain file host.
   build configuration.
 - `papercrown.build`: command-neutral build options, build requests, and build
   results shared by the CLI, render orchestration, paths, and diagnostics.
-- `papercrown.project`: recipe models/loading, manifest construction, vault and
+- `papercrown.project`: book config models/loading, manifest construction, vault and
   catalog resolution, project scaffolding, bundled resource paths, output paths,
   and themes.
 - `papercrown.assembly`: Markdown assembly, heading/source normalization, art
@@ -50,13 +50,13 @@ Pages, GitLab Pages, or any plain file host.
   pipeline code, pagination analysis, static web export, and render snapshots.
 - `papercrown.media`: image diagnostics/optimization, image treatments,
   conditional filler placement, and page-wear rendering.
-- `papercrown.art`: art role classification and recipe art audit/reporting.
+- `papercrown.art`: art role classification and book art audit/reporting.
 - `papercrown.system`: diagnostics, cache fingerprints, dependency checks,
   Obsidian export, doctor checks, and post-build verification.
 
 ## Placement Rules
 
-New code should live where its main owner lives. A new recipe field belongs in
+New code should live where its main owner lives. A new book config field belongs in
 `project`, a new PDF stamping step belongs in `render`, and a new image
 preprocessing policy belongs in `media`. Shared dataclasses should stay near
 the subsystem that creates them unless several packages already depend on them.

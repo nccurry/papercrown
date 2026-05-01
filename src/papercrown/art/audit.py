@@ -155,7 +155,7 @@ class AuditedArtAsset:
 
 @dataclass
 class ArtAuditResult:
-    """All data emitted by a recipe art audit."""
+    """All data emitted by a book art audit."""
 
     art_root: Path
     assets: list[AuditedArtAsset] = field(default_factory=list)
@@ -203,7 +203,7 @@ def audit_recipe_art(
             Diagnostic(
                 code="art.root-missing",
                 severity=DiagnosticSeverity.ERROR,
-                message="recipe art_dir does not exist",
+                message="book art_dir does not exist",
                 path=art_root,
             )
         )

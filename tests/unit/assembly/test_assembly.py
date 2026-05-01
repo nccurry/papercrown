@@ -44,7 +44,7 @@ class TestAssembleChapterMarkdown:
         art = tmp_path / "Art" / "splashes" / "splash-general-boarding-01.png"
         art.parent.mkdir(parents=True)
         art.write_text("fake", encoding="utf-8")
-        recipe_path = tmp_path / "book.yaml"
+        recipe_path = tmp_path / "book.yml"
         recipe_path.write_text(
             textwrap.dedent(
                 """
