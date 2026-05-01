@@ -8,7 +8,7 @@ import textwrap
 import pytest
 
 from papercrown.project.manifest import build_manifest
-from papercrown.project.recipe import load_recipe
+from papercrown.project.recipe import load_book_config
 from papercrown.system import export
 from papercrown.system.export import Tools
 
@@ -111,7 +111,7 @@ def test_ensure_exports_fresh_reuses_export_cache(tmp_path, monkeypatch):
         ).lstrip(),
         encoding="utf-8",
     )
-    recipe = load_recipe(recipe_path)
+    recipe = load_book_config(recipe_path)
     recipe.cache_dir_override = tmp_path / "cache"
     manifest = build_manifest(recipe)
     monkeypatch.setattr(export, "_tool_version", lambda _command: "obsidian-export 1")

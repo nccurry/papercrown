@@ -33,7 +33,7 @@ from papercrown.project.manifest import (
     convention_art_path,
     slugify,
 )
-from papercrown.project.recipe import Recipe
+from papercrown.project.recipe import BookConfig
 from papercrown.project.resources import (
     ASSETS_DIR,
     CORE_CSS_FILES,
@@ -109,7 +109,7 @@ def _effective_page_damage_mode(request: BuildRequest) -> PageDamageMode:
     return PageDamageMode.FAST
 
 
-def _image_cache_root(recipe: Recipe) -> Path:
+def _image_cache_root(recipe: BookConfig) -> Path:
     """Return the recipe image cache root, with a fallback for lightweight tests."""
     cache_dir = getattr(recipe, "cache_dir", Path.cwd() / ".papercrown-cache")
     return cache_dir / "images"
@@ -117,7 +117,7 @@ def _image_cache_root(recipe: Recipe) -> Path:
 
 def make_base_context(
     tools: Tools,
-    recipe: Recipe,
+    recipe: BookConfig,
     *,
     profile: OutputProfile,
     include_art: bool = True,
@@ -206,7 +206,7 @@ def slugs_for_anchors(chapters: list[Chapter]) -> str:
 
 def context_for_chapter(
     tools: Tools,
-    recipe: Recipe,
+    recipe: BookConfig,
     chapter: Chapter,
     *,
     profile: OutputProfile,
@@ -248,7 +248,7 @@ def context_for_chapter(
 
 def context_for_book(
     tools: Tools,
-    recipe: Recipe,
+    recipe: BookConfig,
     manifest: Manifest,
     *,
     profile: OutputProfile,
@@ -285,7 +285,7 @@ def context_for_book(
 
 def context_for_web(
     tools: Tools,
-    recipe: Recipe,
+    recipe: BookConfig,
     manifest: Manifest,
     *,
     include_art: bool = True,
@@ -315,7 +315,7 @@ def context_for_web(
 
 def _populate_book_context(
     ctx: pipeline.RenderContext,
-    recipe: Recipe,
+    recipe: BookConfig,
     manifest: Manifest,
     *,
     include_cover_art: bool,
@@ -389,7 +389,7 @@ def _splashes_for_chapter(manifest: Manifest, chapter: Chapter) -> list[Splash]:
     ]
 
 
-def _recipe_ornament_path(recipe: Recipe, name: str) -> Path | None:
+def _recipe_ornament_path(recipe: BookConfig, name: str) -> Path | None:
     """Resolve an optional recipe-level ornament path."""
     ornaments = getattr(recipe, "ornaments", None)
     raw = getattr(ornaments, name, None)
@@ -401,7 +401,7 @@ def _recipe_ornament_path(recipe: Recipe, name: str) -> Path | None:
     return None
 
 
-def _recipe_cover_art_path(recipe: Recipe) -> Path | None:
+def _recipe_cover_art_path(recipe: BookConfig) -> Path | None:
     """Resolve explicit or convention-derived front cover art."""
     if recipe.cover.art:
         cover_art = (recipe.art_dir / recipe.cover.art).resolve()
@@ -411,24 +411,18 @@ def _recipe_cover_art_path(recipe: Recipe) -> Path | None:
 
 def _prepare_ttrpg_markdown(
     markdown: str,
-    recipe: Recipe,
+    recipe: BookConfig,
     *,
     include_generated_matter: bool,
 ) -> str:
     """Apply typed-block normalization and fail on invalid cross-references."""
     prepared = _prepare_ttrpg_markdown_result(markdown, recipe)
-    if include_generated_matter:
-        return ttrpg.add_generated_matter(
-            prepared.markdown,
-            recipe,
-            prepared.registry,
-        )
     return prepared.markdown
 
 
 def _prepare_book_markdown_with_manual_toc(
     markdown: str,
-    recipe: Recipe,
+    recipe: BookConfig,
     chapters: list[Chapter],
     *,
     toc_max_depth: int | None = None,
@@ -449,7 +443,7 @@ def _prepare_book_markdown_with_manual_toc(
 
 def _replace_generated_content_markers(
     markdown: str,
-    recipe: Recipe,
+    recipe: BookConfig,
     registry: ttrpg.ObjectRegistry,
 ) -> str:
     """Replace ordered-content generated page markers."""
@@ -473,7 +467,7 @@ def _replace_generated_content_markers(
 
 def _prepare_ttrpg_markdown_result(
     markdown: str,
-    recipe: Recipe,
+    recipe: BookConfig,
 ) -> ttrpg.PreparedMarkdown:
     """Apply typed-block normalization and return the prepared result."""
     prepared = ttrpg.prepare_book_markdown(
@@ -498,7 +492,7 @@ def _prepare_ttrpg_markdown_result(
 
 def _prepare_chapter_pdf_job(
     tools: Tools,
-    recipe: Recipe,
+    recipe: BookConfig,
     chapter: Chapter,
     export_map: dict[Path, Path],
     *,
@@ -592,7 +586,7 @@ def _prepare_chapter_pdf_job(
 
 def build_chapter_pdf(
     tools: Tools,
-    recipe: Recipe,
+    recipe: BookConfig,
     chapter: Chapter,
     export_map: dict[Path, Path],
     *,
@@ -644,7 +638,7 @@ def build_chapter_pdf(
 
 def _prepare_combined_book_job(
     tools: Tools,
-    recipe: Recipe,
+    recipe: BookConfig,
     manifest: Manifest,
     export_map: dict[Path, Path],
     *,
@@ -738,7 +732,7 @@ def _prepare_combined_book_job(
 
 def build_web_book(
     tools: Tools,
-    recipe: Recipe,
+    recipe: BookConfig,
     manifest: Manifest,
     export_map: dict[Path, Path],
     *,
@@ -846,7 +840,7 @@ def _append_single_chapter(
 
 
 def clean_stale_pdf_outputs(
-    recipe: Recipe,
+    recipe: BookConfig,
     manifest: Manifest,
     *,
     log: LogFn | None = None,
@@ -876,7 +870,10 @@ def clean_stale_pdf_outputs(
     return removed
 
 
-def _expected_pdf_outputs_all_profiles(recipe: Recipe, manifest: Manifest) -> set[Path]:
+def _expected_pdf_outputs_all_profiles(
+    recipe: BookConfig,
+    manifest: Manifest,
+) -> set[Path]:
     expected: set[Path] = set()
     for profile in OutputProfile:
         for chapter in manifest.chapters:
@@ -1177,7 +1174,7 @@ def _render_page_damage_catalog(
 
 def _rewrite_render_images(
     markdown: str,
-    recipe: Recipe,
+    recipe: BookConfig,
     manifest: Manifest | None,
     *,
     profile: OutputProfile | str,
@@ -1261,7 +1258,10 @@ def _optimized_page_damage_image(
     )
 
 
-def _render_image_search_roots(recipe: Recipe, manifest: Manifest | None) -> list[Path]:
+def _render_image_search_roots(
+    recipe: BookConfig,
+    manifest: Manifest | None,
+) -> list[Path]:
     """Return roots searched while rewriting render-time image references."""
     theme = themes.load_theme(recipe)
     roots = [
@@ -1434,7 +1434,7 @@ def _renderer_source_paths() -> list[Path]:
 def _chapter_input_paths(
     chapter: Chapter,
     *,
-    recipe: Recipe,
+    recipe: BookConfig,
     manifest: Manifest | None,
 ) -> list[Path]:
     """Return files that affect one chapter PDF besides assembled markdown."""
@@ -1452,7 +1452,7 @@ def _chapter_input_paths(
     return paths_for_hash
 
 
-def _book_input_paths(recipe: Recipe, manifest: Manifest) -> list[Path]:
+def _book_input_paths(recipe: BookConfig, manifest: Manifest) -> list[Path]:
     """Return files that affect the combined book PDF besides markdown text."""
     paths_for_hash: list[Path] = []
     for chapter in manifest.all_chapters():
@@ -1463,7 +1463,7 @@ def _book_input_paths(recipe: Recipe, manifest: Manifest) -> list[Path]:
     return paths_for_hash
 
 
-def _shared_image_paths(recipe: Recipe, manifest: Manifest | None) -> list[Path]:
+def _shared_image_paths(recipe: BookConfig, manifest: Manifest | None) -> list[Path]:
     """Return recipe-level image files that can affect output rendering."""
     paths_for_hash: list[Path] = []
     paths_for_hash.append(recipe.recipe_path)

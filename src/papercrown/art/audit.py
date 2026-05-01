@@ -1,4 +1,4 @@
-"""Recipe art audit and validation helpers."""
+"""BookConfig art audit and validation helpers."""
 
 from __future__ import annotations
 
@@ -6,7 +6,7 @@ import hashlib
 import html as html_lib
 import math
 from collections import Counter
-from collections.abc import Iterable
+from collections.abc import Iterable, Mapping
 from dataclasses import dataclass, field
 from pathlib import Path
 
@@ -15,10 +15,11 @@ from PIL import Image, ImageChops, UnidentifiedImageError
 from papercrown.art.roles import (
     IMAGE_SUFFIXES,
     ArtAssetClassification,
+    ArtRoleSpec,
     classify_art_path,
 )
 from papercrown.project.manifest import Manifest
-from papercrown.project.recipe import ChapterSpec, Recipe
+from papercrown.project.recipe import BookConfig, ContentItemSpec
 from papercrown.system.diagnostics import (
     Diagnostic,
     DiagnosticReport,
@@ -158,6 +159,7 @@ class ArtAuditResult:
     """All data emitted by a book art audit."""
 
     art_root: Path
+    art_roles: Mapping[str, ArtRoleSpec] = field(default_factory=dict)
     assets: list[AuditedArtAsset] = field(default_factory=list)
     references: list[ArtReference] = field(default_factory=list)
     diagnostics: DiagnosticReport = field(default_factory=DiagnosticReport)
@@ -183,20 +185,20 @@ class ArtAuditResult:
 
 
 def audit_recipe_art(
-    recipe: Recipe,
+    recipe: BookConfig,
     manifest: Manifest,
     *,
     include_unclassified: bool = True,
 ) -> ArtAuditResult:
     """Audit a recipe's art root, references, and image metadata."""
     art_root = recipe.art_dir.resolve()
-    result = ArtAuditResult(art_root=art_root)
+    result = ArtAuditResult(art_root=art_root, art_roles=recipe.art_roles)
     result.references.extend(_recipe_art_references(recipe))
     result.references.extend(_manifest_art_references(manifest))
     _add_filler_slot_policy_diagnostics(result, recipe)
     _add_reference_diagnostics(result)
     if art_root.is_dir():
-        result.assets.extend(_discover_art_assets(art_root))
+        result.assets.extend(_discover_art_assets(art_root, recipe.art_roles))
         _add_asset_diagnostics(result, include_unclassified=include_unclassified)
     elif result.references or recipe.fillers.enabled or recipe.page_damage.enabled:
         result.diagnostics.add(
@@ -352,14 +354,21 @@ def write_art_contact_sheet(result: ArtAuditResult, path: Path) -> Path:
     return path
 
 
-def _discover_art_assets(art_root: Path) -> list[AuditedArtAsset]:
+def _discover_art_assets(
+    art_root: Path,
+    art_roles: Mapping[str, ArtRoleSpec],
+) -> list[AuditedArtAsset]:
     assets: list[AuditedArtAsset] = []
     for path in sorted(art_root.rglob("*"), key=lambda item: item.as_posix().lower()):
         if not path.is_file() or path.suffix.lower() not in IMAGE_SUFFIXES:
             continue
         resolved = path.resolve()
         relative = _relative_display(resolved, art_root)
-        classification = classify_art_path(resolved, art_root=art_root)
+        classification = classify_art_path(
+            resolved,
+            art_root=art_root,
+            custom_roles=art_roles,
+        )
         assets.append(
             AuditedArtAsset(
                 path=resolved,
@@ -704,7 +713,7 @@ def _add_duplicate_diagnostics(result: ArtAuditResult) -> None:
 
 def _add_filler_slot_policy_diagnostics(
     result: ArtAuditResult,
-    recipe: Recipe,
+    recipe: BookConfig,
 ) -> None:
     if not recipe.fillers.enabled:
         return
@@ -750,7 +759,11 @@ def _add_reference_diagnostics(result: ArtAuditResult) -> None:
             continue
         if not reference.expected_roles:
             continue
-        classification = classify_art_path(reference.path, art_root=result.art_root)
+        classification = classify_art_path(
+            reference.path,
+            art_root=result.art_root,
+            custom_roles=result.art_roles,
+        )
         if classification.role not in reference.expected_roles:
             result.diagnostics.add(
                 Diagnostic(
@@ -766,7 +779,7 @@ def _add_reference_diagnostics(result: ArtAuditResult) -> None:
             )
 
 
-def _recipe_art_references(recipe: Recipe) -> list[ArtReference]:
+def _recipe_art_references(recipe: BookConfig) -> list[ArtReference]:
     refs: list[ArtReference] = []
     if recipe.cover.enabled and recipe.cover.art:
         refs.append(
@@ -803,7 +816,7 @@ def _recipe_art_references(recipe: Recipe) -> list[ArtReference]:
                 expected_roles=expected,
             )
         )
-    for spec in _walk_specs(recipe.chapters):
+    for spec in _walk_specs(recipe.contents):
         label = spec.title or spec.kind
         if spec.art:
             refs.append(
@@ -924,7 +937,7 @@ def _expected_splash_roles(target: str) -> frozenset[str]:
 
 
 def _reference(
-    recipe: Recipe,
+    recipe: BookConfig,
     label: str,
     art: str,
     *,
@@ -938,7 +951,7 @@ def _reference(
 
 
 def _filler_reference(
-    recipe: Recipe,
+    recipe: BookConfig,
     label: str,
     art: str,
     *,
@@ -954,8 +967,8 @@ def _filler_reference(
     )
 
 
-def _walk_specs(chapters: list[ChapterSpec]) -> list[ChapterSpec]:
-    specs: list[ChapterSpec] = []
+def _walk_specs(chapters: list[ContentItemSpec]) -> list[ContentItemSpec]:
+    specs: list[ContentItemSpec] = []
     for spec in chapters:
         specs.append(spec)
         specs.extend(_walk_specs(spec.children))

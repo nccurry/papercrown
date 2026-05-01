@@ -9,11 +9,11 @@ import pytest
 
 from papercrown.project.manifest import build_manifest
 from papercrown.project.recipe import (
-    CHAPTER_KINDS,
-    ChapterSpec,
-    RecipeError,
+    CONTENT_ITEM_KINDS,
+    BookConfigError,
+    ContentItemSpec,
     SourceRef,
-    load_recipe,
+    load_book_config,
 )
 
 FIXTURES_DIR = Path(__file__).parents[2] / "fixtures"
@@ -43,9 +43,9 @@ class TestSourceRef:
         assert s.path == "Heroes/Foo.md"
 
     def test_empty_raises(self):
-        with pytest.raises(RecipeError, match="empty"):
+        with pytest.raises(BookConfigError, match="empty"):
             SourceRef.parse("")
-        with pytest.raises(RecipeError, match="empty"):
+        with pytest.raises(BookConfigError, match="empty"):
             SourceRef.parse("   ")
 
     def test_str_roundtrip(self):
@@ -54,7 +54,7 @@ class TestSourceRef:
 
 
 # ---------------------------------------------------------------------------
-# ChapterSpec
+# ContentItemSpec
 # ---------------------------------------------------------------------------
 
 
@@ -68,13 +68,13 @@ class TestSourceRef:
     ],
 )
 def test_chapter_spec_infers_kind_by_shape(raw, expected_kind):
-    chapter = ChapterSpec.from_dict(raw, index=0)
+    chapter = ContentItemSpec.from_dict(raw, index=0)
 
     assert chapter.kind == expected_kind
 
 
 def test_chapter_spec_splits_divider_art_from_insert_art():
-    chapter = ChapterSpec.from_dict(
+    chapter = ContentItemSpec.from_dict(
         {
             "source": "v:Intro.md",
             "art": [
@@ -87,7 +87,7 @@ def test_chapter_spec_splits_divider_art_from_insert_art():
         },
         index=0,
     )
-    divider = ChapterSpec.from_dict(
+    divider = ContentItemSpec.from_dict(
         {
             "source": "v:Divider.md",
             "art": "dividers/intro.png",
@@ -119,27 +119,27 @@ def _write_recipe(
 
 
 # ---------------------------------------------------------------------------
-# load_recipe: happy path
+# load_book_config: happy path
 # ---------------------------------------------------------------------------
 
 
-class TestLoadRecipeHappy:
-    def test_convention_first_recipe_derives_defaults_from_inline_title(self, tmp_path):
+class TestLoadBookConfigHappy:
+    def test_convention_first_book_uses_top_level_identity(self, tmp_path):
         p = _write_recipe(
             tmp_path,
             """
+            title: Nimble Space Opera
+            subtitle: Rules Book
+            cover_eyebrow: Player's Handbook
             theme: clean-srd
+            cover:
+              enabled: true
             contents:
-              - kind: inline
-                style: title
-                title: Nimble Space Opera
-                subtitle: Rules Book
-                cover_eyebrow: Player's Handbook
               - Intro.md
         """,
             vault_dirs=(),
         )
-        r = load_recipe(p)
+        r = load_book_config(p)
         assert r.title == "Nimble Space Opera"
         assert r.subtitle == "Rules Book"
         assert r.cover_eyebrow == "Player's Handbook"
@@ -149,10 +149,10 @@ class TestLoadRecipeHappy:
         assert r.vault_overlay == ["content"]
         assert r.vaults["content"].path == tmp_path.resolve()
         assert r.cover.enabled is True
-        assert [item.kind for item in r.contents] == ["inline", "file"]
+        assert [item.kind for item in r.contents] == ["file"]
 
     def test_minimal_convention_fixture_is_verifiable(self):
-        r = load_recipe(FIXTURES_DIR / "convention_minimal" / "book.yml")
+        r = load_book_config(FIXTURES_DIR / "convention_minimal" / "book.yml")
         m = build_manifest(r)
 
         assert r.title == "Minimal Convention Book"
@@ -172,15 +172,15 @@ class TestLoadRecipeHappy:
                 source: custom:Foo.md
         """,
         )
-        r = load_recipe(p)
+        r = load_book_config(p)
         assert r.title == "My Book"
         assert r.subtitle is None
         assert "custom" in r.vaults
         assert r.vaults["custom"].path == (tmp_path / "vault").resolve()
         assert r.vault_overlay == ["custom"]
-        assert len(r.chapters) == 1
-        assert r.chapters[0].kind == "file"
-        assert r.chapters[0].source.path == "Foo.md"
+        assert len(r.contents) == 1
+        assert r.contents[0].kind == "file"
+        assert r.contents[0].source.path == "Foo.md"
 
     def test_full_recipe(self, tmp_path):
         p = _write_recipe(
@@ -272,7 +272,7 @@ class TestLoadRecipeHappy:
             """,
             vault_dirs=["vault_a", "vault_b", "art"],
         )
-        r = load_recipe(p)
+        r = load_book_config(p)
         assert r.subtitle == "Sub"
         assert r.cover_eyebrow == "Eyebrow"
         assert r.cover_footer == "Footer"
@@ -315,13 +315,13 @@ class TestLoadRecipeHappy:
             "cover": "print-punch",
         }
         assert r.vault_overlay == ["base", "over"]
-        assert r.chapters[0].slug == "custom-setting"
-        assert r.chapters[0].headpiece == "ornaments/head.png"
-        assert r.chapters[0].break_ornament == "ornaments/break.png"
-        assert r.chapters[0].tailpiece == "ornaments/tail.png"
-        assert r.chapters[0].full_page_sections == ["Character Creation"]
-        assert r.chapters[0].toc_depth == 2
-        ch = r.chapters[1]
+        assert r.contents[0].slug == "custom-setting"
+        assert r.contents[0].headpiece == "ornaments/head.png"
+        assert r.contents[0].break_ornament == "ornaments/break.png"
+        assert r.contents[0].tailpiece == "ornaments/tail.png"
+        assert r.contents[0].full_page_sections == ["Character Creation"]
+        assert r.contents[0].toc_depth == 2
+        ch = r.contents[1]
         assert ch.kind == "classes-catalog"
         assert ch.individual_pdfs is True
         assert ch.individual_pdf_subdir == "classes"
@@ -344,8 +344,8 @@ class TestLoadRecipeHappy:
                 source: custom:Combat.md
         """,
         )
-        with pytest.raises(RecipeError, match="source"):
-            load_recipe(p)
+        with pytest.raises(BookConfigError, match="source"):
+            load_book_config(p)
 
         p = _write_recipe(
             tmp_path,
@@ -363,8 +363,8 @@ class TestLoadRecipeHappy:
                     strip_related: true
         """,
         )
-        r = load_recipe(p)
-        ch = r.chapters[0]
+        r = load_book_config(p)
+        ch = r.contents[0]
         assert ch.kind == "sequence"
         assert [str(item.source) for item in ch.sources] == [
             "custom:Combat Intro.md",
@@ -415,7 +415,7 @@ class TestLoadRecipeHappy:
             encoding="utf-8",
         )
 
-        recipe = load_recipe(child)
+        recipe = load_book_config(child)
 
         assert recipe.title == "Child Book"
         assert recipe.subtitle == "Base Subtitle"
@@ -423,7 +423,7 @@ class TestLoadRecipeHappy:
         assert recipe.cover.enabled is True
         assert recipe.vaults["base"].path == (base_dir / "vault").resolve()
         assert recipe.vaults["child"].path == (child_dir / "vault").resolve()
-        assert [chapter.title for chapter in recipe.chapters] == ["Child"]
+        assert [chapter.title for chapter in recipe.contents] == ["Child"]
 
     def test_include_contents_prepends_reusable_fragments(self, tmp_path):
         (tmp_path / "vault").mkdir()
@@ -452,9 +452,9 @@ class TestLoadRecipeHappy:
             """,
         )
 
-        recipe = load_recipe(recipe_path)
+        recipe = load_book_config(recipe_path)
 
-        assert [chapter.title for chapter in recipe.chapters] == [
+        assert [chapter.title for chapter in recipe.contents] == [
             "Included",
             "Local",
         ]
@@ -491,7 +491,7 @@ class TestLoadRecipeHappy:
             encoding="utf-8",
         )
 
-        recipe = load_recipe(recipe_path)
+        recipe = load_book_config(recipe_path)
 
         assert recipe.vaults["base"].path == (shared / "vaults" / "base").resolve()
         assert recipe.vaults["custom"].path == (recipe_dir / "custom").resolve()
@@ -499,32 +499,32 @@ class TestLoadRecipeHappy:
 
 
 # ---------------------------------------------------------------------------
-# load_recipe: error cases
+# load_book_config: error cases
 # ---------------------------------------------------------------------------
 
 
-class TestLoadRecipeErrors:
+class TestLoadBookConfigErrors:
     def test_missing_file(self, tmp_path):
-        with pytest.raises(RecipeError, match="not found"):
-            load_recipe(tmp_path / "nope.yaml")
+        with pytest.raises(BookConfigError, match="not found"):
+            load_book_config(tmp_path / "nope.yaml")
 
     def test_invalid_yaml(self, tmp_path):
         p = tmp_path / "bad.yaml"
         p.write_text("title: [unterminated\n", encoding="utf-8")
-        with pytest.raises(RecipeError, match="invalid YAML"):
-            load_recipe(p)
+        with pytest.raises(BookConfigError, match="invalid YAML"):
+            load_book_config(p)
 
     def test_empty_recipe(self, tmp_path):
         p = tmp_path / "empty.yaml"
         p.write_text("", encoding="utf-8")
-        with pytest.raises(RecipeError, match="empty"):
-            load_recipe(p)
+        with pytest.raises(BookConfigError, match="empty"):
+            load_book_config(p)
 
     def test_root_not_mapping(self, tmp_path):
         p = tmp_path / "x.yaml"
         p.write_text("- a\n- b\n", encoding="utf-8")
-        with pytest.raises(RecipeError, match="must be a mapping"):
-            load_recipe(p)
+        with pytest.raises(BookConfigError, match="must be a mapping"):
+            load_book_config(p)
 
     def test_missing_title(self, tmp_path):
         p = _write_recipe(
@@ -537,8 +537,8 @@ class TestLoadRecipeErrors:
                 source: custom:Foo.md
         """,
         )
-        with pytest.raises(RecipeError, match="title"):
-            load_recipe(p)
+        with pytest.raises(BookConfigError, match="title"):
+            load_book_config(p)
 
     def test_missing_vaults(self, tmp_path):
         p = _write_recipe(
@@ -550,8 +550,8 @@ class TestLoadRecipeErrors:
                 source: custom:Foo.md
         """,
         )
-        with pytest.raises(RecipeError, match="vaults"):
-            load_recipe(p)
+        with pytest.raises(BookConfigError, match="vaults"):
+            load_book_config(p)
 
     def test_vault_path_does_not_exist(self, tmp_path):
         p = _write_recipe(
@@ -566,8 +566,8 @@ class TestLoadRecipeErrors:
             """,
             vault_dirs=[],
         )
-        with pytest.raises(RecipeError, match="does not exist"):
-            load_recipe(p)
+        with pytest.raises(BookConfigError, match="does not exist"):
+            load_book_config(p)
 
     def test_invalid_vault_name(self, tmp_path):
         p = _write_recipe(
@@ -581,8 +581,8 @@ class TestLoadRecipeErrors:
                 source: vault:Foo.md
             """,
         )
-        with pytest.raises(RecipeError, match="invalid vault alias"):
-            load_recipe(p)
+        with pytest.raises(BookConfigError, match="invalid vault alias"):
+            load_book_config(p)
 
     def test_ornaments_must_be_mapping(self, tmp_path):
         p = _write_recipe(
@@ -597,8 +597,8 @@ class TestLoadRecipeErrors:
                 source: custom:Foo.md
         """,
         )
-        with pytest.raises(RecipeError, match="ornaments"):
-            load_recipe(p)
+        with pytest.raises(BookConfigError, match="ornaments"):
+            load_book_config(p)
 
     def test_splashes_must_be_list(self, tmp_path):
         p = _write_recipe(
@@ -613,8 +613,8 @@ class TestLoadRecipeErrors:
                 source: custom:Foo.md
         """,
         )
-        with pytest.raises(RecipeError, match="splashes"):
-            load_recipe(p)
+        with pytest.raises(BookConfigError, match="splashes"):
+            load_book_config(p)
 
     def test_image_treatments_validate_roles_and_presets(self, tmp_path):
         p = _write_recipe(
@@ -631,7 +631,7 @@ class TestLoadRecipeErrors:
                 source: custom:Foo.md
         """,
         )
-        recipe = load_recipe(p)
+        recipe = load_book_config(p)
         assert recipe.image_treatments == {
             "filler": "raw",
             "ornament": "ink-blend",
@@ -650,8 +650,8 @@ class TestLoadRecipeErrors:
                 source: custom:Foo.md
         """,
         )
-        with pytest.raises(RecipeError, match="role"):
-            load_recipe(p)
+        with pytest.raises(BookConfigError, match="role"):
+            load_book_config(p)
 
         p = _write_recipe(
             tmp_path,
@@ -666,8 +666,8 @@ class TestLoadRecipeErrors:
                 source: custom:Foo.md
         """,
         )
-        with pytest.raises(RecipeError, match="preset"):
-            load_recipe(p)
+        with pytest.raises(BookConfigError, match="preset"):
+            load_book_config(p)
 
     def test_splash_target_and_placement_are_validated(self, tmp_path):
         p = _write_recipe(
@@ -686,8 +686,8 @@ class TestLoadRecipeErrors:
                 source: custom:Foo.md
         """,
         )
-        with pytest.raises(RecipeError, match="chapter"):
-            load_recipe(p)
+        with pytest.raises(BookConfigError, match="chapter"):
+            load_book_config(p)
 
         p = _write_recipe(
             tmp_path,
@@ -705,8 +705,8 @@ class TestLoadRecipeErrors:
                 source: custom:Foo.md
         """,
         )
-        with pytest.raises(RecipeError, match="placement"):
-            load_recipe(p)
+        with pytest.raises(BookConfigError, match="placement"):
+            load_book_config(p)
 
     def test_fillers_validate_shapes_and_lengths(self, tmp_path):
         p = _write_recipe(
@@ -727,8 +727,8 @@ class TestLoadRecipeErrors:
                 source: custom:Foo.md
         """,
         )
-        with pytest.raises(RecipeError, match="shape"):
-            load_recipe(p)
+        with pytest.raises(BookConfigError, match="shape"):
+            load_book_config(p)
 
         p = _write_recipe(
             tmp_path,
@@ -753,8 +753,8 @@ class TestLoadRecipeErrors:
                 source: custom:Foo.md
         """,
         )
-        with pytest.raises(RecipeError, match="inch"):
-            load_recipe(p)
+        with pytest.raises(BookConfigError, match="inch"):
+            load_book_config(p)
 
     def test_page_damage_validates_mapping_ranges_and_skip_targets(self, tmp_path):
         p = _write_recipe(
@@ -769,8 +769,8 @@ class TestLoadRecipeErrors:
                 source: custom:Foo.md
         """,
         )
-        with pytest.raises(RecipeError, match="page_damage"):
-            load_recipe(p)
+        with pytest.raises(BookConfigError, match="page_damage"):
+            load_book_config(p)
 
         p = _write_recipe(
             tmp_path,
@@ -786,8 +786,8 @@ class TestLoadRecipeErrors:
                 source: custom:Foo.md
         """,
         )
-        with pytest.raises(RecipeError, match="density"):
-            load_recipe(p)
+        with pytest.raises(BookConfigError, match="density"):
+            load_book_config(p)
 
         p = _write_recipe(
             tmp_path,
@@ -803,8 +803,8 @@ class TestLoadRecipeErrors:
                 source: custom:Foo.md
         """,
         )
-        with pytest.raises(RecipeError, match="glaze_opacity"):
-            load_recipe(p)
+        with pytest.raises(BookConfigError, match="glaze_opacity"):
+            load_book_config(p)
 
         p = _write_recipe(
             tmp_path,
@@ -820,8 +820,8 @@ class TestLoadRecipeErrors:
                 source: custom:Foo.md
         """,
         )
-        with pytest.raises(RecipeError, match="skip"):
-            load_recipe(p)
+        with pytest.raises(BookConfigError, match="skip"):
+            load_book_config(p)
 
     def test_fillers_parse_marker_policy_and_opt_outs(self, tmp_path):
         p = _write_recipe(
@@ -839,8 +839,8 @@ class TestLoadRecipeErrors:
                   shapes: [tailpiece, plate, page-finish]
               markers:
                 terminal:
-                  chapter_slot: chapter-end
-                  class_slot: false
+                  chapter_slots: chapter-end
+                  class_slots: false
                 source_boundary: false
                 subclass: false
                 headings:
@@ -859,19 +859,19 @@ class TestLoadRecipeErrors:
         """,
         )
 
-        recipe = load_recipe(p)
+        recipe = load_book_config(p)
 
         assert recipe.fillers.slots["chapter-end"].shapes == [
             "tailpiece",
             "plate",
             "page-finish",
         ]
-        assert recipe.fillers.markers.terminal.class_slot is None
-        assert recipe.fillers.markers.source_boundary.sequence_slot is None
-        assert recipe.fillers.markers.subclass.slot is None
+        assert recipe.fillers.markers.terminal.class_slots == ()
+        assert recipe.fillers.markers.source_boundary.sequence_slots == ()
+        assert recipe.fillers.markers.subclass.slots == ()
         assert recipe.fillers.markers.headings[0].slot_kind == "reference-section"
-        assert recipe.chapters[0].fillers_enabled is False
-        assert recipe.chapters[0].sources[0].filler_enabled is False
+        assert recipe.contents[0].fillers_enabled is False
+        assert recipe.contents[0].sources[0].filler_enabled is False
 
     def test_fillers_parse_multi_slot_marker_policy(self, tmp_path):
         p = _write_recipe(
@@ -901,13 +901,12 @@ class TestLoadRecipeErrors:
         """,
         )
 
-        recipe = load_recipe(p)
+        recipe = load_book_config(p)
 
         assert recipe.fillers.markers.terminal.chapter_slots == (
             "chapter-end",
             "chapter-bottom-band",
         )
-        assert recipe.fillers.markers.terminal.chapter_slot == "chapter-end"
         assert recipe.fillers.markers.terminal.class_slots == (
             "class-end",
             "class-bottom-band",
@@ -930,8 +929,8 @@ class TestLoadRecipeErrors:
               custom: vault
         """,
         )
-        with pytest.raises(RecipeError, match="contents"):
-            load_recipe(p)
+        with pytest.raises(BookConfigError, match="contents"):
+            load_book_config(p)
 
     @pytest.mark.parametrize(
         ("field", "hint"),
@@ -939,6 +938,7 @@ class TestLoadRecipeErrors:
             ("chapters", "use contents instead"),
             ("front_matter", "ordinary contents items"),
             ("back_matter", "ordinary contents items"),
+            ("build", "papercrown.yaml"),
             ("include_chapters", "use include_contents instead"),
         ],
     )
@@ -946,6 +946,8 @@ class TestLoadRecipeErrors:
         legacy_value = "[]"
         if field == "include_chapters":
             legacy_value = "old-chapters.yaml"
+        if field == "build":
+            legacy_value = "{scope: book}"
         p = _write_recipe(
             tmp_path,
             f"""
@@ -958,8 +960,8 @@ class TestLoadRecipeErrors:
             {field}: {legacy_value}
         """,
         )
-        with pytest.raises(RecipeError, match=hint):
-            load_recipe(p)
+        with pytest.raises(BookConfigError, match=hint):
+            load_book_config(p)
 
     def test_empty_contents(self, tmp_path):
         p = _write_recipe(
@@ -971,8 +973,8 @@ class TestLoadRecipeErrors:
             contents: []
         """,
         )
-        with pytest.raises(RecipeError, match="contents"):
-            load_recipe(p)
+        with pytest.raises(BookConfigError, match="contents"):
+            load_book_config(p)
 
     def test_unknown_chapter_kind(self, tmp_path):
         p = _write_recipe(
@@ -986,8 +988,25 @@ class TestLoadRecipeErrors:
                 source: custom:Foo.md
         """,
         )
-        with pytest.raises(RecipeError, match="kind"):
-            load_recipe(p)
+        with pytest.raises(BookConfigError, match="kind"):
+            load_book_config(p)
+
+    def test_inline_title_content_fails_clearly(self, tmp_path):
+        p = _write_recipe(
+            tmp_path,
+            """
+            title: X
+            contents:
+              - kind: inline
+                style: title
+                title: Old Title
+              - Intro.md
+        """,
+            vault_dirs=(),
+        )
+
+        with pytest.raises(BookConfigError, match="top-level title"):
+            load_book_config(p)
 
     def test_chapter_missing_source(self, tmp_path):
         p = _write_recipe(
@@ -1000,8 +1019,8 @@ class TestLoadRecipeErrors:
               - kind: file
         """,
         )
-        with pytest.raises(RecipeError, match="source"):
-            load_recipe(p)
+        with pytest.raises(BookConfigError, match="source"):
+            load_book_config(p)
 
     def test_chapter_source_unknown_vault(self, tmp_path):
         p = _write_recipe(
@@ -1015,8 +1034,8 @@ class TestLoadRecipeErrors:
                 source: nimble:Foo.md
         """,
         )
-        with pytest.raises(RecipeError, match="unknown vault"):
-            load_recipe(p)
+        with pytest.raises(BookConfigError, match="unknown vault"):
+            load_book_config(p)
 
     def test_overlay_unknown_vault(self, tmp_path):
         p = _write_recipe(
@@ -1031,12 +1050,12 @@ class TestLoadRecipeErrors:
                 source: custom:Foo.md
         """,
         )
-        with pytest.raises(RecipeError, match="unknown vault"):
-            load_recipe(p)
+        with pytest.raises(BookConfigError, match="unknown vault"):
+            load_book_config(p)
 
     def test_sort_field_rejected(self, tmp_path):
         # `sort:` was an unimplemented option that lived in the API surface
-        # for a while; it's now an explicit RecipeError so old recipes
+        # for a while; it's now an explicit BookConfigError so old recipes
         # can't silently rely on a no-op setting.
         p = _write_recipe(
             tmp_path,
@@ -1050,8 +1069,8 @@ class TestLoadRecipeErrors:
                 sort: alphabetical
         """,
         )
-        with pytest.raises(RecipeError, match="sort"):
-            load_recipe(p)
+        with pytest.raises(BookConfigError, match="sort"):
+            load_book_config(p)
 
     def test_full_page_sections_must_be_list(self, tmp_path):
         p = _write_recipe(
@@ -1066,8 +1085,8 @@ class TestLoadRecipeErrors:
                 full_page_sections: Character Creation
         """,
         )
-        with pytest.raises(RecipeError, match="full_page_sections"):
-            load_recipe(p)
+        with pytest.raises(BookConfigError, match="full_page_sections"):
+            load_book_config(p)
 
     def test_toc_depth_must_be_integer_between_one_and_four(self, tmp_path):
         p = _write_recipe(
@@ -1082,8 +1101,8 @@ class TestLoadRecipeErrors:
                 toc_depth: 0
         """,
         )
-        with pytest.raises(RecipeError, match="toc_depth"):
-            load_recipe(p)
+        with pytest.raises(BookConfigError, match="toc_depth"):
+            load_book_config(p)
 
         p = _write_recipe(
             tmp_path,
@@ -1097,8 +1116,8 @@ class TestLoadRecipeErrors:
                 toc_depth: deep
         """,
         )
-        with pytest.raises(RecipeError, match="toc_depth"):
-            load_recipe(p)
+        with pytest.raises(BookConfigError, match="toc_depth"):
+            load_book_config(p)
 
     def test_sources_only_valid_for_sequence(self, tmp_path):
         p = _write_recipe(
@@ -1114,8 +1133,8 @@ class TestLoadRecipeErrors:
                   - custom:Bar.md
         """,
         )
-        with pytest.raises(RecipeError, match="sources"):
-            load_recipe(p)
+        with pytest.raises(BookConfigError, match="sources"):
+            load_book_config(p)
 
     def test_chapter_slug_must_be_anchor_safe(self, tmp_path):
         p = _write_recipe(
@@ -1130,8 +1149,8 @@ class TestLoadRecipeErrors:
                 slug: "not a safe slug"
         """,
         )
-        with pytest.raises(RecipeError, match="slug"):
-            load_recipe(p)
+        with pytest.raises(BookConfigError, match="slug"):
+            load_book_config(p)
 
     def test_extends_cycle_is_rejected(self, tmp_path):
         (tmp_path / "vault").mkdir()
@@ -1166,8 +1185,8 @@ class TestLoadRecipeErrors:
             encoding="utf-8",
         )
 
-        with pytest.raises(RecipeError, match="cycle"):
-            load_recipe(a)
+        with pytest.raises(BookConfigError, match="cycle"):
+            load_book_config(a)
 
 
 # ---------------------------------------------------------------------------
@@ -1176,8 +1195,7 @@ class TestLoadRecipeErrors:
 
 
 def test_chapter_kinds_set_is_canonical():
-    assert CHAPTER_KINDS == {
-        "inline",
+    assert CONTENT_ITEM_KINDS == {
         "file",
         "catalog",
         "composite",

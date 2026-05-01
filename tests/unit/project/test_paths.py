@@ -8,7 +8,7 @@ from pathlib import Path
 from papercrown.build.options import OutputProfile
 from papercrown.project import paths
 from papercrown.project.manifest import Chapter
-from papercrown.project.recipe import load_recipe
+from papercrown.project.recipe import load_book_config
 
 
 def _write_recipe(tmp_path: Path, body: str) -> Path:
@@ -21,7 +21,7 @@ def _write_recipe(tmp_path: Path, body: str) -> Path:
 
 class TestOutputRoot:
     def test_default_root_uses_recipe_project_dir_and_title_slug(self, tmp_path):
-        recipe = load_recipe(
+        recipe = load_book_config(
             _write_recipe(
                 tmp_path,
                 """
@@ -38,7 +38,7 @@ class TestOutputRoot:
         assert paths.output_root(recipe) == tmp_path / "Paper Crown" / "my-book"
 
     def test_output_dir_and_name_override_root(self, tmp_path):
-        recipe = load_recipe(
+        recipe = load_book_config(
             _write_recipe(
                 tmp_path,
                 """
@@ -61,7 +61,7 @@ class TestOutputRoot:
 
 class TestChapterPdfPath:
     def test_top_level_chapter(self, tmp_path):
-        recipe = load_recipe(
+        recipe = load_book_config(
             _write_recipe(
                 tmp_path,
                 """
@@ -81,7 +81,7 @@ class TestChapterPdfPath:
         )
 
     def test_individual_subdir(self, tmp_path):
-        recipe = load_recipe(
+        recipe = load_book_config(
             _write_recipe(
                 tmp_path,
                 """
@@ -104,7 +104,7 @@ class TestChapterPdfPath:
         assert out.name == "Berserker.pdf"
 
     def test_draft_chapter_name(self, tmp_path):
-        recipe = load_recipe(
+        recipe = load_book_config(
             _write_recipe(
                 tmp_path,
                 """
@@ -124,7 +124,7 @@ class TestChapterPdfPath:
         )
 
     def test_digital_chapter_name_matches_print_name(self, tmp_path):
-        recipe = load_recipe(
+        recipe = load_book_config(
             _write_recipe(
                 tmp_path,
                 """
@@ -146,7 +146,7 @@ class TestChapterPdfPath:
 
 class TestCombinedBookPath:
     def test_print_name(self, tmp_path):
-        recipe = load_recipe(
+        recipe = load_book_config(
             _write_recipe(
                 tmp_path,
                 """
@@ -168,7 +168,7 @@ class TestCombinedBookPath:
         )
 
     def test_digital_name(self, tmp_path):
-        recipe = load_recipe(
+        recipe = load_book_config(
             _write_recipe(
                 tmp_path,
                 """
@@ -187,7 +187,7 @@ class TestCombinedBookPath:
         )
 
     def test_draft_name(self, tmp_path):
-        recipe = load_recipe(
+        recipe = load_book_config(
             _write_recipe(
                 tmp_path,
                 """
@@ -206,7 +206,7 @@ class TestCombinedBookPath:
         )
 
     def test_sanitizes_slashes_in_title(self, tmp_path):
-        recipe = load_recipe(
+        recipe = load_book_config(
             _write_recipe(
                 tmp_path,
                 """
@@ -225,7 +225,7 @@ class TestCombinedBookPath:
         )
 
     def test_web_book_path(self, tmp_path):
-        recipe = load_recipe(
+        recipe = load_book_config(
             _write_recipe(
                 tmp_path,
                 """

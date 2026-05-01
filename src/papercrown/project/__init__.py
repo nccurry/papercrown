@@ -1,1 +1,1 @@
-"""Recipe, manifest, vault, theme, and resource modules."""
+"""BookConfig, manifest, vault, theme, and resource modules."""

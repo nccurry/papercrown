@@ -14,14 +14,14 @@ from papercrown.build.options import (
     PaginationMode,
 )
 from papercrown.project.manifest import Manifest
-from papercrown.project.recipe import Recipe
+from papercrown.project.recipe import BookConfig
 
 
 @dataclass(frozen=True)
 class BuildRequest:
     """A typed build command created by the app layer from resolved options."""
 
-    recipe: Recipe
+    recipe: BookConfig
     manifest: Manifest
     target: BuildTarget = BuildTarget.PDF
     scope: BuildScope = BuildScope.ALL

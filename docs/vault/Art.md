@@ -230,12 +230,12 @@ fillers:
       shapes: [tailpiece, spot, small-wide, plate, page-finish]
   markers:
     terminal:
-      chapter_slot: chapter-end
-      class_slot: class-end
+      chapter_slots: [chapter-end]
+      class_slots: [class-end]
     source_boundary:
-      sequence_slot: section-end
+      sequence_slots: [section-end]
     subclass:
-      slot: subclass-end
+      slots: [subclass-end]
     headings:
       - chapter: frames
         slot: frame-family-end

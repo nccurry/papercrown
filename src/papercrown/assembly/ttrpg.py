@@ -1,4 +1,4 @@
-"""Typed TTRPG block registry, generated matter, and cross-reference support."""
+"""Typed TTRPG block registry, generated pages, and cross-reference support."""
 
 from __future__ import annotations
 
@@ -9,7 +9,7 @@ from dataclasses import dataclass, field
 from pathlib import Path
 
 from papercrown.project.manifest import slugify
-from papercrown.project.recipe import MatterSpec, Recipe
+from papercrown.project.recipe import BookConfig
 from papercrown.system.diagnostics import Diagnostic, DiagnosticSeverity
 
 # Custom div block types that Paper Crown upgrades into TTRPG components.
@@ -99,16 +99,14 @@ class _DivAttrs:
 
 def prepare_book_markdown(
     markdown: str,
-    recipe: Recipe,
+    recipe: BookConfig,
     *,
     include_generated_matter: bool,
 ) -> PreparedMarkdown:
-    """Normalize typed blocks, resolve refs, and add generated matter."""
+    """Normalize typed blocks and resolve typed cross-references."""
     normalized, registry, diagnostics = _normalize_ttrpg_blocks(markdown)
     normalized, ref_diagnostics = _resolve_ttrpg_refs(normalized, registry)
     diagnostics.extend(ref_diagnostics)
-    if include_generated_matter:
-        normalized = _with_generated_matter(normalized, recipe, registry)
     return PreparedMarkdown(
         markdown=normalized,
         registry=registry,
@@ -116,20 +114,11 @@ def prepare_book_markdown(
     )
 
 
-def add_generated_matter(
-    markdown: str,
-    recipe: Recipe,
-    registry: ObjectRegistry,
-) -> str:
-    """Wrap prepared book markdown with configured front and back matter."""
-    return _with_generated_matter(markdown, recipe, registry)
-
-
 def render_generated_content(
     kind: str,
     title: str,
     *,
-    recipe: Recipe,
+    recipe: BookConfig,
     registry: ObjectRegistry,
     style: str = "generated",
 ) -> str:
@@ -436,61 +425,7 @@ def _resolve_ttrpg_refs(
     return "\n".join(out), diagnostics
 
 
-def _with_generated_matter(
-    markdown: str,
-    recipe: Recipe,
-    registry: ObjectRegistry,
-) -> str:
-    front = _render_matter_pages(
-        recipe.front_matter,
-        position="front",
-        recipe=recipe,
-        registry=registry,
-    )
-    back = _render_matter_pages(
-        recipe.back_matter,
-        position="back",
-        recipe=recipe,
-        registry=registry,
-    )
-    parts = []
-    if front:
-        parts.append(front)
-    parts.append(markdown)
-    if back:
-        parts.append(back)
-    return "\n\n".join(parts)
-
-
-def _render_matter_pages(
-    matter: list[MatterSpec],
-    *,
-    position: str,
-    recipe: Recipe,
-    registry: ObjectRegistry,
-) -> str:
-    pages = [
-        _render_matter_page(item, position=position, recipe=recipe, registry=registry)
-        for item in matter
-    ]
-    return "\n\n".join(page for page in pages if page.strip())
-
-
-def _render_matter_page(
-    item: MatterSpec,
-    *,
-    position: str,
-    recipe: Recipe,
-    registry: ObjectRegistry,
-) -> str:
-    title = item.title or _default_matter_title(item.type)
-    body = _matter_body(item.type, recipe=recipe, registry=registry)
-    matter_id = f"matter-{slugify(title)}"
-    classes = f".generated-matter .{position}-matter .matter-{item.type}"
-    return f":::: {{#{matter_id} {classes}}}\n\n# {title}\n\n{body.strip()}\n\n::::"
-
-
-def _matter_body(kind: str, *, recipe: Recipe, registry: ObjectRegistry) -> str:
+def _matter_body(kind: str, *, recipe: BookConfig, registry: ObjectRegistry) -> str:
     metadata = recipe.metadata
     if kind == "title-page":
         lines = [f"## {recipe.title}"]
@@ -549,18 +484,6 @@ def _registry_index(registry: ObjectRegistry) -> str:
             section_lines.append(f"- [{obj.title}](#{obj.anchor}){tags}")
         sections.append("\n".join(section_lines))
     return "\n\n".join(sections)
-
-
-def _default_matter_title(kind: str) -> str:
-    return {
-        "title-page": "Title Page",
-        "credits": "Credits",
-        "copyright": "Copyright",
-        "license": "License",
-        "art-credits": "Art Credits",
-        "changelog": "Changelog",
-        "appendix-index": "Index",
-    }.get(kind, _title_from_id(kind))
 
 
 def _default_index_title(object_type: str) -> str:

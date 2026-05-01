@@ -5,20 +5,19 @@ from __future__ import annotations
 from pathlib import Path
 
 from papercrown.project.manifest import build_manifest
-from papercrown.project.recipe import load_recipe
+from papercrown.project.recipe import load_book_config
 from papercrown.project.starter import StarterBookType, init_project
 
 
 def test_init_project_creates_verifiable_titled_starter(tmp_path):
     result = init_project(tmp_path, force=True)
 
-    recipe = load_recipe(tmp_path / "book.yml")
+    recipe = load_book_config(tmp_path / "book.yml")
     manifest = build_manifest(recipe)
 
     assert recipe.title == "My Paper Crown Book"
     assert recipe.cover.enabled is True
-    assert recipe.contents[0].kind == "inline"
-    assert recipe.contents[1].kind == "toc"
+    assert recipe.contents[0].kind == "toc"
     assert recipe.vaults["content"].path == tmp_path.resolve()
     assert (tmp_path / "Overview.md").is_file()
     recipe_text = (tmp_path / "book.yml").read_text(encoding="utf-8")
@@ -44,7 +43,7 @@ def test_init_project_uses_title_theme_book_type_vault_and_cover_options(tmp_pat
         force=True,
     )
 
-    recipe = load_recipe(tmp_path / "book.yml")
+    recipe = load_book_config(tmp_path / "book.yml")
     manifest = build_manifest(recipe)
 
     assert recipe.title == "The Pinlight Colony"
@@ -66,7 +65,7 @@ def test_init_project_can_use_external_absolute_vault(tmp_path):
 
     init_project(project, vault=shared_vault, force=True)
 
-    recipe = load_recipe(project / "book.yml")
+    recipe = load_book_config(project / "book.yml")
 
     assert recipe.vaults["content"].path == shared_vault.resolve()
     assert (shared_vault / "Overview.md").is_file()

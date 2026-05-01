@@ -6,7 +6,7 @@ from collections.abc import Iterator
 from dataclasses import dataclass, field
 from pathlib import Path
 
-from papercrown.project.recipe import ArtInsertSpec, Recipe
+from papercrown.project.recipe import ArtInsertSpec, BookConfig
 from papercrown.project.slugs import slugify
 from papercrown.project.vaults import VaultIndex
 
@@ -130,10 +130,10 @@ class Chapter:
     source_titles: list[str | None] = field(default_factory=list)
     source_strip_related: list[bool] = field(default_factory=list)
     source_filler_enabled: list[bool] = field(default_factory=list)
-    source_boundary_filler_slot: str | None = None
     source_boundary_filler_slots: list[str] = field(default_factory=list)
-    subclass_filler_slot: str | None = "subclass-end"
-    subclass_filler_slots: list[str] = field(default_factory=list)
+    subclass_filler_slots: list[str] = field(
+        default_factory=lambda: ["subclass-end"]
+    )
     heading_filler_markers: list[ChapterHeadingFillerMarker] | None = None
     fillers_enabled: bool = True
     children: list[Chapter] = field(default_factory=list)
@@ -153,21 +153,6 @@ class Chapter:
     toc_depth: int | None = None
     # Content-scoped art inserts declared on this chapter's recipe item.
     art_inserts: list[ArtInsertSpec] = field(default_factory=list)
-
-    def __post_init__(self) -> None:
-        """Normalize singular filler marker fields into list form."""
-        if not self.source_boundary_filler_slots and self.source_boundary_filler_slot:
-            self.source_boundary_filler_slots = [self.source_boundary_filler_slot]
-        elif (
-            self.source_boundary_filler_slots
-            and self.source_boundary_filler_slot is None
-        ):
-            self.source_boundary_filler_slot = self.source_boundary_filler_slots[0]
-
-        if not self.subclass_filler_slots and self.subclass_filler_slot:
-            self.subclass_filler_slots = [self.subclass_filler_slot]
-        elif self.subclass_filler_slots and self.subclass_filler_slot is None:
-            self.subclass_filler_slot = self.subclass_filler_slots[0]
 
     @property
     def is_leaf(self) -> bool:
@@ -191,18 +176,6 @@ class TocPart:
 
 
 @dataclass(frozen=True)
-class InlinePart:
-    """An inline, recipe-authored book part such as the canonical title item."""
-
-    style: str
-    title: str | None = None
-    subtitle: str | None = None
-    cover_eyebrow: str | None = None
-    cover_footer: str | None = None
-    slug: str | None = None
-
-
-@dataclass(frozen=True)
 class GeneratedPart:
     """A computed page in the ordered book contents."""
 
@@ -212,14 +185,14 @@ class GeneratedPart:
     style: str = "generated"
 
 
-BookPart = Chapter | TocPart | InlinePart | GeneratedPart
+BookPart = Chapter | TocPart | GeneratedPart
 
 
 @dataclass
 class Manifest:
     """The resolved recipe, vault index, chapter tree, and warnings."""
 
-    recipe: Recipe
+    recipe: BookConfig
     vault_index: VaultIndex
     chapters: list[Chapter]  # top-level (siblings)
     contents: list[BookPart] = field(default_factory=list)

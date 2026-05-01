@@ -16,7 +16,7 @@ from papercrown.project.manifest import (
     PageDamageCatalog,
     build_manifest,
 )
-from papercrown.project.recipe import load_recipe
+from papercrown.project.recipe import load_book_config
 from papercrown.project.resources import CORE_CSS_FILES, TEMPLATE_FILE
 from papercrown.render import build, pipeline
 from papercrown.system import export
@@ -43,7 +43,7 @@ def _outline_titles(outline: list[object]) -> list[str]:
 
 def _build_mage_pdf(mini_recipe_path: Path, tmp_path: Path) -> Path:
     """Shared helper: render the fixture's Mage class chapter to a PDF."""
-    recipe = load_recipe(mini_recipe_path)
+    recipe = load_book_config(mini_recipe_path)
     manifest = build_manifest(recipe)
     chapter = manifest.find_chapter("Mage")
     assert chapter is not None
@@ -67,7 +67,7 @@ def _build_mini_combined_pdf(mini_recipe_path: Path, tmp_path: Path) -> Path:
     Produces a multi-page PDF with a cover + section dividers + bodies,
     so running-header / cover-title assertions have pages to check.
     """
-    recipe = load_recipe(mini_recipe_path)
+    recipe = load_book_config(mini_recipe_path)
     manifest = build_manifest(recipe)
     tools = export.discover_tools()
     out_pdf = tmp_path / "mini-combined.pdf"
@@ -173,7 +173,7 @@ def test_running_header_book_title_present_in_rendered_pdf(mini_recipe_path, tmp
 
     # The mini recipe's `title:` is "Mini Test Book".
     assert "mini test book" in normalized, (
-        "Recipe title missing from PDF text; cover/TOC/running header "
+        "BookConfig title missing from PDF text; cover/TOC/running header "
         f"all failed to inject it. Got (first 300 chars): {full_text[:300]!r}"
     )
     assert "content:" not in full_text
@@ -510,7 +510,7 @@ def test_build_outputs_supports_parallel_fast_draft(
     if not has_external_tools["obsidian-export"]:
         pytest.skip("obsidian-export not installed")
 
-    recipe = load_recipe(mini_recipe_path)
+    recipe = load_book_config(mini_recipe_path)
     recipe.output_dir_override = tmp_path / "output"
     recipe.cache_dir_override = tmp_path / "cache"
     manifest = build_manifest(recipe)

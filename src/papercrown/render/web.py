@@ -11,7 +11,7 @@ from urllib.parse import unquote, urlparse
 
 from papercrown.project import themes
 from papercrown.project.manifest import slugify
-from papercrown.project.recipe import Recipe
+from papercrown.project.recipe import BookConfig
 from papercrown.project.resources import (
     ASSETS_DIR,
     CORE_CSS_FILES,
@@ -48,7 +48,7 @@ def reset_web_output(web_root: Path) -> None:
     web_root.mkdir(parents=True, exist_ok=True)
 
 
-def copy_web_static_assets(web_root: Path, *, recipe: Recipe) -> None:
+def copy_web_static_assets(web_root: Path, *, recipe: BookConfig) -> None:
     """Copy stylesheets and bundled fonts into a static web output tree."""
     styles_dir = web_root / "styles"
     styles_dir.mkdir(parents=True, exist_ok=True)
@@ -173,7 +173,7 @@ def local_asset_path(
     return find_relative_asset(path, search_roots=search_roots or [])
 
 
-def web_asset_search_roots(recipe: Recipe) -> list[Path]:
+def web_asset_search_roots(recipe: BookConfig) -> list[Path]:
     """Return roots searched for relative images in static web HTML."""
     roots = [
         recipe.cache_dir / "exports",

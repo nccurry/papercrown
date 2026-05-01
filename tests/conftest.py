@@ -8,7 +8,7 @@ from pathlib import Path
 import pytest
 
 from papercrown.project.manifest import Manifest, build_manifest
-from papercrown.project.recipe import Recipe, load_recipe
+from papercrown.project.recipe import BookConfig, load_book_config
 
 # Repository root shared by tests that need project-relative paths.
 PAPERCROWN_ROOT = Path(__file__).parent.parent.resolve()
@@ -34,8 +34,8 @@ def mini_recipe_path() -> Path:
 
 
 @pytest.fixture
-def mini_recipe() -> Recipe:
-    return load_recipe(MINI_RECIPE_PATH)
+def mini_recipe() -> BookConfig:
+    return load_book_config(MINI_RECIPE_PATH)
 
 
 @pytest.fixture

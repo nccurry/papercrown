@@ -30,13 +30,12 @@ from papercrown.project.manifest import (
     ChapterFillerSlot,
     ChapterHeadingFillerMarker,
     GeneratedPart,
-    InlinePart,
     Splash,
     TocPart,
     resolve_art_asset,
     slugify,
 )
-from papercrown.project.recipe import Recipe
+from papercrown.project.recipe import BookConfig
 from papercrown.project.vaults import VaultIndex
 
 render_back_cover_splashes = _art_blocks.render_back_cover_splashes
@@ -67,7 +66,7 @@ def assemble_chapter_markdown(
     include_fillers: bool = True,
     include_tailpiece_art: bool = False,
     include_source_markers: bool = False,
-    recipe: Recipe | None = None,
+    recipe: BookConfig | None = None,
 ) -> str:
     """Concatenate the chapter's source files into one markdown blob.
 
@@ -229,7 +228,7 @@ def _decorate_chapter_markdown(
     include_splashes: bool,
     include_fillers: bool,
     include_tailpiece_art: bool,
-    recipe: Recipe | None,
+    recipe: BookConfig | None,
 ) -> str:
     """Run chapter-level markdown decoration passes in render order."""
     if not _source_notes.starts_with_h1(combined):
@@ -301,7 +300,7 @@ def assemble_combined_book_markdown(
     splashes: list[Splash] | None = None,
     include_source_markers: bool = False,
     include_back_cover_splashes: bool = True,
-    recipe: Recipe | None = None,
+    recipe: BookConfig | None = None,
 ) -> str:
     """Concatenate every chapter into one big markdown blob for the combined book.
 
@@ -359,13 +358,11 @@ def assemble_book_contents_markdown(
     splashes: list[Splash] | None = None,
     include_source_markers: bool = False,
     include_back_cover_splashes: bool = True,
-    recipe: Recipe | None = None,
+    recipe: BookConfig | None = None,
 ) -> str:
     """Concatenate the ordered book contents stream into markdown."""
     parts: list[str] = []
     for part in contents:
-        if isinstance(part, InlinePart):
-            continue
         if isinstance(part, TocPart):
             depth = "" if part.depth is None else str(part.depth)
             parts.append(f"<!-- papercrown-toc: {part.title} | {depth} -->")
@@ -406,7 +403,7 @@ def _append_combined_chapter_parts(
     include_tailpiece_art: bool,
     splashes: list[Splash] | None,
     include_source_markers: bool,
-    recipe: Recipe | None,
+    recipe: BookConfig | None,
 ) -> None:
     """Append one top-level chapter and descendants to combined-book parts."""
     parts.append(
@@ -1131,7 +1128,7 @@ def _insert_chapter_splashes(
 
 def _replace_art_slot_blocks(
     text: str,
-    recipe: Recipe,
+    recipe: BookConfig,
     *,
     include_art: bool,
 ) -> str:
@@ -1206,7 +1203,7 @@ def _parse_fenced_div_attrs(attrs: str) -> dict[str, str]:
 
 def _render_art_slot(
     attrs: dict[str, str],
-    recipe: Recipe,
+    recipe: BookConfig,
     *,
     include_art: bool,
 ) -> str:

@@ -11,16 +11,17 @@ import yaml
 
 from papercrown.project.recipe.models import (
     DEFAULT_THEME,
+    BookConfig,
+    BookConfigError,
     BookMetadataSpec,
-    ChapterSpec,
+    ContentItemSpec,
     CoverSpec,
     FillersSpec,
     OrnamentsSpec,
     PageDamageSpec,
-    Recipe,
-    RecipeError,
     SplashSpec,
     VaultSpec,
+    _art_roles_mapping,
     _filename_slug,
     _image_treatments_mapping,
     _slug_or_none,
@@ -43,15 +44,15 @@ def _resolve_vault_path(raw: str, recipe_dir: Path) -> Path:
     return p
 
 
-def load_recipe(
+def load_book_config(
     path: str | Path,
     *,
     defaults: Mapping[str, object] | None = None,
     defaults_base_dir: Path | None = None,
-) -> Recipe:
+) -> BookConfig:
     """Load and validate a book YAML file.
 
-    Raises RecipeError with a clear message on any structural or referential
+    Raises BookConfigError with a clear message on any structural or referential
     problem (missing required fields, unknown content kinds, vault paths that
     don't exist, vault_overlay names not in `vaults`, book include cycles,
     etc). Books may use ``extends``, ``include_contents``, and
@@ -59,9 +60,9 @@ def load_recipe(
     """
     recipe_path = Path(path).resolve()
     if not recipe_path.is_file():
-        raise RecipeError(f"book config file not found: {recipe_path}")
+        raise BookConfigError(f"book config file not found: {recipe_path}")
 
-    raw = _load_recipe_mapping(recipe_path, stack=())
+    raw = _load_book_config_mapping(recipe_path, stack=())
     if defaults:
         defaults_raw = {str(key): value for key, value in deepcopy(defaults).items()}
         _normalize_recipe_filesystem_paths(
@@ -72,9 +73,8 @@ def load_recipe(
     _reject_legacy_recipe_shape(raw)
 
     contents_raw = _normalize_contents(raw.get("contents"))
-    title, subtitle, cover_eyebrow, cover_footer, inline_title_raw = _title_fields(
-        raw, contents_raw
-    )
+    _reject_inline_title_content(contents_raw)
+    title, subtitle, cover_eyebrow, cover_footer = _title_fields(raw)
 
     recipe_dir = recipe_path.parent
     project_dir = _project_dir_for_recipe(recipe_path)
@@ -105,29 +105,30 @@ def load_recipe(
 
     metadata_raw = raw.get("metadata")
     if metadata_raw is not None and not isinstance(metadata_raw, Mapping):
-        raise RecipeError("metadata must be a mapping when provided")
+        raise BookConfigError("metadata must be a mapping when provided")
     theme_options = _theme_options_mapping(raw.get("theme_options"))
     image_treatments = _image_treatments_mapping(raw.get("image_treatments"))
+    art_roles = _art_roles_mapping(raw.get("art_roles"))
 
     cover_raw = raw.get("cover")
     if cover_raw is not None and not isinstance(cover_raw, Mapping):
-        raise RecipeError("cover must be a mapping when provided")
+        raise BookConfigError("cover must be a mapping when provided")
     ornaments_raw = raw.get("ornaments")
     if ornaments_raw is not None and not isinstance(ornaments_raw, Mapping):
-        raise RecipeError("ornaments must be a mapping when provided")
+        raise BookConfigError("ornaments must be a mapping when provided")
     fillers_raw = raw.get("fillers")
     if fillers_raw is not None and not isinstance(fillers_raw, Mapping):
-        raise RecipeError("fillers must be a mapping when provided")
+        raise BookConfigError("fillers must be a mapping when provided")
     page_damage_raw = raw.get("page_damage")
     if page_damage_raw is not None and not isinstance(page_damage_raw, Mapping):
-        raise RecipeError("page_damage must be a mapping when provided")
+        raise BookConfigError("page_damage must be a mapping when provided")
     splashes = _parse_splashes(raw.get("splashes"))
     contents = _parse_contents(contents_raw)
     _validate_chapter_sources(contents, "contents", declared_vaults=set(vaults))
 
-    cover = _cover_spec(cover_raw, inline_title_raw)
+    cover = _cover_spec(cover_raw)
 
-    return Recipe(
+    return BookConfig(
         title=title.strip(),
         subtitle=subtitle,
         cover_eyebrow=cover_eyebrow,
@@ -143,6 +144,7 @@ def load_recipe(
         image_treatments=image_treatments,
         metadata=BookMetadataSpec.from_dict(metadata_raw),
         art_dir_override=art_dir_override,
+        art_roles=art_roles,
         ornaments=OrnamentsSpec.from_dict(ornaments_raw),
         cover=cover,
         splashes=splashes,
@@ -155,31 +157,16 @@ def load_recipe(
 
 def _title_fields(
     raw: Mapping[str, object],
-    contents_raw: Sequence[Mapping[str, object]],
-) -> tuple[str, str | None, str | None, str | None, Mapping[str, object] | None]:
-    """Resolve title metadata from top-level fields and inline title contents."""
-    inline_title_raw = _first_inline_title(contents_raw)
+) -> tuple[str, str | None, str | None, str | None]:
+    """Resolve required top-level book title metadata."""
     title = _str_or_none(raw.get("title"))
-    if title is None and inline_title_raw is not None:
-        title = _str_or_none(inline_title_raw.get("title"))
     if title is None:
-        raise RecipeError(
-            "book config missing required title: add top-level title or a first "
-            "contents item with kind: inline, style: title, title: ..."
-        )
+        raise BookConfigError("book config missing required top-level title")
 
     subtitle = _str_or_none(raw.get("subtitle"))
     cover_eyebrow = _str_or_none(raw.get("cover_eyebrow"))
     cover_footer = _str_or_none(raw.get("cover_footer"))
-    if inline_title_raw is not None:
-        subtitle = subtitle or _str_or_none(inline_title_raw.get("subtitle"))
-        cover_eyebrow = cover_eyebrow or _str_or_none(
-            inline_title_raw.get("cover_eyebrow")
-        )
-        cover_footer = cover_footer or _str_or_none(
-            inline_title_raw.get("cover_footer")
-        )
-    return title, subtitle, cover_eyebrow, cover_footer, inline_title_raw
+    return title, subtitle, cover_eyebrow, cover_footer
 
 
 def _load_vaults(
@@ -193,17 +180,17 @@ def _load_vaults(
     if vaults_raw is None:
         vaults_raw = {"content": str(project_dir)}
     if not isinstance(vaults_raw, Mapping) or not vaults_raw:
-        raise RecipeError("vaults must be a mapping of name -> path when provided")
+        raise BookConfigError("vaults must be a mapping of name -> path when provided")
 
     vaults: dict[str, VaultSpec] = {}
     for name, vp in vaults_raw.items():
         if not isinstance(name, str) or not re.match(r"^[A-Za-z0-9_-]+$", name):
-            raise RecipeError(
+            raise BookConfigError(
                 f"invalid vault alias {name!r}: must be alphanumeric/underscore/dash"
             )
         resolved = _resolve_vault_path(str(vp), recipe_dir)
         if not resolved.is_dir():
-            raise RecipeError(f"vault {name!r} path does not exist: {resolved}")
+            raise BookConfigError(f"vault {name!r} path does not exist: {resolved}")
         vaults[name] = VaultSpec(name=name, path=resolved)
     return vaults
 
@@ -219,10 +206,10 @@ def _vault_overlay(
     if not isinstance(overlay_raw, list) or not all(
         isinstance(x, str) for x in overlay_raw
     ):
-        raise RecipeError("vault_overlay must be a list of vault alias strings")
+        raise BookConfigError("vault_overlay must be a list of vault alias strings")
     for name in overlay_raw:
         if name not in vaults:
-            raise RecipeError(
+            raise BookConfigError(
                 f"vault_overlay references unknown vault {name!r}; "
                 f"declared vaults: {sorted(vaults)}"
             )
@@ -242,7 +229,7 @@ def _optional_resolved_path(
         return None
     resolved = _resolve_vault_path(field_raw, recipe_dir)
     if must_exist and not resolved.is_dir():
-        raise RecipeError(f"{field_name} path does not exist: {resolved}")
+        raise BookConfigError(f"{field_name} path does not exist: {resolved}")
     return resolved
 
 
@@ -250,27 +237,29 @@ def _parse_splashes(raw: object) -> list[SplashSpec]:
     """Parse the optional top-level splash art list."""
     splashes_raw = raw or []
     if not isinstance(splashes_raw, list):
-        raise RecipeError("splashes must be a list when provided")
+        raise BookConfigError("splashes must be a list when provided")
     splashes: list[SplashSpec] = []
     for i, splash_raw in enumerate(splashes_raw):
         if not isinstance(splash_raw, Mapping):
-            raise RecipeError(
+            raise BookConfigError(
                 f"splashes[{i}] must be a mapping, got {type(splash_raw).__name__}"
             )
         splashes.append(SplashSpec.from_dict(splash_raw, index=i))
     return splashes
 
 
-def _parse_contents(contents_raw: Sequence[Mapping[str, object]]) -> list[ChapterSpec]:
+def _parse_contents(
+    contents_raw: Sequence[Mapping[str, object]],
+) -> list[ContentItemSpec]:
     """Parse normalized chapter mappings into typed chapter specs."""
     return [
-        ChapterSpec.from_dict(chapter_raw, index=i)
+        ContentItemSpec.from_dict(chapter_raw, index=i)
         for i, chapter_raw in enumerate(contents_raw)
     ]
 
 
 def _validate_chapter_sources(
-    chapters: Sequence[ChapterSpec],
+    chapters: Sequence[ContentItemSpec],
     crumb: str,
     *,
     declared_vaults: set[str],
@@ -283,7 +272,7 @@ def _validate_chapter_sources(
             and chapter.source.vault is not None
             and chapter.source.vault not in declared_vaults
         ):
-            raise RecipeError(
+            raise BookConfigError(
                 f"{here} source {chapter.source!s} references unknown vault "
                 f"{chapter.source.vault!r}; declared vaults: {sorted(declared_vaults)}"
             )
@@ -292,7 +281,7 @@ def _validate_chapter_sources(
                 item.source.vault is not None
                 and item.source.vault not in declared_vaults
             ):
-                raise RecipeError(
+                raise BookConfigError(
                     f"{here}.sources[{j}] source {item.source!s} "
                     "references unknown vault "
                     f"{item.source.vault!r}; declared vaults: {sorted(declared_vaults)}"
@@ -306,21 +295,15 @@ def _validate_chapter_sources(
 
 def _cover_spec(
     cover_raw: Mapping[str, object] | None,
-    inline_title_raw: Mapping[str, object] | None,
 ) -> CoverSpec:
-    """Build cover settings, including convention-first inline title defaults."""
-    cover = CoverSpec.from_dict(cover_raw)
-    if cover_raw is None and inline_title_raw is not None:
-        cover.enabled = True
-        inline_art = inline_title_raw.get("art")
-        if isinstance(inline_art, str):
-            cover.art = _str_or_none(inline_art)
-    return cover
+    """Build cover settings from explicit top-level cover config."""
+    return CoverSpec.from_dict(cover_raw)
 
 
 def _reject_legacy_recipe_shape(raw: Mapping[str, object]) -> None:
     """Fail fast for the pre-contents recipe fields."""
     legacy = {
+        "build": "move build defaults to papercrown.yaml",
         "chapters": "use contents instead",
         "front_matter": "make these ordinary contents items before kind: toc",
         "back_matter": "make these ordinary contents items after kind: toc",
@@ -328,7 +311,17 @@ def _reject_legacy_recipe_shape(raw: Mapping[str, object]) -> None:
     }
     for key, hint in legacy.items():
         if key in raw:
-            raise RecipeError(f"{key} is no longer supported; {hint}")
+            raise BookConfigError(f"{key} is no longer supported; {hint}")
+
+
+def _reject_inline_title_content(contents: Sequence[Mapping[str, object]]) -> None:
+    """Reject the V1 inline title convention in ordered contents."""
+    for i, item in enumerate(contents):
+        if item.get("kind") == "inline" and item.get("style") == "title":
+            raise BookConfigError(
+                "inline title items are no longer supported; use top-level "
+                f"title/subtitle/cover_eyebrow fields instead (contents[{i}])"
+            )
 
 
 def _project_dir_for_recipe(recipe_path: Path) -> Path:
@@ -339,14 +332,14 @@ def _project_dir_for_recipe(recipe_path: Path) -> Path:
 def _normalize_contents(raw: object) -> list[dict[str, object]]:
     """Normalize contents strings/mappings into mutable mapping items."""
     if not isinstance(raw, list) or not raw:
-        raise RecipeError("book missing required field: contents (non-empty list)")
+        raise BookConfigError("book missing required field: contents (non-empty list)")
     contents: list[dict[str, object]] = []
     for i, item in enumerate(raw):
         if isinstance(item, str):
             contents.append({"source": item})
             continue
         if not isinstance(item, Mapping):
-            raise RecipeError(
+            raise BookConfigError(
                 f"contents[{i}] must be a mapping or source string, "
                 f"got {type(item).__name__}"
             )
@@ -354,36 +347,28 @@ def _normalize_contents(raw: object) -> list[dict[str, object]]:
     return contents
 
 
-def _first_inline_title(
-    contents: Sequence[Mapping[str, object]],
-) -> Mapping[str, object] | None:
-    """Return the first inline title item when it appears at the front."""
-    if not contents:
-        return None
-    first = contents[0]
-    if first.get("kind") == "inline" and first.get("style") == "title":
-        return first
-    return None
-
-
-def _load_recipe_mapping(path: Path, *, stack: tuple[Path, ...]) -> dict[str, object]:
+def _load_book_config_mapping(
+    path: Path,
+    *,
+    stack: tuple[Path, ...],
+) -> dict[str, object]:
     """Load a recipe or inherited recipe layer into an expanded mapping."""
     recipe_path = path.resolve()
     if recipe_path in stack:
         cycle = " -> ".join(p.name for p in (*stack, recipe_path))
-        raise RecipeError(f"book config extends/include cycle detected: {cycle}")
+        raise BookConfigError(f"book config extends/include cycle detected: {cycle}")
 
     try:
         raw_obj = yaml.safe_load(recipe_path.read_text(encoding="utf-8"))
     except yaml.YAMLError as e:
-        raise RecipeError(f"invalid YAML in {recipe_path}: {e}") from e
+        raise BookConfigError(f"invalid YAML in {recipe_path}: {e}") from e
     except OSError as e:
-        raise RecipeError(f"could not read book config {recipe_path}: {e}") from e
+        raise BookConfigError(f"could not read book config {recipe_path}: {e}") from e
 
     if raw_obj is None:
-        raise RecipeError(f"book config is empty: {recipe_path}")
+        raise BookConfigError(f"book config is empty: {recipe_path}")
     if not isinstance(raw_obj, Mapping):
-        raise RecipeError(
+        raise BookConfigError(
             f"book config root must be a mapping, got {type(raw_obj).__name__}"
         )
 
@@ -395,8 +380,8 @@ def _load_recipe_mapping(path: Path, *, stack: tuple[Path, ...]) -> dict[str, ob
     extends_raw = raw.get("extends")
     if extends_raw is not None:
         if not isinstance(extends_raw, str) or not extends_raw.strip():
-            raise RecipeError("extends must be a non-empty path string")
-        base = _load_recipe_mapping(
+            raise BookConfigError("extends must be a non-empty path string")
+        base = _load_book_config_mapping(
             _resolve_include_path(extends_raw, recipe_dir),
             stack=next_stack,
         )
@@ -422,7 +407,7 @@ def _resolve_include_path(raw: str, base_dir: Path) -> Path:
         path = base_dir / path
     resolved = path.resolve()
     if not resolved.is_file():
-        raise RecipeError(f"included book config file not found: {resolved}")
+        raise BookConfigError(f"included book config file not found: {resolved}")
     return resolved
 
 
@@ -477,7 +462,9 @@ def _merge_vault_includes(
         fragment = _read_yaml_mapping(include_path, stack=stack)
         vaults_raw = fragment.get("vaults", fragment)
         if not isinstance(vaults_raw, Mapping):
-            raise RecipeError(f"{include_path.name}: vault include must be a mapping")
+            raise BookConfigError(
+                f"{include_path.name}: vault include must be a mapping"
+            )
         for name, value in vaults_raw.items():
             included_vaults[str(name)] = str(
                 _resolve_vault_path(str(value), include_path.parent)
@@ -515,7 +502,7 @@ def _merge_content_includes(
             continue
         contents_raw = fragment.get("contents")
         if not isinstance(contents_raw, list):
-            raise RecipeError(
+            raise BookConfigError(
                 f"{include_path.name}: content include must be a list or "
                 "a mapping with contents"
             )
@@ -527,7 +514,7 @@ def _merge_content_includes(
     elif isinstance(local_contents_raw, list):
         local_contents = list(local_contents_raw)
     else:
-        raise RecipeError("contents must be a list when include_contents is used")
+        raise BookConfigError("contents must be a list when include_contents is used")
     raw["contents"] = included_contents + local_contents
 
 
@@ -535,7 +522,7 @@ def _read_yaml_mapping(path: Path, *, stack: tuple[Path, ...]) -> dict[str, obje
     """Read an include file that must contain a mapping."""
     obj = _read_yaml_mapping_or_list(path, stack=stack)
     if not isinstance(obj, Mapping):
-        raise RecipeError(f"{path.name}: expected a mapping")
+        raise BookConfigError(f"{path.name}: expected a mapping")
     return {str(key): value for key, value in obj.items()}
 
 
@@ -548,16 +535,16 @@ def _read_yaml_mapping_or_list(
     resolved = path.resolve()
     if resolved in stack:
         cycle = " -> ".join(p.name for p in (*stack, resolved))
-        raise RecipeError(f"book config extends/include cycle detected: {cycle}")
+        raise BookConfigError(f"book config extends/include cycle detected: {cycle}")
     try:
         obj = yaml.safe_load(resolved.read_text(encoding="utf-8"))
     except yaml.YAMLError as e:
-        raise RecipeError(f"invalid YAML in {resolved}: {e}") from e
+        raise BookConfigError(f"invalid YAML in {resolved}: {e}") from e
     except OSError as e:
-        raise RecipeError(f"could not read include {resolved}: {e}") from e
+        raise BookConfigError(f"could not read include {resolved}: {e}") from e
     if isinstance(obj, Mapping) or isinstance(obj, list):
         return obj
-    raise RecipeError(f"{resolved.name}: expected a mapping or list include")
+    raise BookConfigError(f"{resolved.name}: expected a mapping or list include")
 
 
 def _include_path_list(raw: object, *, field_name: str) -> list[str]:
@@ -566,7 +553,7 @@ def _include_path_list(raw: object, *, field_name: str) -> list[str]:
         return [raw]
     if isinstance(raw, list) and all(isinstance(item, str) for item in raw):
         return [str(item) for item in raw]
-    raise RecipeError(f"{field_name} must be a path string or list of path strings")
+    raise BookConfigError(f"{field_name} must be a path string or list of path strings")
 
 
 def _deep_merge(

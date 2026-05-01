@@ -1,4 +1,4 @@
-"""Unit tests for manifest building (Recipe -> Chapter tree)."""
+"""Unit tests for manifest building (BookConfig -> Chapter tree)."""
 
 from __future__ import annotations
 
@@ -8,13 +8,12 @@ from pathlib import Path
 import pytest
 
 from papercrown.project.manifest import (
-    InlinePart,
     ManifestError,
     build_manifest,
     classify_filler_art_path,
     slugify,
 )
-from papercrown.project.recipe import RecipeError, load_recipe
+from papercrown.project.recipe import BookConfigError, load_book_config
 
 # ---------------------------------------------------------------------------
 # Fixtures
@@ -82,22 +81,19 @@ def _write_recipe(workspace: Path, body: str) -> Path:
 
 
 class TestKindFile:
-    def test_inline_title_part_does_not_create_chapter(self, tmp_path):
+    def test_top_level_identity_does_not_create_chapter(self, tmp_path):
         (tmp_path / "Intro.md").write_text("# Intro\nBody.\n", encoding="utf-8")
         rp = _write_recipe(
             tmp_path,
             """
+            title: Nimble Space Opera
+            subtitle: Rules Book
             contents:
-              - kind: inline
-                style: title
-                title: Nimble Space Opera
-                subtitle: Rules Book
               - Intro.md
         """,
         )
-        m = build_manifest(load_recipe(rp))
-        assert isinstance(m.contents[0], InlinePart)
-        assert m.contents[0].title == "Nimble Space Opera"
+        m = build_manifest(load_book_config(rp))
+        assert m.recipe.title == "Nimble Space Opera"
         assert len(m.chapters) == 1
         assert m.chapters[0].source_files == [(tmp_path / "Intro.md").resolve()]
 
@@ -117,7 +113,7 @@ class TestKindFile:
                 source: base:Setting.md
         """,
         )
-        m = build_manifest(load_recipe(rp))
+        m = build_manifest(load_book_config(rp))
         assert len(m.chapters) == 1
         ch = m.chapters[0]
         assert ch.title == "Setting"
@@ -147,7 +143,7 @@ class TestKindFile:
                 source: base:Setting.md
         """,
         )
-        m = build_manifest(load_recipe(rp))
+        m = build_manifest(load_book_config(rp))
         assert m.chapters[0].tailpiece_path == tailpiece.resolve()
 
     def test_scoped_content_art_insert_resolves_to_chapter_splash(self, mini_workspace):
@@ -174,7 +170,7 @@ class TestKindFile:
                     placement: bottom-half
         """,
         )
-        m = build_manifest(load_recipe(rp))
+        m = build_manifest(load_book_config(rp))
         assert len(m.splashes) == 1
         assert m.splashes[0].id == "boarding"
         assert m.splashes[0].chapter_slug == "setting"
@@ -206,7 +202,7 @@ class TestKindFile:
                 source: base:Setting.md
         """,
         )
-        m = build_manifest(load_recipe(rp))
+        m = build_manifest(load_book_config(rp))
         assert m.chapters[0].headpiece_path == headpiece.resolve()
         assert m.chapters[0].break_ornament_path == break_ornament.resolve()
 
@@ -242,7 +238,7 @@ class TestKindFile:
                 source: base:Setting.md
         """,
         )
-        m = build_manifest(load_recipe(rp))
+        m = build_manifest(load_book_config(rp))
         assert [s.id for s in m.splashes] == ["front", "setting-corner"]
         assert m.splashes[0].art_path == front.resolve()
         assert m.splashes[1].art_path == corner.resolve()
@@ -287,7 +283,7 @@ class TestKindFile:
                 source: base:Backgrounds.md
         """,
         )
-        m = build_manifest(load_recipe(rp))
+        m = build_manifest(load_book_config(rp))
         assert m.fillers.enabled is True
         assert m.fillers.assets[0].art_path == tailpiece.resolve()
         assert m.fillers.slots["chapter-end"].min_space_in == 0.65
@@ -352,7 +348,7 @@ class TestKindFile:
             """,
         )
 
-        m = build_manifest(load_recipe(rp))
+        m = build_manifest(load_book_config(rp))
 
         original_rules = m.find_chapter("original-conditions")
         assert original_rules is not None
@@ -364,7 +360,7 @@ class TestKindFile:
         assert original_backgrounds.filler_slots == []
         combat = m.find_chapter("combat")
         assert combat is not None
-        assert combat.source_boundary_filler_slot == "section-end"
+        assert combat.source_boundary_filler_slots == ["section-end"]
         assert combat.filler_slots[0].context == "combat"
 
     def test_fillers_attach_multiple_marker_slots(self, mini_workspace):
@@ -414,7 +410,7 @@ class TestKindFile:
             """,
         )
 
-        m = build_manifest(load_recipe(rp))
+        m = build_manifest(load_book_config(rp))
 
         setting = m.find_chapter("setting")
         assert setting is not None
@@ -428,7 +424,6 @@ class TestKindFile:
             "section-end",
             "section-bottom-band",
         ]
-        assert combat.source_boundary_filler_slot == "section-end"
 
     def test_filler_marker_policy_can_disable_generated_markers(
         self,
@@ -473,7 +468,7 @@ class TestKindFile:
             """,
         )
 
-        m = build_manifest(load_recipe(rp))
+        m = build_manifest(load_book_config(rp))
 
         setting = m.find_chapter("setting")
         combat = m.find_chapter("combat")
@@ -481,7 +476,7 @@ class TestKindFile:
         assert combat is not None
         assert setting.filler_slots == []
         assert combat.filler_slots == []
-        assert combat.source_boundary_filler_slot is None
+        assert combat.source_boundary_filler_slots == []
         assert combat.source_filler_enabled == [False, True]
         assert combat.heading_filler_markers == []
 
@@ -521,7 +516,7 @@ class TestKindFile:
         """,
         )
 
-        m = build_manifest(load_recipe(rp))
+        m = build_manifest(load_book_config(rp))
 
         assert m.page_damage.enabled is True
         assert m.page_damage.seed == "manifest-test"
@@ -705,7 +700,7 @@ class TestKindFile:
         """,
         )
 
-        m = build_manifest(load_recipe(rp))
+        m = build_manifest(load_book_config(rp))
         assets = {asset.id: asset for asset in m.fillers.assets}
 
         assert assets["auto-filler-spot-future"].shape == "spot"
@@ -756,7 +751,7 @@ class TestKindFile:
         """,
         )
 
-        m = build_manifest(load_recipe(rp))
+        m = build_manifest(load_book_config(rp))
         assets = {asset.id: asset for asset in m.fillers.assets}
 
         assert assets["auto-ornaments-ornament-tailpiece-airlock"].shape == "tailpiece"
@@ -781,7 +776,7 @@ class TestKindFile:
             path.parent.mkdir(parents=True, exist_ok=True)
             path.write_text("fake", encoding="utf-8")
 
-        recipe = load_recipe(
+        recipe = load_book_config(
             _write_recipe(
                 ws,
                 """
@@ -870,7 +865,7 @@ class TestKindFile:
         """,
         )
 
-        m = build_manifest(load_recipe(rp))
+        m = build_manifest(load_book_config(rp))
         assets = {asset.id: asset for asset in m.fillers.assets}
 
         assert (
@@ -904,7 +899,7 @@ class TestKindFile:
         """,
         )
         with pytest.raises(ManifestError, match="unknown chapter"):
-            build_manifest(load_recipe(rp))
+            build_manifest(load_book_config(rp))
 
     def test_missing_source_raises(self, mini_workspace):
         ws, _, _ = mini_workspace
@@ -920,7 +915,7 @@ class TestKindFile:
         """,
         )
         with pytest.raises(ManifestError, match="not found"):
-            build_manifest(load_recipe(rp))
+            build_manifest(load_book_config(rp))
 
     def test_explicit_slug_overrides_title_slug(self, mini_workspace):
         ws, base, _ = mini_workspace
@@ -937,7 +932,7 @@ class TestKindFile:
                 source: base:Setting.md
         """,
         )
-        m = build_manifest(load_recipe(rp))
+        m = build_manifest(load_book_config(rp))
         assert m.chapters[0].title == "Original - Setting"
         assert m.chapters[0].slug == "original-setting"
 
@@ -969,7 +964,7 @@ class TestKindCatalogEmbedCompendium:
                 source: base:Backgrounds List.md
         """,
         )
-        m = build_manifest(load_recipe(rp))
+        m = build_manifest(load_book_config(rp))
         assert len(m.chapters) == 1
         ch = m.chapters[0]
         # source_files = [the catalog file itself]
@@ -1000,7 +995,7 @@ class TestKindClassesCatalog:
                 individual_pdf_subdir: classes
         """,
         )
-        m = build_manifest(load_recipe(rp))
+        m = build_manifest(load_book_config(rp))
         # Flat: 2 sibling chapters (Mage, Rogue), no wrapper
         assert len(m.chapters) == 2
         assert {c.title for c in m.chapters} == {"Mage", "Rogue"}
@@ -1029,7 +1024,7 @@ class TestKindClassesCatalog:
                 child_style: class
         """,
         )
-        m = build_manifest(load_recipe(rp))
+        m = build_manifest(load_book_config(rp))
         # Wrapper: 1 top-level chapter "Classes" with 2 children
         assert len(m.chapters) == 1
         wrapper = m.chapters[0]
@@ -1063,7 +1058,7 @@ class TestKindClassesCatalog:
         """,
         )
 
-        m = build_manifest(load_recipe(rp))
+        m = build_manifest(load_book_config(rp))
 
         mage = next(c for c in m.chapters if c.title == "Mage")
         assert mage.headpiece_path == headpiece.resolve()
@@ -1086,7 +1081,7 @@ class TestKindClassesCatalog:
                 source: base:Heroes/Classes List.md
         """,
         )
-        m = build_manifest(load_recipe(rp))
+        m = build_manifest(load_book_config(rp))
         mage = next(c for c in m.chapters if c.title == "Mage")
         # Mage Description should resolve to the overlay version
         desc_path = next(
@@ -1120,7 +1115,7 @@ class TestKindClassesCatalog:
                 source: base:Heroes/Classes List.md
         """,
         )
-        m = build_manifest(load_recipe(rp))
+        m = build_manifest(load_book_config(rp))
         assert len(m.chapters) == 1
         assert any("NonexistentFile" in w for w in m.warnings)
         # Class chapter still built with the resolved files
@@ -1148,7 +1143,7 @@ class TestKindClassesCatalog:
                 replace_existing_opening_art: true
         """,
         )
-        m = build_manifest(load_recipe(rp))
+        m = build_manifest(load_book_config(rp))
         mage = next(c for c in m.chapters if c.title == "Mage")
         rogue = next(c for c in m.chapters if c.title == "Rogue")
         assert mage.spot_art_path == mage_spot.resolve()
@@ -1177,7 +1172,7 @@ class TestKindClassesCatalog:
                 class_art_pattern: classes/dividers/class-{slug}.png
         """,
         )
-        m = build_manifest(load_recipe(rp))
+        m = build_manifest(load_book_config(rp))
         mage = next(c for c in m.chapters if c.title == "Mage")
         rogue = next(c for c in m.chapters if c.title == "Rogue")
         assert mage.art_path == mage_art.resolve()
@@ -1210,7 +1205,7 @@ class TestKindFolder:
                 source: base:Misc
         """,
         )
-        m = build_manifest(load_recipe(rp))
+        m = build_manifest(load_book_config(rp))
         names = [p.name for p in m.chapters[0].source_files]
         assert names == ["Alpha.md", "Bravo.md", "Charlie.md"]
 
@@ -1234,7 +1229,7 @@ class TestManifestHelpers:
                 source: base:Heroes/Classes List.md
         """,
         )
-        m = build_manifest(load_recipe(rp))
+        m = build_manifest(load_book_config(rp))
         assert m.find_chapter("Mage").title == "Mage"
         assert m.find_chapter("mage").title == "Mage"
         assert m.find_chapter("rogue").title == "Rogue"
@@ -1258,7 +1253,7 @@ class TestManifestHelpers:
                 source: base:Heroes/Classes List.md
         """,
         )
-        m = build_manifest(load_recipe(rp))
+        m = build_manifest(load_book_config(rp))
         text = dump(m)
         assert "Setting" in text
         assert "Mage" in text
@@ -1316,7 +1311,7 @@ class TestKindComposite:
                 source: base:Heroes/Classes
         """,
         )
-        m = build_manifest(load_recipe(rp))
+        m = build_manifest(load_book_config(rp))
         assert len(m.chapters) == 1
         ch = m.chapters[0]
         assert ch.title == "All Classes"
@@ -1342,7 +1337,7 @@ class TestKindComposite:
         """,
         )
         with pytest.raises(ManifestError, match="explicit vault prefix"):
-            build_manifest(load_recipe(rp))
+            build_manifest(load_book_config(rp))
 
     def test_composite_requires_directory(self, mini_workspace):
         ws, base, _ = mini_workspace
@@ -1358,7 +1353,7 @@ class TestKindComposite:
         """,
         )
         with pytest.raises(ManifestError, match="must be a directory"):
-            build_manifest(load_recipe(rp))
+            build_manifest(load_book_config(rp))
 
 
 # ---------------------------------------------------------------------------
@@ -1388,7 +1383,7 @@ class TestKindGroup:
                     source: base:Backgrounds.md
         """,
         )
-        m = build_manifest(load_recipe(rp))
+        m = build_manifest(load_book_config(rp))
         assert len(m.chapters) == 1
         wrap = m.chapters[0]
         assert wrap.title == "Hero Reference"
@@ -1418,7 +1413,7 @@ class TestKindGroup:
                     source: base:Backgrounds.md
         """,
         )
-        m = build_manifest(load_recipe(rp))
+        m = build_manifest(load_book_config(rp))
         wrap = m.chapters[0]
         # First child kept default style -> picks up the group's child_style
         assert wrap.children[0].style == "equipment"
@@ -1443,7 +1438,7 @@ class TestKindGroup:
                     source: base:Setting.md
         """,
         )
-        m = build_manifest(load_recipe(rp))
+        m = build_manifest(load_book_config(rp))
         wrap = m.chapters[0]
         assert wrap.children[0].divider is True
 
@@ -1474,8 +1469,8 @@ class TestKindSequence:
                 source: base:Rules/Intro.md
         """,
         )
-        with pytest.raises(RecipeError, match="source"):
-            build_manifest(load_recipe(rp))
+        with pytest.raises(BookConfigError, match="source"):
+            build_manifest(load_book_config(rp))
 
         rp = _write_recipe(
             ws,
@@ -1496,7 +1491,7 @@ class TestKindSequence:
                     source: base:Rules/Actions.md
         """,
         )
-        m = build_manifest(load_recipe(rp))
+        m = build_manifest(load_book_config(rp))
         ch = m.chapters[0]
         assert ch.title == "Combat"
         assert ch.style == "rules"
@@ -1510,20 +1505,20 @@ class TestKindSequence:
 
 
 # ---------------------------------------------------------------------------
-# Recipe.project_dir / art_dir
+# BookConfig.project_dir / art_dir
 # ---------------------------------------------------------------------------
 
 
-class TestRecipePathProperties:
+class TestBookConfigPathProperties:
     def test_project_dir_is_book_config_directory(self, tmp_path):
-        from papercrown.project.recipe import CoverSpec, Recipe
+        from papercrown.project.recipe import BookConfig, CoverSpec
 
         project = tmp_path / "project"
         config_dir = project / "books"
         config_dir.mkdir(parents=True)
         rp = config_dir / "foo.yaml"
         rp.write_text("title: t\n", encoding="utf-8")
-        r = Recipe(
+        r = BookConfig(
             title="t",
             subtitle=None,
             cover_eyebrow=None,
@@ -1538,11 +1533,11 @@ class TestRecipePathProperties:
         assert r.art_dir == (config_dir / "Art").resolve()
 
     def test_project_dir_when_recipe_alongside(self, tmp_path):
-        from papercrown.project.recipe import CoverSpec, Recipe
+        from papercrown.project.recipe import BookConfig, CoverSpec
 
         rp = tmp_path / "myrecipe.yaml"
         rp.write_text("title: t\n", encoding="utf-8")
-        r = Recipe(
+        r = BookConfig(
             title="t",
             subtitle=None,
             cover_eyebrow=None,
@@ -1556,14 +1551,14 @@ class TestRecipePathProperties:
         assert r.project_dir == tmp_path.resolve()
 
     def test_art_dir_can_be_overridden(self, tmp_path):
-        from papercrown.project.recipe import CoverSpec, Recipe
+        from papercrown.project.recipe import BookConfig, CoverSpec
 
         rp = tmp_path / "recipes" / "foo.yaml"
         rp.parent.mkdir()
         rp.write_text("title: t\n", encoding="utf-8")
         art_dir = tmp_path / "Sample Vault" / "Art"
         art_dir.mkdir(parents=True)
-        r = Recipe(
+        r = BookConfig(
             title="t",
             subtitle=None,
             cover_eyebrow=None,

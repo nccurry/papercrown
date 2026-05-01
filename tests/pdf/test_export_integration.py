@@ -20,7 +20,7 @@ from __future__ import annotations
 import pytest
 
 from papercrown.project.manifest import build_manifest
-from papercrown.project.recipe import load_recipe
+from papercrown.project.recipe import load_book_config
 from papercrown.system import export
 
 pytestmark = pytest.mark.usefixtures("require_pandoc")
@@ -59,7 +59,7 @@ class TestEnsureExportsFreshHappyPath:
         require_obsidian_export,
         isolated_build_cache,
     ):
-        recipe = load_recipe(mini_recipe_path)
+        recipe = load_book_config(mini_recipe_path)
         recipe.cache_dir_override = isolated_build_cache
         manifest = build_manifest(recipe)
         tools = export.discover_tools()
@@ -92,7 +92,7 @@ class TestEnsureExportsFreshHappyPath:
         contain literal `[[...]]` wikilink syntax -- it should have been
         rewritten to markdown links (`[alias](Target.md)`) or inlined
         embed content."""
-        recipe = load_recipe(mini_recipe_path)
+        recipe = load_book_config(mini_recipe_path)
         recipe.cache_dir_override = isolated_build_cache
         manifest = build_manifest(recipe)
         tools = export.discover_tools()
@@ -147,7 +147,7 @@ class TestEnsureExportsFreshIgnoresUnreferencedFailures:
             "contents:\n  - kind: file\n    source: v:Good.md\n",
             encoding="utf-8",
         )
-        recipe = load_recipe(recipe_path)
+        recipe = load_book_config(recipe_path)
         recipe.cache_dir_override = isolated_build_cache
         manifest = build_manifest(recipe)
         tools = export.discover_tools()

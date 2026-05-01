@@ -6,7 +6,7 @@ import textwrap
 from pathlib import Path
 
 from papercrown.project.manifest import build_manifest
-from papercrown.project.recipe import load_recipe
+from papercrown.project.recipe import load_book_config
 from papercrown.system.content_lint import lint_manifest_content
 from papercrown.system.diagnostics import DiagnosticSeverity
 
@@ -71,7 +71,7 @@ def _write_two_vault_recipe(
 
 
 def test_lint_reports_unresolved_wikilinks_in_assembled_markdown(tmp_path):
-    recipe = load_recipe(_write_recipe(tmp_path, "# Foo\n\n[[Missing]]\n"))
+    recipe = load_book_config(_write_recipe(tmp_path, "# Foo\n\n[[Missing]]\n"))
     manifest = build_manifest(recipe)
 
     diagnostics = lint_manifest_content(manifest)
@@ -84,7 +84,7 @@ def test_lint_reports_unresolved_wikilinks_in_assembled_markdown(tmp_path):
 
 
 def test_lint_reports_duplicate_explicit_heading_ids(tmp_path):
-    recipe = load_recipe(
+    recipe = load_book_config(
         _write_recipe(tmp_path, "# Foo\n\n## One {#dup}\n\n## Two {#dup}\n")
     )
     manifest = build_manifest(recipe)
@@ -97,7 +97,7 @@ def test_lint_reports_duplicate_explicit_heading_ids(tmp_path):
 
 
 def test_lint_accepts_exported_markdown_without_raw_wikilinks(tmp_path):
-    recipe = load_recipe(_write_recipe(tmp_path, "# Foo\n\n[[Resolved]]\n"))
+    recipe = load_book_config(_write_recipe(tmp_path, "# Foo\n\n[[Resolved]]\n"))
     manifest = build_manifest(recipe)
     source = manifest.all_chapters()[0].source_files[0]
     exported = tmp_path / "exported.md"
@@ -111,7 +111,7 @@ def test_lint_accepts_exported_markdown_without_raw_wikilinks(tmp_path):
 
 
 def test_lint_reports_exact_custom_duplicate(tmp_path):
-    recipe = load_recipe(
+    recipe = load_book_config(
         _write_two_vault_recipe(
             tmp_path,
             nimble_body="# Foo\nsame\n",
@@ -130,7 +130,7 @@ def test_lint_reports_exact_custom_duplicate(tmp_path):
 
 
 def test_lint_reports_changed_custom_file_bypassed_by_recipe(tmp_path):
-    recipe = load_recipe(
+    recipe = load_book_config(
         _write_two_vault_recipe(
             tmp_path,
             nimble_body="# Foo\nOriginal wording.\n",
@@ -149,7 +149,7 @@ def test_lint_reports_changed_custom_file_bypassed_by_recipe(tmp_path):
 
 
 def test_lint_allows_changed_custom_file_bypassed_in_source_reference(tmp_path):
-    recipe = load_recipe(
+    recipe = load_book_config(
         _write_two_vault_recipe(
             tmp_path,
             nimble_body="# Foo\nOriginal wording.\n",
@@ -186,7 +186,7 @@ def test_lint_reports_mojibake_recipe_source_path(tmp_path):
         ).lstrip(),
         encoding="utf-8",
     )
-    manifest = build_manifest(load_recipe(recipe_path))
+    manifest = build_manifest(load_book_config(recipe_path))
 
     diagnostics = lint_manifest_content(manifest)
 

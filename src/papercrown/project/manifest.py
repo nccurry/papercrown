@@ -1,6 +1,6 @@
-"""Manifest builder: Recipe -> Chapter tree.
+"""Manifest builder: BookConfig -> Chapter tree.
 
-Walks a Recipe's chapters, dispatches each entry to the right kind handler,
+Walks a BookConfig's chapters, dispatches each entry to the right kind handler,
 and produces a tree of `Chapter` objects ready for the renderer.
 
 A Chapter has:
@@ -46,7 +46,6 @@ from papercrown.project.manifest_models import (
     FillerCatalog,
     FillerSlot,
     GeneratedPart,
-    InlinePart,
     Manifest,
     PageDamageAsset,
     PageDamageCatalog,
@@ -56,11 +55,11 @@ from papercrown.project.manifest_models import (
 from papercrown.project.recipe import (
     PAGE_DAMAGE_FAMILIES,
     PAGE_DAMAGE_SIZES,
-    ChapterSpec,
+    BookConfig,
+    ContentItemSpec,
     FillerAssetSpec,
     FillerHeadingMarkerSpec,
     FillerMarkersSpec,
-    Recipe,
     SourceRef,
     SplashSpec,
 )
@@ -84,7 +83,6 @@ __all__ = [
     "FillerCatalog",
     "FillerSlot",
     "GeneratedPart",
-    "InlinePart",
     "Manifest",
     "ManifestError",
     "PageDamageAsset",
@@ -117,7 +115,11 @@ class ManifestError(ValueError):
 # ---------------------------------------------------------------------------
 
 
-def _resolve_source(source: SourceRef, recipe: Recipe, vault_index: VaultIndex) -> Path:
+def _resolve_source(
+    source: SourceRef,
+    recipe: BookConfig,
+    vault_index: VaultIndex,
+) -> Path:
     """Turn a recipe's `vault:path` reference into an absolute file path."""
     if source.vault is not None:
         vault = recipe.vault_by_name(source.vault)
@@ -137,7 +139,11 @@ def _resolve_source(source: SourceRef, recipe: Recipe, vault_index: VaultIndex) 
     return hit
 
 
-def _chapter_art_path(recipe: Recipe, spec: ChapterSpec, title: str) -> Path | None:
+def _chapter_art_path(
+    recipe: BookConfig,
+    spec: ContentItemSpec,
+    title: str,
+) -> Path | None:
     """Resolve explicit or convention-derived chapter divider/header art."""
     if spec.art:
         return _art_path(recipe, spec.art)
@@ -149,7 +155,7 @@ def _chapter_art_path(recipe: Recipe, spec: ChapterSpec, title: str) -> Path | N
     )
 
 
-def _class_art_path(recipe: Recipe, slug: str) -> Path | None:
+def _class_art_path(recipe: BookConfig, slug: str) -> Path | None:
     """Resolve convention-derived class divider art for a class slug."""
     return convention_art_path(
         recipe,
@@ -159,7 +165,7 @@ def _class_art_path(recipe: Recipe, slug: str) -> Path | None:
     )
 
 
-def _class_spot_art_path(recipe: Recipe, slug: str) -> Path | None:
+def _class_spot_art_path(recipe: BookConfig, slug: str) -> Path | None:
     """Resolve convention-derived class opening spot art for a class slug."""
     return convention_art_path(
         recipe,
@@ -169,7 +175,7 @@ def _class_spot_art_path(recipe: Recipe, slug: str) -> Path | None:
     )
 
 
-def _filler_art_root(recipe: Recipe) -> Path:
+def _filler_art_root(recipe: BookConfig) -> Path:
     """Return the root used for filler assets."""
     art_dir = recipe.fillers.art_dir
     if art_dir:
@@ -177,7 +183,7 @@ def _filler_art_root(recipe: Recipe) -> Path:
     return recipe.art_dir.resolve()
 
 
-def _filler_art_path(recipe: Recipe, spec: FillerAssetSpec) -> Path | None:
+def _filler_art_path(recipe: BookConfig, spec: FillerAssetSpec) -> Path | None:
     """Resolve a filler art asset path."""
     root = _filler_art_root(recipe)
     art = (root / spec.art).resolve()
@@ -188,7 +194,7 @@ def _filler_art_path(recipe: Recipe, spec: FillerAssetSpec) -> Path | None:
     return art if art.is_file() else None
 
 
-def _page_damage_art_root(recipe: Recipe) -> Path:
+def _page_damage_art_root(recipe: BookConfig) -> Path:
     """Return the root used for page-damage assets."""
     return (recipe.art_dir / recipe.page_damage.art_dir).resolve()
 
@@ -228,7 +234,7 @@ def _auto_filler_asset_id(path: Path, *, art_root: Path) -> str:
 
 
 def _auto_filler_assets(
-    recipe: Recipe,
+    recipe: BookConfig,
     *,
     seen_ids: set[str],
     seen_paths: set[Path],
@@ -248,7 +254,11 @@ def _auto_filler_assets(
         resolved = path.resolve()
         if resolved in seen_paths:
             continue
-        classification = classify_art_path(resolved, art_root=root)
+        classification = classify_art_path(
+            resolved,
+            art_root=root,
+            custom_roles=recipe.art_roles,
+        )
         is_tailpiece = (
             allow_tailpieces
             and classification.role == "ornament-tailpiece"
@@ -274,7 +284,7 @@ def _auto_filler_assets(
     return assets
 
 
-def _per_class_art(recipe: Recipe, slug: str) -> Path | None:
+def _per_class_art(recipe: BookConfig, slug: str) -> Path | None:
     """Look for recipe.art_dir/<slug>.png fallbacks for a generated child."""
     for ext in ("png", "jpg", "jpeg", "webp"):
         candidate = recipe.art_dir / f"{slug}.{ext}"
@@ -284,7 +294,7 @@ def _per_class_art(recipe: Recipe, slug: str) -> Path | None:
 
 
 def _art_path_from_pattern(
-    recipe: Recipe,
+    recipe: BookConfig,
     pattern: str | None,
     *,
     slug: str,
@@ -300,21 +310,20 @@ def _art_path_from_pattern(
     return _art_path(recipe, art_filename)
 
 
-def _chapter_slug(spec: ChapterSpec, title: str) -> str:
+def _chapter_slug(spec: ContentItemSpec, title: str) -> str:
     """Return an explicit recipe slug or derive one from the chapter title."""
     return spec.slug or slugify(title)
 
 
 def _chapter_from_spec(
-    spec: ChapterSpec,
-    recipe: Recipe,
+    spec: ContentItemSpec,
+    recipe: BookConfig,
     title: str,
     *,
     source_files: list[Path] | None = None,
     source_titles: list[str | None] | None = None,
     source_strip_related: list[bool] | None = None,
     source_filler_enabled: list[bool] | None = None,
-    source_boundary_filler_slot: str | None = None,
     source_boundary_filler_slots: list[str] | None = None,
     children: list[Chapter] | None = None,
     slug: str | None = None,
@@ -345,9 +354,7 @@ def _chapter_from_spec(
         source_titles=list(source_titles or []),
         source_strip_related=list(source_strip_related or []),
         source_filler_enabled=list(source_filler_enabled or []),
-        source_boundary_filler_slot=source_boundary_filler_slot,
         source_boundary_filler_slots=list(source_boundary_filler_slots or []),
-        subclass_filler_slot=recipe.fillers.markers.subclass.slot,
         subclass_filler_slots=list(recipe.fillers.markers.subclass.slots),
         fillers_enabled=spec.fillers_enabled,
         children=list(children or []),
@@ -377,7 +384,7 @@ def _find_chapter(chapters: list[Chapter], name: str) -> Chapter | None:
 
 def _build_splashes(
     specs: list[SplashSpec],
-    recipe: Recipe,
+    recipe: BookConfig,
     chapters: list[Chapter],
     warnings: list[str],
 ) -> list[Splash]:
@@ -425,7 +432,7 @@ def _build_splashes(
 
 def _build_scoped_art_splashes(
     chapters: list[Chapter],
-    recipe: Recipe,
+    recipe: BookConfig,
     warnings: list[str],
 ) -> list[Splash]:
     """Resolve content-item ``art:`` inserts into chapter splash placements."""
@@ -473,7 +480,7 @@ def _build_scoped_art_splashes(
     return splashes
 
 
-def _build_filler_catalog(recipe: Recipe, warnings: list[str]) -> FillerCatalog:
+def _build_filler_catalog(recipe: BookConfig, warnings: list[str]) -> FillerCatalog:
     """Resolve recipe filler assets to filesystem paths."""
     spec = recipe.fillers
     if not spec.enabled:
@@ -521,7 +528,7 @@ def _build_filler_catalog(recipe: Recipe, warnings: list[str]) -> FillerCatalog:
 
 
 def _build_page_damage_catalog(
-    recipe: Recipe,
+    recipe: BookConfig,
     warnings: list[str],
 ) -> PageDamageCatalog:
     """Resolve transparent page-damage assets from the recipe art directory."""
@@ -594,9 +601,7 @@ def _attach_chapter_filler_slots(
             candidate.filler_slots.clear()
             candidate.heading_filler_markers = []
             if not candidate.fillers_enabled:
-                candidate.source_boundary_filler_slot = None
                 candidate.source_boundary_filler_slots = []
-                candidate.subclass_filler_slot = None
                 candidate.subclass_filler_slots = []
                 continue
             candidate.heading_filler_markers = _chapter_heading_filler_markers(
@@ -608,21 +613,11 @@ def _attach_chapter_filler_slots(
                 candidate.subclass_filler_slots,
                 catalog,
             )
-            candidate.subclass_filler_slot = (
-                candidate.subclass_filler_slots[0]
-                if candidate.subclass_filler_slots
-                else None
-            )
             if not candidate.source_files:
                 continue
             candidate.source_boundary_filler_slots = _valid_marker_slots(
                 candidate.source_boundary_filler_slots,
                 catalog,
-            )
-            candidate.source_boundary_filler_slot = (
-                candidate.source_boundary_filler_slots[0]
-                if candidate.source_boundary_filler_slots
-                else None
             )
             if _skip_terminal_filler_slot(candidate):
                 continue
@@ -767,8 +762,8 @@ def _chapter_filler_context(chapter: Chapter) -> str:
 
 
 def _build_file_chapter(
-    spec: ChapterSpec,
-    recipe: Recipe,
+    spec: ContentItemSpec,
+    recipe: BookConfig,
     vault_index: VaultIndex,
 ) -> Chapter:
     """Build a chapter from one markdown source file."""
@@ -787,8 +782,8 @@ def _build_file_chapter(
 
 
 def _build_catalog_chapter(
-    spec: ChapterSpec,
-    recipe: Recipe,
+    spec: ContentItemSpec,
+    recipe: BookConfig,
     vault_index: VaultIndex,
     warnings: list[str],
 ) -> Chapter:
@@ -838,8 +833,8 @@ def _build_catalog_chapter(
 
 
 def _build_composite_chapter(
-    spec: ChapterSpec,
-    recipe: Recipe,
+    spec: ContentItemSpec,
+    recipe: BookConfig,
     vault_index: VaultIndex,
 ) -> Chapter:
     """Render a folder-as-chapter: alphabetical concatenation of all .md files."""
@@ -869,8 +864,8 @@ def _build_composite_chapter(
 
 
 def _build_classes_catalog_chapters(
-    spec: ChapterSpec,
-    recipe: Recipe,
+    spec: ContentItemSpec,
+    recipe: BookConfig,
     vault_index: VaultIndex,
     warnings: list[str],
 ) -> list[Chapter]:
@@ -982,8 +977,8 @@ def _build_classes_catalog_chapters(
 
 
 def _build_group_chapter(
-    spec: ChapterSpec,
-    recipe: Recipe,
+    spec: ContentItemSpec,
+    recipe: BookConfig,
     vault_index: VaultIndex,
     warnings: list[str],
 ) -> Chapter:
@@ -1014,8 +1009,8 @@ def _build_group_chapter(
 
 
 def _build_sequence_chapter(
-    spec: ChapterSpec,
-    recipe: Recipe,
+    spec: ContentItemSpec,
+    recipe: BookConfig,
     vault_index: VaultIndex,
 ) -> Chapter:
     """Build a mixed-source chapter from an explicit ordered source list."""
@@ -1038,9 +1033,6 @@ def _build_sequence_chapter(
         source_titles=source_titles,
         source_strip_related=source_strip_related,
         source_filler_enabled=source_filler_enabled,
-        source_boundary_filler_slot=(
-            recipe.fillers.markers.source_boundary.sequence_slot
-        ),
         source_boundary_filler_slots=list(
             recipe.fillers.markers.source_boundary.sequence_slots
         ),
@@ -1050,8 +1042,8 @@ def _build_sequence_chapter(
 
 
 def _build_folder_chapter(
-    spec: ChapterSpec,
-    recipe: Recipe,
+    spec: ContentItemSpec,
+    recipe: BookConfig,
     vault_index: VaultIndex,
 ) -> Chapter:
     """All `.md` in a folder, sorted alphabetically."""
@@ -1086,8 +1078,8 @@ def _build_folder_chapter(
 
 
 def _dispatch_chapter(
-    spec: ChapterSpec,
-    recipe: Recipe,
+    spec: ContentItemSpec,
+    recipe: BookConfig,
     vault_index: VaultIndex,
     warnings: list[str],
 ) -> list[Chapter]:
@@ -1114,26 +1106,12 @@ def _dispatch_chapter(
 
 
 def _content_part(
-    spec: ChapterSpec,
-    recipe: Recipe,
+    spec: ContentItemSpec,
+    recipe: BookConfig,
     vault_index: VaultIndex,
     warnings: list[str],
 ) -> tuple[list[BookPart], list[Chapter]]:
     """Resolve one ordered content spec into render parts and chapter entries."""
-    if spec.kind == "inline":
-        return (
-            [
-                InlinePart(
-                    style=spec.style,
-                    title=spec.title,
-                    subtitle=spec.subtitle,
-                    cover_eyebrow=spec.cover_eyebrow,
-                    cover_footer=spec.cover_footer,
-                    slug=spec.slug,
-                )
-            ],
-            [],
-        )
     if spec.kind == "toc":
         title = spec.title or "Table of Contents"
         return ([TocPart(title=title, slug=slugify(title), depth=spec.depth)], [])
@@ -1158,11 +1136,17 @@ def _content_part(
 
 def _default_generated_title(kind: str) -> str:
     return {
+        "art-credits": "Art Credits",
         "appendix-index": "Index",
+        "changelog": "Changelog",
+        "copyright": "Copyright",
+        "credits": "Credits",
+        "license": "License",
+        "title-page": "Title Page",
     }.get(kind, kind.replace("-", " ").title())
 
 
-def build_manifest(recipe: Recipe) -> Manifest:
+def build_manifest(recipe: BookConfig) -> Manifest:
     """Walk the recipe and produce a Manifest with a populated Chapter tree."""
     # Build VaultIndex in priority order from recipe.vault_overlay
     vault_specs = [(name, recipe.vaults[name].path) for name in recipe.vault_overlay]
@@ -1171,7 +1155,7 @@ def build_manifest(recipe: Recipe) -> Manifest:
     warnings: list[str] = []
     chapters: list[Chapter] = []
     contents: list[BookPart] = []
-    for spec in recipe.chapters:
+    for spec in recipe.contents:
         parts, part_chapters = _content_part(spec, recipe, vault_index, warnings)
         contents.extend(parts)
         chapters.extend(part_chapters)

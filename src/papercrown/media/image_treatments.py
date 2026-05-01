@@ -1,4 +1,4 @@
-"""Recipe-driven image treatment CSS."""
+"""BookConfig-driven image treatment CSS."""
 
 from __future__ import annotations
 

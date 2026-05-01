@@ -29,7 +29,7 @@ from papercrown.project.manifest import (
     Splash,
     build_manifest,
 )
-from papercrown.project.recipe import load_recipe
+from papercrown.project.recipe import load_book_config
 from papercrown.render import build
 from papercrown.system import export as export_mod
 from papercrown.system.cache import ArtifactCache
@@ -648,7 +648,7 @@ def test_build_chapter_pdf_skips_when_render_cache_matches(tmp_path, monkeypatch
             source: v:Foo.md
     """,
     )
-    recipe = load_recipe(rp)
+    recipe = load_book_config(rp)
     manifest = build_manifest(recipe)
     chapter = manifest.all_chapters()[0]
     tools = export_mod.Tools(
@@ -712,7 +712,7 @@ def test_build_outputs_scope_all_runs_book_in_prepared_job_pool(tmp_path, monkey
             source: v:Foo.md
     """,
     )
-    recipe = load_recipe(rp)
+    recipe = load_book_config(rp)
     manifest = build_manifest(recipe)
     tools = export_mod.Tools(
         pandoc="pandoc",
@@ -786,7 +786,7 @@ def test_build_chapter_pdf_passes_page_damage_catalog(tmp_path, monkeypatch):
             source: v:Foo.md
     """,
     )
-    recipe = load_recipe(rp)
+    recipe = load_book_config(rp)
     manifest = build_manifest(recipe)
     chapter = manifest.all_chapters()[0]
     tools = export_mod.Tools(
@@ -866,7 +866,7 @@ def test_fast_draft_chapter_pdf_skips_page_art_and_cleanup(tmp_path, monkeypatch
         "# Foo\n\n![Spot](spot.png)\n",
         encoding="utf-8",
     )
-    recipe = load_recipe(rp)
+    recipe = load_book_config(rp)
     manifest = build_manifest(recipe)
     chapter = manifest.all_chapters()[0]
     tools = export_mod.Tools(
@@ -1069,7 +1069,7 @@ def test_clean_stale_pdf_outputs_removes_renamed_artifacts(tmp_path):
             source: v:Foo.md
     """,
     )
-    recipe = load_recipe(rp)
+    recipe = load_book_config(rp)
     manifest = build_manifest(recipe)
     root = paths.output_root(recipe)
     root.mkdir(parents=True)
@@ -1119,7 +1119,7 @@ class TestPathReexports:
                 source: v:Foo.md
         """,
         )
-        recipe = load_recipe(rp)
+        recipe = load_book_config(rp)
         ch = Chapter(title="X", slug="x")
         assert paths.chapter_pdf_path(recipe, ch).name == "X.pdf"
 
@@ -1135,7 +1135,7 @@ class TestPathReexports:
                 source: v:Foo.md
         """,
         )
-        recipe = load_recipe(rp)
+        recipe = load_book_config(rp)
         assert (
             paths.combined_book_path(recipe, profile=OutputProfile.PRINT).name
             == "My Book.pdf"
@@ -1161,7 +1161,7 @@ class TestSingleChapterLookup:
                 source: v:Foo.md
         """,
         )
-        m = build_manifest(load_recipe(rp))
+        m = build_manifest(load_book_config(rp))
         assert m.find_chapter("Berserker").title == "Berserker"
         assert m.find_chapter("berserker").title == "Berserker"
         assert m.find_chapter("BERSERKER").title == "Berserker"
@@ -1179,5 +1179,5 @@ class TestSingleChapterLookup:
                 source: v:Foo.md
         """,
         )
-        m = build_manifest(load_recipe(rp))
+        m = build_manifest(load_book_config(rp))
         assert m.find_chapter("Wizard") is None

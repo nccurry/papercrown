@@ -422,7 +422,7 @@ def write_missing_art_report(
     lines = [
         "# Missing Filler Art",
         "",
-        f"- Recipe: {recipe_title}",
+        f"- BookConfig: {recipe_title}",
         f"- Unfilled art-worthy slots: {len(opportunities)}",
         "",
     ]

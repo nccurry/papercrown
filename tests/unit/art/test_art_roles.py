@@ -9,9 +9,9 @@ from PIL import Image, ImageDraw
 
 from papercrown.art import audit as audit_mod
 from papercrown.art.audit import audit_recipe_art
-from papercrown.art.roles import ROLE_REGISTRY, classify_art_path
+from papercrown.art.roles import ROLE_REGISTRY, ArtRoleSpec, classify_art_path
 from papercrown.project.manifest import build_manifest
-from papercrown.project.recipe import load_recipe
+from papercrown.project.recipe import load_book_config
 
 
 def test_classify_art_path_recognizes_canonical_roles(tmp_path: Path):
@@ -75,6 +75,81 @@ def test_classify_art_path_recognizes_flat_filename_roles(tmp_path: Path):
         assert classify_art_path(art / filename, art_root=art).role == role
 
 
+def test_classify_art_path_accepts_project_declared_roles(tmp_path: Path):
+    art = tmp_path / "Art"
+    roles = {
+        "power-header": ArtRoleSpec(
+            "power-header",
+            "powers/headers",
+            6.0,
+            2.0,
+            transparent=False,
+            prefixes=("power-header",),
+        )
+    }
+
+    classified = classify_art_path(
+        art / "power-header-void-lance.png",
+        art_root=art,
+        custom_roles=roles,
+    )
+
+    assert classified.role == "power-header"
+    assert classified.context == "void"
+    assert classified.subject == "lance"
+    assert classified.variant is None
+    assert classified.nominal_width_in == 6.0
+
+
+def test_art_audit_uses_book_config_declared_roles(tmp_path: Path):
+    vault = tmp_path / "vault"
+    art = tmp_path / "art"
+    vault.mkdir()
+    art.mkdir()
+    (vault / "Foo.md").write_text("# Foo\n", encoding="utf-8")
+    Image.new("RGB", (1800, 600), (255, 255, 255)).save(
+        art / "power-header-void-lance.png"
+    )
+    Image.new("RGBA", (150, 150), (0, 0, 0, 0)).save(
+        art / "power-icon-void-lance.png"
+    )
+    recipe_path = tmp_path / "recipe.yaml"
+    recipe_path.write_text(
+        textwrap.dedent(
+            """
+            title: Custom Art Book
+            art_dir: art
+            art_roles:
+              power-header:
+                prefix: power-header
+                width: 6.0
+                height: 2.0
+                transparent: false
+              power-icon:
+                prefix: power-icon
+                width: 0.5
+                height: 0.5
+                transparent: true
+            vaults:
+              v: vault
+            contents:
+              - kind: file
+                title: Foo
+                source: v:Foo.md
+            """
+        ).lstrip(),
+        encoding="utf-8",
+    )
+    recipe = load_book_config(recipe_path)
+    manifest = build_manifest(recipe)
+
+    result = audit_recipe_art(recipe, manifest)
+
+    assert result.role_counts["power-header"] == 1
+    assert result.role_counts["power-icon"] == 1
+    assert not result.unclassified
+
+
 def test_art_audit_validates_alpha_and_unclassified_assets(tmp_path: Path):
     vault = tmp_path / "vault"
     art = tmp_path / "art"
@@ -105,7 +180,7 @@ def test_art_audit_validates_alpha_and_unclassified_assets(tmp_path: Path):
         ).lstrip(),
         encoding="utf-8",
     )
-    recipe = load_recipe(recipe_path)
+    recipe = load_book_config(recipe_path)
     manifest = build_manifest(recipe)
 
     result = audit_recipe_art(recipe, manifest)
@@ -151,7 +226,7 @@ def test_art_audit_warns_about_duplicates_sparse_art_and_backgrounds(
         ).lstrip(),
         encoding="utf-8",
     )
-    recipe = load_recipe(recipe_path)
+    recipe = load_book_config(recipe_path)
     manifest = build_manifest(recipe)
 
     result = audit_recipe_art(recipe, manifest)
@@ -199,7 +274,7 @@ def test_art_audit_warns_about_bottom_band_slot_and_top_safety(
         ).lstrip(),
         encoding="utf-8",
     )
-    recipe = load_recipe(recipe_path)
+    recipe = load_book_config(recipe_path)
     manifest = build_manifest(recipe)
 
     result = audit_recipe_art(recipe, manifest)
@@ -239,7 +314,7 @@ def test_art_audit_allows_cross_role_ornament_reuse(tmp_path: Path):
         ).lstrip(),
         encoding="utf-8",
     )
-    recipe = load_recipe(recipe_path)
+    recipe = load_book_config(recipe_path)
     manifest = build_manifest(recipe)
 
     result = audit_recipe_art(recipe, manifest)
@@ -318,7 +393,7 @@ def test_art_audit_expects_cover_roles_for_cover_targets(tmp_path: Path):
         ).lstrip(),
         encoding="utf-8",
     )
-    recipe = load_recipe(recipe_path)
+    recipe = load_book_config(recipe_path)
     manifest = build_manifest(recipe)
 
     result = audit_recipe_art(recipe, manifest)
@@ -381,7 +456,7 @@ def test_art_audit_allows_namespaced_art_packs_and_filler_art_dir(
         ).lstrip(),
         encoding="utf-8",
     )
-    recipe = load_recipe(recipe_path)
+    recipe = load_book_config(recipe_path)
     manifest = build_manifest(recipe)
 
     result = audit_recipe_art(recipe, manifest)
@@ -443,7 +518,7 @@ def test_art_audit_allows_flat_art_library(tmp_path: Path):
         ).lstrip(),
         encoding="utf-8",
     )
-    recipe = load_recipe(recipe_path)
+    recipe = load_book_config(recipe_path)
     manifest = build_manifest(recipe)
 
     result = audit_recipe_art(recipe, manifest)

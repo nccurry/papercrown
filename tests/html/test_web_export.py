@@ -9,7 +9,7 @@ from pathlib import Path
 from urllib.parse import urlparse
 
 from papercrown.project.manifest import build_manifest
-from papercrown.project.recipe import load_recipe
+from papercrown.project.recipe import load_book_config
 from papercrown.render import build
 from papercrown.system.export import Tools
 
@@ -77,7 +77,7 @@ def _local_refs(html: str) -> list[str]:
 
 
 def test_static_web_export_writes_self_contained_tree(tmp_path, require_pandoc):
-    recipe = load_recipe(_make_web_recipe(tmp_path))
+    recipe = load_book_config(_make_web_recipe(tmp_path))
     manifest = build_manifest(recipe)
     web_root = recipe.generated_root / "web"
     stale = web_root / "stale.txt"
@@ -189,7 +189,7 @@ def test_static_web_export_recovers_lossy_spell_list_embeds(tmp_path, require_pa
                   - v:Magic/Spell List.md
     """,
     )
-    recipe = load_recipe(recipe_path)
+    recipe = load_book_config(recipe_path)
     manifest = build_manifest(recipe)
     src = (tmp_path / "vault" / "Magic" / "Spell List.md").resolve()
     lossy = tmp_path / "export" / "Spell List.md"

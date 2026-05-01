@@ -9,8 +9,8 @@ import pytest
 from papercrown.app.config import (
     BuildConfigPatch,
     ConfigError,
+    load_book_build_config,
     load_project_config,
-    load_recipe_build_config,
     parse_jobs,
     resolve_build_config,
 )
@@ -92,17 +92,13 @@ def test_missing_project_config_without_book_yml_has_no_book(tmp_path, monkeypat
     assert patch.book_path is None
 
 
-def test_project_recipe_and_cli_layers_apply_in_order(tmp_path):
+def test_project_and_cli_layers_apply_in_order(tmp_path):
     recipe = _write_recipe(
         tmp_path,
         """
         title: B
         vaults:
           v: vault
-        build:
-          scope: book
-          profile: digital
-          page_damage: fast
         contents:
           - kind: file
             title: Foo
@@ -116,11 +112,11 @@ def test_project_recipe_and_cli_layers_apply_in_order(tmp_path):
             book: recipe.yaml
             build:
               target: pdf
-              scope: sections
-              profile: print
+              scope: book
+              profile: digital
               pagination: off
               draft_mode: fast
-              page_damage: off
+              page_damage: fast
               jobs: 2
               clean_pdf: false
             """
@@ -129,7 +125,7 @@ def test_project_recipe_and_cli_layers_apply_in_order(tmp_path):
     )
 
     project = load_project_config(config_path)
-    recipe_patch = load_recipe_build_config(recipe)
+    recipe_patch = load_book_build_config(recipe)
     cli = BuildConfigPatch(
         profile=OutputProfile.DRAFT,
         pagination_mode=PaginationMode.FIX,
@@ -162,7 +158,7 @@ def test_unknown_project_config_key_fails(tmp_path):
         load_project_config(config_path)
 
 
-def test_unknown_recipe_build_key_fails(tmp_path):
+def test_book_local_build_block_fails(tmp_path):
     recipe = _write_recipe(
         tmp_path,
         """
@@ -178,8 +174,8 @@ def test_unknown_recipe_build_key_fails(tmp_path):
         """,
     )
 
-    with pytest.raises(ConfigError, match="unknown build key"):
-        load_recipe_build_config(recipe)
+    with pytest.raises(ConfigError, match="papercrown.yaml"):
+        load_book_build_config(recipe)
 
 
 def test_missing_book_requires_argument_or_default():

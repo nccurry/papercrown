@@ -6,15 +6,15 @@ from pathlib import Path
 
 from papercrown.build.options import OutputProfile, profile_filename_suffix
 from papercrown.project.manifest import Chapter
-from papercrown.project.recipe import Recipe
+from papercrown.project.recipe import BookConfig
 
 
-def output_root(recipe: Recipe) -> Path:
+def output_root(recipe: BookConfig) -> Path:
     """Return the root directory under which one recipe writes generated files."""
     return recipe.generated_root
 
 
-def pdf_root(recipe: Recipe) -> Path:
+def pdf_root(recipe: BookConfig) -> Path:
     """Return the generated PDF root for a recipe."""
     return output_root(recipe) / "pdf"
 
@@ -26,7 +26,7 @@ def _pdf_name(title: str, *, profile: OutputProfile = OutputProfile.PRINT) -> st
 
 
 def chapter_pdf_path(
-    recipe: Recipe,
+    recipe: BookConfig,
     chapter: Chapter,
     *,
     profile: OutputProfile = OutputProfile.PRINT,
@@ -43,7 +43,7 @@ def chapter_pdf_path(
 
 
 def combined_book_path(
-    recipe: Recipe,
+    recipe: BookConfig,
     *,
     profile: OutputProfile = OutputProfile.PRINT,
 ) -> Path:
@@ -51,6 +51,6 @@ def combined_book_path(
     return pdf_root(recipe) / "book" / _pdf_name(recipe.title, profile=profile)
 
 
-def web_book_path(recipe: Recipe) -> Path:
+def web_book_path(recipe: BookConfig) -> Path:
     """Return the static web export entrypoint path for ``recipe``."""
     return output_root(recipe) / "web" / "index.html"

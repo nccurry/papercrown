@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import re
+from collections.abc import Mapping
 from dataclasses import dataclass
 from pathlib import Path
 from typing import TypedDict
@@ -26,6 +27,7 @@ class ArtRoleSpec:
     shape: str | None = None
     transparent: bool | None = None
     auto_placeable: bool = False
+    prefixes: tuple[str, ...] = ()
 
 
 class _ParsedArtName(TypedDict):
@@ -159,6 +161,7 @@ ROLE_REGISTRY: dict[str, ArtRoleSpec] = {
 def classify_art_path(
     path: Path,
     art_root: Path | None = None,
+    custom_roles: Mapping[str, ArtRoleSpec] | None = None,
 ) -> ArtAssetClassification:
     """Classify an art path according to the Paper Crown art contract."""
     relative = _relative_to_root(path, art_root)
@@ -173,7 +176,8 @@ def classify_art_path(
         return _classification("excluded")
 
     classification = (
-        _classify_cover_art(stem)
+        _classify_custom_art(dirs, stem, custom_roles)
+        or _classify_cover_art(stem)
         or _classify_class_art(dirs, stem)
         or _classify_chapter_art(dirs, stem)
         or _classify_frame_art(dirs, stem)
@@ -211,6 +215,62 @@ def _classification(
         shape=spec.shape,
         matched_convention=matched_convention,
     )
+
+
+def _classification_from_spec(
+    spec: ArtRoleSpec,
+    *,
+    context: str | None = None,
+    subject: str | None = None,
+    variant: str | None = None,
+    matched_convention: str = "project",
+) -> ArtAssetClassification:
+    return ArtAssetClassification(
+        role=spec.role,
+        context=context,
+        subject=subject,
+        variant=variant,
+        expected_folder=spec.expected_folder,
+        nominal_width_in=spec.nominal_width_in,
+        nominal_height_in=spec.nominal_height_in,
+        transparent=spec.transparent,
+        auto_placeable=spec.auto_placeable,
+        shape=spec.shape,
+        matched_convention=matched_convention,
+    )
+
+
+def _classify_custom_art(
+    dirs: list[str],
+    stem: str,
+    custom_roles: Mapping[str, ArtRoleSpec] | None,
+) -> ArtAssetClassification | None:
+    if not custom_roles:
+        return None
+    for role, spec in sorted(custom_roles.items()):
+        prefixes = spec.prefixes or (role,)
+        parsed = _custom_prefix_match(stem, prefixes)
+        if parsed is not None:
+            return _classification_from_spec(spec, **parsed)
+        if spec.expected_folder and _in_folder(dirs, spec.expected_folder):
+            return _classification_from_spec(spec, subject=stem)
+    return None
+
+
+def _custom_prefix_match(
+    stem: str,
+    prefixes: tuple[str, ...],
+) -> _ParsedArtName | None:
+    for prefix in sorted(prefixes, key=len, reverse=True):
+        normalized = prefix.lower().strip()
+        if not normalized:
+            continue
+        if stem == normalized:
+            return {"context": None, "subject": None, "variant": None}
+        token_prefix = f"{normalized}-"
+        if stem.startswith(token_prefix):
+            return _parse_tokens(stem.removeprefix(token_prefix).split("-"))
+    return None
 
 
 def _relative_to_root(path: Path, art_root: Path | None) -> Path:

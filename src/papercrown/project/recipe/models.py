@@ -1,10 +1,10 @@
-"""Recipe loader.
+"""BookConfig loader.
 
 A recipe is a YAML file that declares one book: which vaults to use, what
 chapters to include, and how to style the output. Loaded into typed
 dataclasses so downstream code can rely on shape and validation.
 
-Recipe shape:
+BookConfig shape:
 
     title: "My Book"
     subtitle: "..."
@@ -61,6 +61,7 @@ from collections.abc import Mapping
 from dataclasses import dataclass, field
 from pathlib import Path
 
+from papercrown.art.roles import ArtRoleSpec
 from papercrown.media.image_treatments import (
     IMAGE_TREATMENT_PRESETS,
     IMAGE_TREATMENT_ROLE_SELECTORS,
@@ -71,7 +72,7 @@ from papercrown.media.image_treatments import (
 # ---------------------------------------------------------------------------
 
 
-class RecipeError(ValueError):
+class BookConfigError(ValueError):
     """Raised when a recipe is malformed or references missing files."""
 
 
@@ -101,7 +102,7 @@ PAGE_DAMAGE_SIZES = {
     "medium",
     "large",
 }
-# Recipe skip targets that suppress page-wear on matching pages.
+# BookConfig skip targets that suppress page-wear on matching pages.
 PAGE_DAMAGE_SKIP_TARGETS = {
     "cover",
     "toc",
@@ -114,7 +115,7 @@ DEFAULT_PAGE_DAMAGE_SKIP = ["cover", "toc", "divider", "splash"]
 
 @dataclass(frozen=True)
 class PageDamageSpec:
-    """Recipe-level page wear configuration."""
+    """BookConfig-level page wear configuration."""
 
     enabled: bool = False
     art_dir: str = "page-wear"
@@ -192,20 +193,10 @@ FILLER_SHAPES = {
 
 @dataclass(frozen=True)
 class FillerTerminalMarkersSpec:
-    """Recipe policy for terminal chapter filler markers."""
+    """BookConfig policy for terminal chapter filler markers."""
 
     chapter_slots: tuple[str, ...] = ("chapter-end",)
     class_slots: tuple[str, ...] = ("class-end",)
-
-    @property
-    def chapter_slot(self) -> str | None:
-        """Backward-compatible first terminal chapter marker slot."""
-        return self.chapter_slots[0] if self.chapter_slots else None
-
-    @property
-    def class_slot(self) -> str | None:
-        """Backward-compatible first terminal class marker slot."""
-        return self.class_slots[0] if self.class_slots else None
 
     @classmethod
     def from_raw(cls, raw: object, *, loc: str) -> FillerTerminalMarkersSpec:
@@ -215,15 +206,15 @@ class FillerTerminalMarkersSpec:
         if raw is False:
             return cls(chapter_slots=(), class_slots=())
         if not isinstance(raw, Mapping):
-            raise RecipeError(f"{loc} must be a mapping or false")
+            raise BookConfigError(f"{loc} must be a mapping or false")
         return cls(
             chapter_slots=_marker_slots_or_none(
-                _marker_raw_value(raw, "chapter_slots", "chapter_slot", "chapter"),
+                _marker_raw_value(raw, "chapter_slots"),
                 default="chapter-end",
                 loc=f"{loc}.chapter_slots",
             ),
             class_slots=_marker_slots_or_none(
-                _marker_raw_value(raw, "class_slots", "class_slot", "class"),
+                _marker_raw_value(raw, "class_slots"),
                 default="class-end",
                 loc=f"{loc}.class_slots",
             ),
@@ -232,14 +223,9 @@ class FillerTerminalMarkersSpec:
 
 @dataclass(frozen=True)
 class FillerSourceBoundaryMarkersSpec:
-    """Recipe policy for sequence source-boundary filler markers."""
+    """BookConfig policy for sequence source-boundary filler markers."""
 
     sequence_slots: tuple[str, ...] = ("section-end",)
-
-    @property
-    def sequence_slot(self) -> str | None:
-        """Backward-compatible first source-boundary marker slot."""
-        return self.sequence_slots[0] if self.sequence_slots else None
 
     @classmethod
     def from_raw(cls, raw: object, *, loc: str) -> FillerSourceBoundaryMarkersSpec:
@@ -251,16 +237,10 @@ class FillerSourceBoundaryMarkersSpec:
         if isinstance(raw, str):
             return cls(sequence_slots=(_required_marker_slot(raw, loc=loc),))
         if not isinstance(raw, Mapping):
-            raise RecipeError(f"{loc} must be a mapping, string, or false")
+            raise BookConfigError(f"{loc} must be a mapping, string, or false")
         return cls(
             sequence_slots=_marker_slots_or_none(
-                _marker_raw_value(
-                    raw,
-                    "sequence_slots",
-                    "sequence_slot",
-                    "sequence",
-                    "slot",
-                ),
+                _marker_raw_value(raw, "sequence_slots"),
                 default="section-end",
                 loc=f"{loc}.sequence_slots",
             )
@@ -269,14 +249,9 @@ class FillerSourceBoundaryMarkersSpec:
 
 @dataclass(frozen=True)
 class FillerSubclassMarkersSpec:
-    """Recipe policy for subclass source-end filler markers."""
+    """BookConfig policy for subclass source-end filler markers."""
 
     slots: tuple[str, ...] = ("subclass-end",)
-
-    @property
-    def slot(self) -> str | None:
-        """Backward-compatible first subclass marker slot."""
-        return self.slots[0] if self.slots else None
 
     @classmethod
     def from_raw(cls, raw: object, *, loc: str) -> FillerSubclassMarkersSpec:
@@ -288,10 +263,10 @@ class FillerSubclassMarkersSpec:
         if isinstance(raw, str):
             return cls(slots=(_required_marker_slot(raw, loc=loc),))
         if not isinstance(raw, Mapping):
-            raise RecipeError(f"{loc} must be a mapping, string, or false")
+            raise BookConfigError(f"{loc} must be a mapping, string, or false")
         return cls(
             slots=_marker_slots_or_none(
-                _marker_raw_value(raw, "slots", "slot"),
+                _marker_raw_value(raw, "slots"),
                 default="subclass-end",
                 loc=f"{loc}.slots",
             )
@@ -300,7 +275,7 @@ class FillerSubclassMarkersSpec:
 
 @dataclass(frozen=True)
 class FillerHeadingMarkerSpec:
-    """Recipe policy for generated section-end filler markers."""
+    """BookConfig policy for generated section-end filler markers."""
 
     chapter: str
     slot: str
@@ -320,14 +295,14 @@ class FillerHeadingMarkerSpec:
         loc = f"fillers.markers.headings[{index}]"
         chapter = _str_or_none(raw.get("chapter"))
         if chapter is None:
-            raise RecipeError(f"{loc}.chapter is required")
+            raise BookConfigError(f"{loc}.chapter is required")
         slot = _required_marker_slot(raw.get("slot"), loc=f"{loc}.slot")
         heading_level = _positive_int(
             raw.get("heading_level"),
             loc=f"{loc}.heading_level",
         )
         if heading_level > 6:
-            raise RecipeError(f"{loc}.heading_level must be between 1 and 6")
+            raise BookConfigError(f"{loc}.heading_level must be between 1 and 6")
         return cls(
             chapter=chapter,
             slot=slot,
@@ -360,7 +335,7 @@ def _default_heading_marker_specs() -> list[FillerHeadingMarkerSpec]:
 
 @dataclass(frozen=True)
 class FillerMarkersSpec:
-    """Recipe policy for generated invisible filler marker slots."""
+    """BookConfig policy for generated invisible filler marker slots."""
 
     terminal: FillerTerminalMarkersSpec = field(
         default_factory=FillerTerminalMarkersSpec
@@ -381,17 +356,19 @@ class FillerMarkersSpec:
         if raw is None:
             return cls()
         if not isinstance(raw, Mapping):
-            raise RecipeError("fillers.markers must be a mapping when provided")
+            raise BookConfigError("fillers.markers must be a mapping when provided")
         headings_raw = raw.get("headings", _default_heading_marker_specs())
         if not isinstance(headings_raw, list):
-            raise RecipeError("fillers.markers.headings must be a list")
+            raise BookConfigError("fillers.markers.headings must be a list")
         headings: list[FillerHeadingMarkerSpec] = []
         for i, item in enumerate(headings_raw):
             if isinstance(item, FillerHeadingMarkerSpec):
                 headings.append(item)
                 continue
             if not isinstance(item, Mapping):
-                raise RecipeError(f"fillers.markers.headings[{i}] must be a mapping")
+                raise BookConfigError(
+                    f"fillers.markers.headings[{i}] must be a mapping"
+                )
             headings.append(FillerHeadingMarkerSpec.from_dict(item, index=i))
         return cls(
             terminal=FillerTerminalMarkersSpec.from_raw(
@@ -425,13 +402,13 @@ class FillerAssetSpec:
         loc = f"fillers.assets[{index}]"
         asset_id = _slug_or_none(raw.get("id"), loc=loc)
         if asset_id is None:
-            raise RecipeError(f"{loc}.id is required")
+            raise BookConfigError(f"{loc}.id is required")
         art = _str_or_none(raw.get("art"))
         if art is None:
-            raise RecipeError(f"{loc}.art is required")
+            raise BookConfigError(f"{loc}.art is required")
         shape = _str_or_none(raw.get("shape"))
         if shape not in FILLER_SHAPES:
-            raise RecipeError(f"{loc}.shape must be one of {sorted(FILLER_SHAPES)}")
+            raise BookConfigError(f"{loc}.shape must be one of {sorted(FILLER_SHAPES)}")
         return cls(
             id=asset_id,
             art=art,
@@ -460,19 +437,19 @@ class FillerSlotSpec:
         """Parse one ``fillers.slots`` mapping value."""
         shapes_raw = raw.get("shapes")
         if not isinstance(shapes_raw, list) or not shapes_raw:
-            raise RecipeError(f"{loc}.shapes must be a non-empty list")
+            raise BookConfigError(f"{loc}.shapes must be a non-empty list")
         shapes: list[str] = []
         for i, shape_raw in enumerate(shapes_raw):
             shape = _str_or_none(shape_raw)
             if shape not in FILLER_SHAPES:
-                raise RecipeError(
+                raise BookConfigError(
                     f"{loc}.shapes[{i}] must be one of {sorted(FILLER_SHAPES)}"
                 )
             shapes.append(shape)
         min_space = _inch_value(raw.get("min_space"), loc=f"{loc}.min_space")
         max_space = _inch_value(raw.get("max_space"), loc=f"{loc}.max_space")
         if max_space < min_space:
-            raise RecipeError(f"{loc}.max_space must be >= min_space")
+            raise BookConfigError(f"{loc}.max_space must be >= min_space")
         return cls(
             name=name,
             min_space_in=min_space,
@@ -483,7 +460,7 @@ class FillerSlotSpec:
 
 @dataclass(frozen=True)
 class FillersSpec:
-    """Recipe-level conditional filler art configuration."""
+    """BookConfig-level conditional filler art configuration."""
 
     enabled: bool = False
     art_dir: str | None = None
@@ -498,14 +475,14 @@ class FillersSpec:
             return cls()
         slots_raw = raw.get("slots") or {}
         if not isinstance(slots_raw, Mapping):
-            raise RecipeError("fillers.slots must be a mapping when provided")
+            raise BookConfigError("fillers.slots must be a mapping when provided")
         slots: dict[str, FillerSlotSpec] = {}
         for name, slot_raw in slots_raw.items():
             slot_name = str(name).strip()
             if not slot_name:
-                raise RecipeError("fillers.slots keys must be non-empty")
+                raise BookConfigError("fillers.slots keys must be non-empty")
             if not isinstance(slot_raw, Mapping):
-                raise RecipeError(f"fillers.slots.{slot_name} must be a mapping")
+                raise BookConfigError(f"fillers.slots.{slot_name} must be a mapping")
             slots[slot_name] = FillerSlotSpec.from_dict(
                 slot_name,
                 slot_raw,
@@ -514,11 +491,11 @@ class FillersSpec:
 
         assets_raw = raw.get("assets") or []
         if not isinstance(assets_raw, list):
-            raise RecipeError("fillers.assets must be a list when provided")
+            raise BookConfigError("fillers.assets must be a list when provided")
         assets: list[FillerAssetSpec] = []
         for i, asset_raw in enumerate(assets_raw):
             if not isinstance(asset_raw, Mapping):
-                raise RecipeError(
+                raise BookConfigError(
                     f"fillers.assets[{i}] must be a mapping, "
                     f"got {type(asset_raw).__name__}"
                 )
@@ -538,7 +515,7 @@ class FillersSpec:
 # ---------------------------------------------------------------------------
 
 
-# Recipe targets that describe when splash art should be placed.
+# BookConfig targets that describe when splash art should be placed.
 SPLASH_TARGETS = {
     "front-cover",
     "back-cover",
@@ -572,29 +549,35 @@ class SplashSpec:
         loc = f"splashes[{index}]"
         splash_id = _slug_or_none(raw.get("id"), loc=loc)
         if splash_id is None:
-            raise RecipeError(f"{loc}.id is required")
+            raise BookConfigError(f"{loc}.id is required")
         art = _str_or_none(raw.get("art"))
         if art is None:
-            raise RecipeError(f"{loc}.art is required")
+            raise BookConfigError(f"{loc}.art is required")
         target = _str_or_none(raw.get("target"))
         if target not in SPLASH_TARGETS:
-            raise RecipeError(f"{loc}.target must be one of {sorted(SPLASH_TARGETS)}")
+            raise BookConfigError(
+                f"{loc}.target must be one of {sorted(SPLASH_TARGETS)}"
+            )
         placement = _str_or_none(raw.get("placement"))
         if placement not in SPLASH_PLACEMENTS:
-            raise RecipeError(
+            raise BookConfigError(
                 f"{loc}.placement must be one of {sorted(SPLASH_PLACEMENTS)}"
             )
 
         chapter = _str_or_none(raw.get("chapter"))
         heading = _str_or_none(raw.get("heading"))
         if target in {"chapter-start", "after-heading"} and chapter is None:
-            raise RecipeError(f"{loc}.chapter is required for target={target!r}")
+            raise BookConfigError(f"{loc}.chapter is required for target={target!r}")
         if target == "after-heading" and heading is None:
-            raise RecipeError(f"{loc}.heading is required for target='after-heading'")
+            raise BookConfigError(
+                f"{loc}.heading is required for target='after-heading'"
+            )
         if target in {"front-cover", "back-cover"} and chapter is not None:
-            raise RecipeError(f"{loc}.chapter is only valid for chapter splashes")
+            raise BookConfigError(f"{loc}.chapter is only valid for chapter splashes")
         if target != "after-heading" and heading is not None:
-            raise RecipeError(f"{loc}.heading is only valid for target='after-heading'")
+            raise BookConfigError(
+                f"{loc}.heading is only valid for target='after-heading'"
+            )
 
         return cls(
             id=splash_id,
@@ -630,10 +613,10 @@ class ArtInsertSpec:
         item_loc = f"{loc}.art[{index}]"
         role = _str_or_none(raw.get("role")) or "splash"
         if role != "splash":
-            raise RecipeError(f"{item_loc}.role currently supports only 'splash'")
+            raise BookConfigError(f"{item_loc}.role currently supports only 'splash'")
         placement = _str_or_none(raw.get("placement")) or "bottom-half"
         if placement not in {"corner-left", "corner-right", "bottom-half"}:
-            raise RecipeError(
+            raise BookConfigError(
                 f"{item_loc}.placement must be one of "
                 "['bottom-half', 'corner-left', 'corner-right']"
             )
@@ -643,11 +626,11 @@ class ArtInsertSpec:
             target = "after-heading"
         target = target or "chapter-start"
         if target not in {"chapter-start", "after-heading"}:
-            raise RecipeError(
+            raise BookConfigError(
                 f"{item_loc}.target must be 'chapter-start' or 'after-heading'"
             )
         if target == "after-heading" and heading is None:
-            raise RecipeError(
+            raise BookConfigError(
                 f"{item_loc}.after_heading is required for target='after-heading'"
             )
         return cls(
@@ -686,10 +669,10 @@ class SourceRef:
     def parse(cls, raw: str) -> SourceRef:
         """Parse a raw recipe source string into a structured reference."""
         if not raw or not raw.strip():
-            raise RecipeError("empty source reference")
+            raise BookConfigError("empty source reference")
         m = _SOURCE_RE.match(raw.strip())
         if not m:
-            raise RecipeError(f"invalid source reference: {raw!r}")
+            raise BookConfigError(f"invalid source reference: {raw!r}")
         vault = m.group("vault")
         path = m.group("path").replace("\\", "/").lstrip("/")
         return cls(vault=vault, path=path)
@@ -770,12 +753,12 @@ class SourceItem:
         if isinstance(raw, str):
             return cls(source=SourceRef.parse(raw))
         if not isinstance(raw, Mapping):
-            raise RecipeError(
+            raise BookConfigError(
                 f"{loc} must be a source string or mapping, got {type(raw).__name__}"
             )
         source_raw = raw.get("source")
         if not isinstance(source_raw, str) or not source_raw.strip():
-            raise RecipeError(f"{loc}.source is required")
+            raise BookConfigError(f"{loc}.source is required")
         return cls(
             source=SourceRef.parse(source_raw),
             title=_str_or_none(raw.get("title")),
@@ -785,13 +768,12 @@ class SourceItem:
 
 
 # ---------------------------------------------------------------------------
-# Chapter spec
+# Content item spec
 # ---------------------------------------------------------------------------
 
 
 # Structural content kinds accepted in book contents.
-CHAPTER_KINDS = {
-    "inline",
+CONTENT_ITEM_KINDS = {
     "file",
     "catalog",
     "composite",
@@ -805,11 +787,11 @@ CHAPTER_KINDS = {
 
 # Kinds that don't need (or use) their own `source:` field. `group` is a
 # pure structural wrapper around its `children:`. `sequence` uses `sources:`.
-_KINDS_WITHOUT_SOURCE = {"group", "inline", "sequence", "toc", "generated"}
+_KINDS_WITHOUT_SOURCE = {"group", "sequence", "toc", "generated"}
 
 
 @dataclass
-class ChapterSpec:
+class ContentItemSpec:
     """One entry in the book's ordered `contents:` list.
 
     `kind` is structural (how to assemble files into chapter content).
@@ -817,7 +799,7 @@ class ChapterSpec:
     `section-kind` metadata; CSS targets `body.section-<style>`).
     """
 
-    # inline | file | catalog | composite | classes-catalog | folder | group | sequence
+    # file | catalog | composite | classes-catalog | folder | group | sequence
     kind: str
     # computed content kind for `kind: generated`
     type: str | None = None
@@ -825,10 +807,6 @@ class ChapterSpec:
     source: SourceRef | None = None
     # optional; some kinds derive it
     title: str | None = None
-    # inline/title-page fields
-    subtitle: str | None = None
-    cover_eyebrow: str | None = None
-    cover_footer: str | None = None
     # optional explicit PDF/link anchor
     slug: str | None = None
     eyebrow: str | None = None
@@ -846,7 +824,7 @@ class ChapterSpec:
     # emit a section-divider page for EACH child
     child_divider: bool = False
     # group-kind sub-chapters
-    children: list[ChapterSpec] = field(default_factory=list)
+    children: list[ContentItemSpec] = field(default_factory=list)
     # sequence-kind ordered sources
     sources: list[SourceItem] = field(default_factory=list)
     # heading slugs/titles to start on a new page
@@ -884,11 +862,11 @@ class ChapterSpec:
         *,
         index: int,
         path: str = "",
-    ) -> ChapterSpec:
+    ) -> ContentItemSpec:
         """Parse and validate one chapter mapping from the recipe YAML."""
         loc = f"contents[{index}]" if not path else f"{path}.children[{index}]"
         if not isinstance(raw, Mapping):
-            raise RecipeError(f"{loc} must be a mapping, got {type(raw).__name__}")
+            raise BookConfigError(f"{loc} must be a mapping, got {type(raw).__name__}")
         kind = _chapter_kind(raw, loc=loc)
         generated_type = _chapter_generated_type(kind, raw, loc=loc)
         source = _chapter_source(kind, raw, loc=loc)
@@ -903,9 +881,6 @@ class ChapterSpec:
             type=generated_type,
             source=source,
             title=_str_or_none(raw.get("title")),
-            subtitle=_str_or_none(raw.get("subtitle")),
-            cover_eyebrow=_str_or_none(raw.get("cover_eyebrow")),
-            cover_footer=_str_or_none(raw.get("cover_footer")),
             slug=_slug_or_none(raw.get("slug"), loc=loc),
             eyebrow=_str_or_none(raw.get("eyebrow")),
             art=chapter_art,
@@ -942,9 +917,11 @@ def _chapter_kind(raw: Mapping[str, object], *, loc: str) -> str:
     elif isinstance(kind_raw, str):
         kind = kind_raw
     else:
-        raise RecipeError(f"{loc}.kind must be a string")
-    if kind not in CHAPTER_KINDS:
-        raise RecipeError(f"{loc}.kind={kind!r} is not one of {sorted(CHAPTER_KINDS)}")
+        raise BookConfigError(f"{loc}.kind must be a string")
+    if kind not in CONTENT_ITEM_KINDS:
+        raise BookConfigError(
+            f"{loc}.kind={kind!r} is not one of {sorted(CONTENT_ITEM_KINDS)}"
+        )
     return kind
 
 
@@ -957,11 +934,11 @@ def _chapter_generated_type(
     """Validate the optional computed content type."""
     generated_type = _str_or_none(raw.get("type"))
     if kind == "generated" and generated_type not in GENERATED_CONTENT_TYPES:
-        raise RecipeError(
+        raise BookConfigError(
             f"{loc}.type must be one of {sorted(GENERATED_CONTENT_TYPES)}"
         )
     if kind != "generated" and generated_type is not None:
-        raise RecipeError(f"{loc}.type is only valid for kind='generated'")
+        raise BookConfigError(f"{loc}.type is only valid for kind='generated'")
     return generated_type
 
 
@@ -975,17 +952,17 @@ def _chapter_source(
     source_raw = raw.get("source")
     if kind in _KINDS_WITHOUT_SOURCE:
         if source_raw is not None:
-            raise RecipeError(
+            raise BookConfigError(
                 f"{loc} kind={kind!r} should not declare `source:` "
                 f"(use `children:` for groups or `sources:` for sequences)"
             )
         return None
     if not isinstance(source_raw, str) or not source_raw.strip():
-        raise RecipeError(f"{loc} missing required field: source")
+        raise BookConfigError(f"{loc} missing required field: source")
     try:
         return SourceRef.parse(source_raw)
-    except RecipeError as e:
-        raise RecipeError(f"{loc}: {e}") from e
+    except BookConfigError as e:
+        raise BookConfigError(f"{loc}: {e}") from e
 
 
 def _chapter_sources(
@@ -998,18 +975,20 @@ def _chapter_sources(
     sources_raw = raw.get("sources")
     if kind != "sequence":
         if sources_raw is not None:
-            raise RecipeError(
+            raise BookConfigError(
                 f"{loc}.sources is only valid for kind='sequence' (got kind={kind!r})"
             )
         return []
     if not isinstance(sources_raw, list) or not sources_raw:
-        raise RecipeError(f"{loc} kind='sequence' requires a non-empty `sources:` list")
+        raise BookConfigError(
+            f"{loc} kind='sequence' requires a non-empty `sources:` list"
+        )
     sources: list[SourceItem] = []
     for i, item in enumerate(sources_raw):
         try:
             sources.append(SourceItem.from_raw(item, loc=f"{loc}.sources[{i}]"))
-        except RecipeError as e:
-            raise RecipeError(str(e)) from e
+        except BookConfigError as e:
+            raise BookConfigError(str(e)) from e
     return sources
 
 
@@ -1018,31 +997,33 @@ def _chapter_children(
     raw: Mapping[str, object],
     *,
     loc: str,
-    parser: type[ChapterSpec],
-) -> list[ChapterSpec]:
+    parser: type[ContentItemSpec],
+) -> list[ContentItemSpec]:
     """Validate and recursively parse group children."""
     if "sort" in raw:
-        raise RecipeError(
+        raise BookConfigError(
             f"{loc}.sort is no longer supported; folder ordering is always "
             "alphabetical. Remove the field from your recipe."
         )
 
     children_raw = raw.get("children") or []
     if not isinstance(children_raw, list):
-        raise RecipeError(
+        raise BookConfigError(
             f"{loc}.children must be a list, got {type(children_raw).__name__}"
         )
     if kind == "group" and not children_raw:
-        raise RecipeError(f"{loc} kind='group' requires a non-empty `children:` list")
+        raise BookConfigError(
+            f"{loc} kind='group' requires a non-empty `children:` list"
+        )
     if kind != "group" and children_raw:
-        raise RecipeError(
+        raise BookConfigError(
             f"{loc}.children is only valid for kind='group' (got kind={kind!r})"
         )
 
-    children: list[ChapterSpec] = []
+    children: list[ContentItemSpec] = []
     for i, child_raw in enumerate(children_raw):
         if not isinstance(child_raw, Mapping):
-            raise RecipeError(
+            raise BookConfigError(
                 f"{loc}.children[{i}] must be a mapping, got {type(child_raw).__name__}"
             )
         children.append(parser.from_dict(child_raw, index=i, path=loc))
@@ -1059,7 +1040,7 @@ def _chapter_full_page_sections(
     if not isinstance(sections_raw, list) or not all(
         isinstance(x, str) for x in sections_raw
     ):
-        raise RecipeError(
+        raise BookConfigError(
             f"{loc}.full_page_sections must be a list of heading titles/slugs"
         )
     return [str(section) for section in sections_raw]
@@ -1075,7 +1056,7 @@ def _chapter_toc_depths(
     toc_depth = _toc_depth_or_none(raw.get("toc_depth"), loc=loc)
     depth = _toc_depth_or_none(raw.get("depth"), loc=loc)
     if depth is not None and kind != "toc":
-        raise RecipeError(f"{loc}.depth is only valid for kind='toc'")
+        raise BookConfigError(f"{loc}.depth is only valid for kind='toc'")
     return toc_depth, depth
 
 
@@ -1092,7 +1073,7 @@ def _chapter_art_fields(
     art_inserts: list[ArtInsertSpec] = []
     for i, art_item in enumerate(art_raw):
         if not isinstance(art_item, Mapping):
-            raise RecipeError(
+            raise BookConfigError(
                 f"{loc}.art[{i}] must be a mapping, got {type(art_item).__name__}"
             )
         art_inserts.append(ArtInsertSpec.from_dict(art_item, index=i, loc=loc))
@@ -1100,7 +1081,7 @@ def _chapter_art_fields(
 
 
 # ---------------------------------------------------------------------------
-# Recipe
+# BookConfig
 # ---------------------------------------------------------------------------
 
 
@@ -1109,18 +1090,13 @@ DEFAULT_THEME = "industrial"
 
 # Computed content page types accepted in book contents.
 GENERATED_CONTENT_TYPES = {
-    "appendix-index",
-}
-
-# Legacy generated matter page types kept for internal compatibility only.
-GENERATED_MATTER_TYPES = {
-    "title-page",
-    "credits",
-    "copyright",
-    "license",
     "art-credits",
-    "changelog",
     "appendix-index",
+    "changelog",
+    "copyright",
+    "credits",
+    "license",
+    "title-page",
 }
 
 
@@ -1156,38 +1132,6 @@ class BookMetadataSpec:
         )
 
 
-@dataclass(frozen=True)
-class MatterSpec:
-    """One generated front/back matter page declared by a recipe."""
-
-    type: str
-    title: str | None = None
-
-    @classmethod
-    def from_raw(cls, raw: object, *, loc: str) -> MatterSpec:
-        """Parse one front/back matter item from a string or mapping."""
-        if isinstance(raw, str):
-            matter_type = raw.strip()
-            title = None
-        elif isinstance(raw, Mapping):
-            matter_type = _str_or_none(raw.get("type")) or ""
-            title = _str_or_none(raw.get("title"))
-            kind = _str_or_none(raw.get("kind")) or "generated"
-            if kind != "generated":
-                raise RecipeError(
-                    f"{loc}.kind currently supports only 'generated' matter"
-                )
-        else:
-            raise RecipeError(
-                f"{loc} must be a generated matter type string or mapping"
-            )
-        if matter_type not in GENERATED_MATTER_TYPES:
-            raise RecipeError(
-                f"{loc}.type must be one of {sorted(GENERATED_MATTER_TYPES)}"
-            )
-        return cls(type=matter_type, title=title)
-
-
 @dataclass
 class VaultSpec:
     """A vault declared in the recipe's `vaults:` mapping."""
@@ -1197,7 +1141,7 @@ class VaultSpec:
 
 
 @dataclass
-class Recipe:
+class BookConfig:
     """A fully validated recipe ready for manifest construction."""
 
     title: str
@@ -1207,7 +1151,7 @@ class Recipe:
     vaults: dict[str, VaultSpec]  # name -> VaultSpec
     vault_overlay: list[str]  # priority order, first = lowest
     cover: CoverSpec
-    contents: list[ChapterSpec]
+    contents: list[ContentItemSpec]
     recipe_path: Path  # where this recipe was loaded from
     output_dir_override: Path | None = None
     output_name: str | None = None
@@ -1217,27 +1161,12 @@ class Recipe:
     theme_options: dict[str, str] = field(default_factory=dict)
     image_treatments: dict[str, str] = field(default_factory=dict)
     metadata: BookMetadataSpec = field(default_factory=BookMetadataSpec)
-    front_matter: list[MatterSpec] = field(default_factory=list)
-    back_matter: list[MatterSpec] = field(default_factory=list)
     art_dir_override: Path | None = None  # optional override for art assets
+    art_roles: dict[str, ArtRoleSpec] = field(default_factory=dict)
     ornaments: OrnamentsSpec = field(default_factory=OrnamentsSpec)
     splashes: list[SplashSpec] = field(default_factory=list)
     fillers: FillersSpec = field(default_factory=FillersSpec)
     page_damage: PageDamageSpec = field(default_factory=PageDamageSpec)
-
-    # Convenience
-    @property
-    def chapters(self) -> list[ChapterSpec]:
-        """Backward-facing internal alias for ordered book contents."""
-        return self.contents
-
-    @property
-    def inline_title(self) -> ChapterSpec | None:
-        """Return the first inline title item, if the recipe declares one."""
-        for item in self.contents:
-            if item.kind == "inline" and item.style == "title" and item.title:
-                return item
-        return None
 
     def vault_priority_paths(self) -> list[Path]:
         """Return vault paths in overlay priority order (first = lowest priority)."""
@@ -1297,7 +1226,7 @@ def _infer_content_kind(raw: Mapping[str, object], *, loc: str) -> str:
         return "generated"
     if "source" in raw:
         return "file"
-    raise RecipeError(f"{loc}.kind must be a string")
+    raise BookConfigError(f"{loc}.kind must be a string")
 
 
 def _str_or_none(value: object) -> str | None:
@@ -1311,7 +1240,7 @@ def _str_or_none(value: object) -> str | None:
 def _bool_value(value: object, *, loc: str) -> bool:
     """Validate a boolean recipe value."""
     if not isinstance(value, bool):
-        raise RecipeError(f"{loc} must be true or false")
+        raise BookConfigError(f"{loc} must be true or false")
     return value
 
 
@@ -1319,9 +1248,9 @@ def _required_marker_slot(value: object, *, loc: str) -> str:
     """Validate one filler marker slot name."""
     slot = _str_or_none(value)
     if slot is None:
-        raise RecipeError(f"{loc} is required")
+        raise BookConfigError(f"{loc} is required")
     if not re.match(r"^[A-Za-z0-9_-]+$", slot):
-        raise RecipeError(
+        raise BookConfigError(
             f"{loc} must contain only letters, numbers, underscores, and hyphens"
         )
     return slot
@@ -1364,7 +1293,7 @@ def _marker_slots_or_none(
         slots: list[str] = []
         for i, item in enumerate(value):
             if item is False:
-                raise RecipeError(f"{loc}[{i}] must be a marker slot name")
+                raise BookConfigError(f"{loc}[{i}] must be a marker slot name")
             slots.append(_required_marker_slot(item, loc=f"{loc}[{i}]"))
         return tuple(slots)
     return (_required_marker_slot(value, loc=loc),)
@@ -1378,11 +1307,11 @@ def _string_list_or_one(value: object) -> list[str]:
         item = value.strip()
         return [item] if item else []
     if not isinstance(value, list):
-        raise RecipeError("expected a string or list of strings")
+        raise BookConfigError("expected a string or list of strings")
     items: list[str] = []
     for raw in value:
         if not isinstance(raw, str):
-            raise RecipeError("expected a string or list of strings")
+            raise BookConfigError("expected a string or list of strings")
         item = raw.strip()
         if item:
             items.append(item)
@@ -1394,12 +1323,12 @@ def _credits_mapping(value: object) -> dict[str, list[str]]:
     if value is None:
         return {}
     if not isinstance(value, Mapping):
-        raise RecipeError("metadata.credits must be a mapping")
+        raise BookConfigError("metadata.credits must be a mapping")
     credits: dict[str, list[str]] = {}
     for raw_role, raw_names in value.items():
         role = str(raw_role).strip()
         if not role:
-            raise RecipeError("metadata.credits keys must be non-empty")
+            raise BookConfigError("metadata.credits keys must be non-empty")
         credits[role] = _string_list_or_one(raw_names)
     return credits
 
@@ -1409,12 +1338,12 @@ def _theme_options_mapping(value: object) -> dict[str, str]:
     if value is None:
         return {}
     if not isinstance(value, Mapping):
-        raise RecipeError("theme_options must be a mapping")
+        raise BookConfigError("theme_options must be a mapping")
     options: dict[str, str] = {}
     for raw_key, raw_value in value.items():
         key = str(raw_key).strip()
         if not key:
-            raise RecipeError("theme_options keys must be non-empty")
+            raise BookConfigError("theme_options keys must be non-empty")
         if raw_value is None:
             continue
         options[key] = str(raw_value).strip()
@@ -1426,26 +1355,26 @@ def _image_treatments_mapping(value: object) -> dict[str, str]:
     if value is None:
         return {}
     if not isinstance(value, Mapping):
-        raise RecipeError("image_treatments must be a mapping")
+        raise BookConfigError("image_treatments must be a mapping")
     treatments: dict[str, str] = {}
     for raw_role, raw_treatment in value.items():
         role = str(raw_role).strip()
         if not role:
-            raise RecipeError("image_treatments keys must be non-empty")
+            raise BookConfigError("image_treatments keys must be non-empty")
         if role not in IMAGE_TREATMENT_ROLE_SELECTORS:
             choices = ", ".join(sorted(IMAGE_TREATMENT_ROLE_SELECTORS))
-            raise RecipeError(
+            raise BookConfigError(
                 f"image_treatments role {role!r} is not supported; "
                 f"choose one of: {choices}"
             )
         treatment = str(raw_treatment).strip()
         if not treatment:
-            raise RecipeError(f"image_treatments.{role} must be non-empty")
+            raise BookConfigError(f"image_treatments.{role} must be non-empty")
         if treatment == "none":
             treatment = "raw"
         if treatment not in IMAGE_TREATMENT_PRESETS:
             choices = ", ".join(sorted(IMAGE_TREATMENT_PRESETS))
-            raise RecipeError(
+            raise BookConfigError(
                 f"image_treatments.{role} preset {treatment!r} is not supported; "
                 f"choose one of: {choices}"
             )
@@ -1453,16 +1382,91 @@ def _image_treatments_mapping(value: object) -> dict[str, str]:
     return treatments
 
 
-def _matter_list(value: object, *, field_name: str) -> list[MatterSpec]:
-    """Validate a front_matter/back_matter list."""
+def _art_roles_mapping(value: object) -> dict[str, ArtRoleSpec]:
+    """Validate project-declared art role classifiers."""
     if value is None:
-        return []
-    if not isinstance(value, list):
-        raise RecipeError(f"{field_name} must be a list when provided")
-    return [
-        MatterSpec.from_raw(raw_item, loc=f"{field_name}[{i}]")
-        for i, raw_item in enumerate(value)
-    ]
+        return {}
+    if not isinstance(value, Mapping):
+        raise BookConfigError("art_roles must be a mapping")
+    roles: dict[str, ArtRoleSpec] = {}
+    for raw_role, raw_spec in value.items():
+        role = _slug_or_none(raw_role, loc="art_roles") or ""
+        if not role:
+            raise BookConfigError("art_roles keys must be non-empty")
+        if role in roles:
+            raise BookConfigError(f"art_roles.{role} is duplicated")
+        if not isinstance(raw_spec, Mapping):
+            raise BookConfigError(f"art_roles.{role} must be a mapping")
+        shape = _str_or_none(raw_spec.get("shape"))
+        if shape is not None and shape not in FILLER_SHAPES:
+            raise BookConfigError(
+                f"art_roles.{role}.shape must be one of {sorted(FILLER_SHAPES)}"
+            )
+        roles[role] = ArtRoleSpec(
+            role=role,
+            expected_folder=(
+                _str_or_none(raw_spec.get("folder"))
+                or _str_or_none(raw_spec.get("expected_folder"))
+            ),
+            nominal_width_in=_optional_inch_value(
+                raw_spec.get("width"),
+                loc=f"art_roles.{role}.width",
+            ),
+            nominal_height_in=_optional_inch_value(
+                raw_spec.get("height"),
+                loc=f"art_roles.{role}.height",
+            ),
+            shape=shape,
+            transparent=_optional_bool(
+                raw_spec.get("transparent"),
+                loc=f"art_roles.{role}.transparent",
+            ),
+            auto_placeable=bool(raw_spec.get("auto_placeable", False)),
+            prefixes=_role_prefixes(raw_spec.get("prefixes", raw_spec.get("prefix"))),
+        )
+    return roles
+
+
+def _optional_inch_value(value: object, *, loc: str) -> float | None:
+    """Parse an optional role size from ``1.5`` or ``1.5in``."""
+    if value is None:
+        return None
+    if isinstance(value, bool):
+        raise BookConfigError(f"{loc} must be a positive number or inch string")
+    if isinstance(value, int | float):
+        parsed = float(value)
+        if parsed <= 0:
+            raise BookConfigError(f"{loc} must be greater than 0")
+        return parsed
+    return _inch_value(value, loc=loc)
+
+
+def _optional_bool(value: object, *, loc: str) -> bool | None:
+    """Validate an optional boolean."""
+    if value is None:
+        return None
+    if not isinstance(value, bool):
+        raise BookConfigError(f"{loc} must be true or false")
+    return value
+
+
+def _role_prefixes(value: object) -> tuple[str, ...]:
+    """Normalize project art role prefixes."""
+    if value is None:
+        return ()
+    raw_prefixes: list[object]
+    if isinstance(value, str):
+        raw_prefixes = [value]
+    elif isinstance(value, list):
+        raw_prefixes = value
+    else:
+        raise BookConfigError("art_roles prefixes must be a string or list")
+    prefixes: list[str] = []
+    for i, item in enumerate(raw_prefixes):
+        prefix = _slug_or_none(item, loc=f"art_roles.prefixes[{i}]")
+        if prefix is not None:
+            prefixes.append(prefix)
+    return tuple(prefixes)
 
 
 def _slug_or_none(value: object, *, loc: str) -> str | None:
@@ -1471,7 +1475,7 @@ def _slug_or_none(value: object, *, loc: str) -> str | None:
     if slug is None:
         return None
     if not re.match(r"^[A-Za-z0-9_-]+$", slug):
-        raise RecipeError(
+        raise BookConfigError(
             f"{loc}.slug must contain only letters, numbers, underscores, and hyphens"
         )
     return slug
@@ -1481,13 +1485,13 @@ def _inch_value(value: object, *, loc: str) -> float:
     """Parse a positive CSS inch value such as ``0.65in``."""
     raw = _str_or_none(value)
     if raw is None:
-        raise RecipeError(f"{loc} is required")
+        raise BookConfigError(f"{loc} is required")
     match = re.fullmatch(r"(?P<num>\d+(?:\.\d+)?)in", raw)
     if match is None:
-        raise RecipeError(f"{loc} must be a positive inch value like '0.65in'")
+        raise BookConfigError(f"{loc} must be a positive inch value like '0.65in'")
     parsed = float(match.group("num"))
     if parsed <= 0:
-        raise RecipeError(f"{loc} must be greater than 0")
+        raise BookConfigError(f"{loc} must be greater than 0")
     return parsed
 
 
@@ -1500,31 +1504,31 @@ def _float_between(
 ) -> float:
     """Parse a numeric value constrained to an inclusive range."""
     if isinstance(value, bool) or not isinstance(value, int | float):
-        raise RecipeError(f"{loc} must be a number from {min_value} to {max_value}")
+        raise BookConfigError(f"{loc} must be a number from {min_value} to {max_value}")
     parsed = float(value)
     if parsed < min_value or parsed > max_value:
-        raise RecipeError(f"{loc} must be from {min_value} to {max_value}")
+        raise BookConfigError(f"{loc} must be from {min_value} to {max_value}")
     return parsed
 
 
 def _positive_int(value: object, *, loc: str) -> int:
     """Parse a positive integer recipe value."""
     if isinstance(value, bool) or not isinstance(value, int):
-        raise RecipeError(f"{loc} must be a positive integer")
+        raise BookConfigError(f"{loc} must be a positive integer")
     if value <= 0:
-        raise RecipeError(f"{loc} must be a positive integer")
+        raise BookConfigError(f"{loc} must be a positive integer")
     return int(value)
 
 
 def _skip_targets(value: object) -> list[str]:
     """Validate page-damage skip target names."""
     if not isinstance(value, list) or not all(isinstance(item, str) for item in value):
-        raise RecipeError("page_damage.skip must be a list of strings")
+        raise BookConfigError("page_damage.skip must be a list of strings")
     skip: list[str] = []
     for item in value:
         target = item.strip()
         if target not in PAGE_DAMAGE_SKIP_TARGETS:
-            raise RecipeError(
+            raise BookConfigError(
                 "page_damage.skip entries must be one of "
                 f"{sorted(PAGE_DAMAGE_SKIP_TARGETS)}"
             )
@@ -1538,7 +1542,7 @@ def _toc_depth_or_none(value: object, *, loc: str) -> int | None:
     if value is None:
         return None
     if isinstance(value, bool) or not isinstance(value, int):
-        raise RecipeError(f"{loc}.toc_depth must be an integer from 1 to 4")
+        raise BookConfigError(f"{loc}.toc_depth must be an integer from 1 to 4")
     if value < 1 or value > 4:
-        raise RecipeError(f"{loc}.toc_depth must be between 1 and 4")
+        raise BookConfigError(f"{loc}.toc_depth must be between 1 and 4")
     return value

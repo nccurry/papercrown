@@ -8,7 +8,7 @@ from PIL import Image
 
 from papercrown.build.options import BuildTarget
 from papercrown.project.manifest import build_manifest
-from papercrown.project.recipe import load_recipe
+from papercrown.project.recipe import load_book_config
 from papercrown.system import doctor
 from papercrown.system.diagnostics import (
     Diagnostic,
@@ -53,7 +53,7 @@ def test_doctor_reports_missing_recipe_art_before_tool_checks(tmp_path, monkeypa
         ).lstrip(),
         encoding="utf-8",
     )
-    recipe = load_recipe(recipe_path)
+    recipe = load_book_config(recipe_path)
     manifest = build_manifest(recipe)
     monkeypatch.setattr(
         doctor,
@@ -147,7 +147,7 @@ def test_doctor_warns_for_invalid_filler_and_page_wear_assets(
         ).lstrip(),
         encoding="utf-8",
     )
-    recipe = load_recipe(recipe_path)
+    recipe = load_book_config(recipe_path)
     manifest = build_manifest(recipe)
     monkeypatch.setattr(doctor, "_discover_tools", lambda report, *, target: None)
 

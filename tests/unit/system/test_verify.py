@@ -9,7 +9,7 @@ import pytest
 
 from papercrown.build.options import BuildScope, OutputProfile
 from papercrown.project.manifest import build_manifest
-from papercrown.project.recipe import load_recipe
+from papercrown.project.recipe import load_book_config
 from papercrown.system import verify as verifier
 
 # ---------------------------------------------------------------------------
@@ -64,7 +64,7 @@ def tiny_workspace(tmp_path):
 class TestDeriveExpected:
     def test_includes_section_individual_and_book(self, tiny_workspace):
         _, rp = tiny_workspace
-        m = build_manifest(load_recipe(rp))
+        m = build_manifest(load_book_config(rp))
         expected = verifier.derive_expected(
             m,
             include_book=True,
@@ -81,7 +81,7 @@ class TestDeriveExpected:
 
     def test_skips_book_when_disabled(self, tiny_workspace):
         _, rp = tiny_workspace
-        m = build_manifest(load_recipe(rp))
+        m = build_manifest(load_book_config(rp))
         expected = verifier.derive_expected(
             m,
             include_book=False,
@@ -92,7 +92,7 @@ class TestDeriveExpected:
 
     def test_digital_book_filename(self, tiny_workspace):
         _, rp = tiny_workspace
-        m = build_manifest(load_recipe(rp))
+        m = build_manifest(load_book_config(rp))
         expected = verifier.derive_expected(
             m,
             include_book=True,
@@ -103,7 +103,7 @@ class TestDeriveExpected:
 
     def test_draft_filenames(self, tiny_workspace):
         _, rp = tiny_workspace
-        m = build_manifest(load_recipe(rp))
+        m = build_manifest(load_book_config(rp))
         expected = verifier.derive_expected(
             m,
             include_book=True,
@@ -115,7 +115,7 @@ class TestDeriveExpected:
 
     def test_combined_book_requires_manifest_anchors(self, tiny_workspace):
         _, rp = tiny_workspace
-        m = build_manifest(load_recipe(rp))
+        m = build_manifest(load_book_config(rp))
         expected = verifier.derive_expected(
             m,
             include_book=True,
@@ -147,7 +147,7 @@ class TestDeriveExpected:
             ).lstrip(),
             encoding="utf-8",
         )
-        m = build_manifest(load_recipe(rp))
+        m = build_manifest(load_book_config(rp))
         expected = verifier.derive_expected(
             m,
             include_book=True,
@@ -159,7 +159,7 @@ class TestDeriveExpected:
 
     def test_dedup_by_resolved_path(self, tiny_workspace):
         _, rp = tiny_workspace
-        m = build_manifest(load_recipe(rp))
+        m = build_manifest(load_book_config(rp))
         expected = verifier.derive_expected(
             m,
             include_book=True,
@@ -171,7 +171,7 @@ class TestDeriveExpected:
 
     def test_scope_book_only_expects_combined_book(self, tiny_workspace):
         _, rp = tiny_workspace
-        m = build_manifest(load_recipe(rp))
+        m = build_manifest(load_book_config(rp))
         expected = verifier.derive_expected(
             m,
             include_book=True,
@@ -183,7 +183,7 @@ class TestDeriveExpected:
 
     def test_scope_sections_does_not_expect_book_or_individuals(self, tiny_workspace):
         _, rp = tiny_workspace
-        m = build_manifest(load_recipe(rp))
+        m = build_manifest(load_book_config(rp))
         expected = verifier.derive_expected(
             m,
             include_book=True,
@@ -372,7 +372,7 @@ class TestMain:
         workspace, rp = tiny_workspace
         # Derive the expected PDF paths from the manifest and create each one
         # at the right generated path.
-        m = build_manifest(load_recipe(rp))
+        m = build_manifest(load_book_config(rp))
         for exp in verifier.derive_expected(
             m,
             include_book=True,
@@ -401,7 +401,7 @@ class TestMain:
         self, tiny_workspace, capsys, monkeypatch
     ):
         _, rp = tiny_workspace
-        recipe = load_recipe(rp)
+        recipe = load_book_config(rp)
         manifest = build_manifest(recipe)
         for exp in verifier.derive_expected(
             manifest,
@@ -439,7 +439,7 @@ class TestMain:
         self, tiny_workspace, capsys, monkeypatch
     ):
         _, rp = tiny_workspace
-        manifest = build_manifest(load_recipe(rp))
+        manifest = build_manifest(load_book_config(rp))
         for exp in verifier.derive_expected(
             manifest,
             include_book=True,
@@ -470,7 +470,7 @@ class TestMain:
         # forbidden substrings) into a non-zero exit. Without --strict,
         # only missing files cause rc != 0.
         _, rp = tiny_workspace
-        m = build_manifest(load_recipe(rp))
+        m = build_manifest(load_book_config(rp))
         for exp in verifier.derive_expected(
             m,
             include_book=True,
@@ -509,7 +509,7 @@ class TestMain:
         self, tiny_workspace, capsys, monkeypatch
     ):
         _, rp = tiny_workspace
-        m = build_manifest(load_recipe(rp))
+        m = build_manifest(load_book_config(rp))
         for exp in verifier.derive_expected(
             m,
             include_book=True,
@@ -541,7 +541,7 @@ class TestMain:
         self, tiny_workspace, capsys, monkeypatch
     ):
         _, rp = tiny_workspace
-        m = build_manifest(load_recipe(rp))
+        m = build_manifest(load_book_config(rp))
         for exp in verifier.derive_expected(
             m,
             include_book=True,

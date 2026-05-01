@@ -18,7 +18,7 @@ from papercrown.build.options import (
     PageDamageMode,
     PaginationMode,
 )
-from papercrown.project.recipe import RecipeError, _load_recipe_mapping
+from papercrown.project.recipe import BookConfigError, _load_book_config_mapping
 
 
 class ConfigError(ValueError):
@@ -177,19 +177,18 @@ def load_project_config(
     )
 
 
-def load_recipe_build_config(recipe_path: Path) -> BuildConfigPatch:
-    """Load the optional top-level ``build:`` block from a recipe."""
+def load_book_build_config(recipe_path: Path) -> BuildConfigPatch:
+    """Reject legacy book-local build defaults."""
     try:
-        raw = _load_recipe_mapping(recipe_path.resolve(), stack=())
-    except RecipeError as error:
+        raw = _load_book_config_mapping(recipe_path.resolve(), stack=())
+    except BookConfigError as error:
         raise ConfigError(str(error)) from error
-    build_raw = raw.get("build") or {}
-    if not isinstance(build_raw, Mapping):
-        raise ConfigError(f"{recipe_path}: build must be a mapping")
-    return _build_patch_from_mapping(
-        build_raw,
-        source=f"{recipe_path}: build",
-    )
+    if "build" in raw:
+        raise ConfigError(
+            f"{recipe_path}: build is no longer supported in book configs; "
+            "move build defaults to papercrown.yaml"
+        )
+    return BuildConfigPatch()
 
 
 def resolve_build_config(

@@ -16,8 +16,8 @@ from papercrown.project.manifest import Manifest, classify_filler_art_path
 from papercrown.project.recipe import (
     PAGE_DAMAGE_FAMILIES,
     PAGE_DAMAGE_SIZES,
-    ChapterSpec,
-    Recipe,
+    BookConfig,
+    ContentItemSpec,
 )
 from papercrown.render.build import missing_fonts
 from papercrown.system.content_lint import lint_manifest_content
@@ -63,7 +63,7 @@ class _AlphaStats:
 
 
 def run_doctor(
-    recipe: Recipe,
+    recipe: BookConfig,
     manifest: Manifest,
     *,
     target: BuildTarget,
@@ -156,7 +156,7 @@ def _add_font_diagnostics(report: DiagnosticReport) -> None:
     )
 
 
-def _add_recipe_art_diagnostics(report: DiagnosticReport, recipe: Recipe) -> None:
+def _add_recipe_art_diagnostics(report: DiagnosticReport, recipe: BookConfig) -> None:
     for label, art_path in _recipe_art_references(recipe):
         if art_path.is_file():
             continue
@@ -383,7 +383,7 @@ def _alpha_value(value: Any) -> int:
     return int(value or 0)
 
 
-def _recipe_art_references(recipe: Recipe) -> Iterator[tuple[str, Path]]:
+def _recipe_art_references(recipe: BookConfig) -> Iterator[tuple[str, Path]]:
     if recipe.cover.enabled and recipe.cover.art:
         yield "cover", (recipe.art_dir / recipe.cover.art).resolve()
     if recipe.ornaments.folio_frame:
@@ -393,7 +393,7 @@ def _recipe_art_references(recipe: Recipe) -> Iterator[tuple[str, Path]]:
             "corner_bracket",
             (recipe.art_dir / recipe.ornaments.corner_bracket).resolve(),
         )
-    for spec in _walk_specs(recipe.chapters):
+    for spec in _walk_specs(recipe.contents):
         if spec.art:
             yield (
                 f"chapter {spec.title or spec.kind}",
@@ -406,7 +406,7 @@ def _recipe_art_references(recipe: Recipe) -> Iterator[tuple[str, Path]]:
             )
 
 
-def _walk_specs(chapters: list[ChapterSpec]) -> Iterator[ChapterSpec]:
+def _walk_specs(chapters: list[ContentItemSpec]) -> Iterator[ContentItemSpec]:
     for spec in chapters:
         yield spec
         yield from _walk_specs(spec.children)

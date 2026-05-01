@@ -10,7 +10,7 @@ from papercrown.assembly import markdown as assembly
 from papercrown.assembly import ttrpg
 from papercrown.media.images import resolve_local_image
 from papercrown.project.manifest import Manifest
-from papercrown.project.recipe import ChapterSpec, SourceRef
+from papercrown.project.recipe import ContentItemSpec, SourceRef
 from papercrown.system.diagnostics import Diagnostic, DiagnosticSeverity
 
 # Matches Markdown ATX heading openers for heading-shape linting.
@@ -101,7 +101,7 @@ def _lint_recipe_source_audit(manifest: Manifest) -> list[Diagnostic]:
 
 def _lint_recipe_source_mojibake(manifest: Manifest) -> list[Diagnostic]:
     diagnostics: list[Diagnostic] = []
-    for source, label, _ in _iter_recipe_sources(manifest.recipe.chapters):
+    for source, label, _ in _iter_recipe_sources(manifest.recipe.contents):
         raw = str(source)
         if not any(marker in raw for marker in _MOJIBAKE_MARKERS):
             continue
@@ -157,7 +157,7 @@ def _lint_bypassed_custom_overrides(manifest: Manifest) -> list[Diagnostic]:
 
     diagnostics: list[Diagnostic] = []
     for source, label, in_source_reference in _iter_recipe_sources(
-        manifest.recipe.chapters
+        manifest.recipe.contents
     ):
         if in_source_reference or source.vault != "nimble":
             continue
@@ -189,7 +189,7 @@ def _lint_bypassed_custom_overrides(manifest: Manifest) -> list[Diagnostic]:
 
 
 def _iter_recipe_sources(
-    specs: list[ChapterSpec],
+    specs: list[ContentItemSpec],
     *,
     in_source_reference: bool = False,
 ) -> Iterator[tuple[SourceRef, str, bool]]:

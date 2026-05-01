@@ -12,11 +12,11 @@ from papercrown.build.options import OutputProfile
 from papercrown.project import themes
 from papercrown.project.manifest import Chapter
 from papercrown.project.recipe import (
+    BookConfig,
+    BookConfigError,
     BookMetadataSpec,
     CoverSpec,
-    Recipe,
-    RecipeError,
-    load_recipe,
+    load_book_config,
 )
 from papercrown.project.resources import CORE_CSS_FILES, TEMPLATE_FILE
 from papercrown.render import build as build_mod
@@ -30,8 +30,8 @@ def _write_recipe(tmp_path: Path, body: str) -> Path:
     return recipe
 
 
-def _recipe(tmp_path: Path) -> Recipe:
-    return Recipe(
+def _recipe(tmp_path: Path) -> BookConfig:
+    return BookConfig(
         title="Frostmere",
         subtitle="Winter Court Primer",
         cover_eyebrow="Campaign",
@@ -79,15 +79,15 @@ def test_recipe_loads_theme_metadata_and_ordered_contents(tmp_path):
         """,
     )
 
-    recipe = load_recipe(recipe_path)
+    recipe = load_book_config(recipe_path)
 
     assert recipe.theme == "clean-srd"
     assert recipe.theme_options == {"accent": "#123456"}
     assert recipe.metadata.authors == ["Example Author"]
     assert recipe.metadata.keywords == ["rules", "fantasy"]
     assert recipe.metadata.credits["art"] == ["Example Artist"]
-    assert [item.kind for item in recipe.chapters] == ["file", "toc", "generated"]
-    assert recipe.chapters[2].title == "Game Object Index"
+    assert [item.kind for item in recipe.contents] == ["file", "toc", "generated"]
+    assert recipe.contents[2].title == "Game Object Index"
 
 
 def test_bundled_theme_resolves_css_template_and_options(tmp_path):
@@ -109,7 +109,7 @@ def test_bundled_theme_resolves_css_template_and_options(tmp_path):
             source: v:Book.md
         """,
     )
-    recipe = load_recipe(recipe_path)
+    recipe = load_book_config(recipe_path)
 
     theme = themes.load_theme(recipe)
 
@@ -167,7 +167,7 @@ def test_theme_css_list_can_use_arbitrary_source_filenames(tmp_path):
             source: v:Book.md
         """,
     )
-    recipe = load_recipe(recipe_path)
+    recipe = load_book_config(recipe_path)
 
     theme = themes.load_theme(recipe)
 
@@ -185,15 +185,13 @@ def test_local_themes_directory_is_discovered_by_default(tmp_path):
     recipe_path = _write_recipe(
         tmp_path,
         """
+        title: Local Theme Book
         contents:
-          - kind: inline
-            style: title
-            title: Local Theme Book
           - source: Book.md
         theme: my-theme
         """,
     )
-    recipe = load_recipe(recipe_path)
+    recipe = load_book_config(recipe_path)
 
     theme = themes.load_theme(recipe)
 
@@ -217,9 +215,9 @@ def test_theme_css_list_is_required(tmp_path):
             source: v:Book.md
         """,
     )
-    recipe = load_recipe(recipe_path)
+    recipe = load_book_config(recipe_path)
 
-    with pytest.raises(RecipeError, match="theme.yaml must declare css"):
+    with pytest.raises(BookConfigError, match="theme.yaml must declare css"):
         themes.load_theme(recipe)
 
 
@@ -253,7 +251,7 @@ def test_base_context_layers_core_css_before_theme_css(tmp_path):
             source: v:Book.md
         """,
     )
-    recipe = load_recipe(recipe_path)
+    recipe = load_book_config(recipe_path)
     tools = build_mod.Tools(
         pandoc="pandoc",
         obsidian_export="obsidian-export",

@@ -330,8 +330,7 @@ def _render_recipe(
     with_cover: bool,
 ) -> str:
     optional_blocks: list[str] = []
-    if not with_cover:
-        optional_blocks.append("cover:\n  enabled: false\n")
+    optional_blocks.append(f"cover:\n  enabled: {_yaml_bool(with_cover)}\n")
     if vault_ref is not None:
         optional_blocks.append(f"vaults:\n  content: {_yaml_string(vault_ref)}\n")
     optional_yaml = "\n".join(optional_blocks)
@@ -339,13 +338,11 @@ def _render_recipe(
         optional_yaml += "\n"
 
     source_prefix = "content:" if vault_ref is not None else ""
-    return f"""theme: {_yaml_string(theme)}
+    return f"""title: {_yaml_string(title)}
+subtitle: {_yaml_string(subtitle)}
+theme: {_yaml_string(theme)}
 
 {optional_yaml}contents:
-  - kind: inline
-    style: title
-    title: {_yaml_string(title)}
-    subtitle: {_yaml_string(subtitle)}
   - kind: toc
 {_render_chapters(contents, source_prefix=source_prefix)}"""
 
@@ -433,3 +430,7 @@ def _clean_title(title: str | None) -> str:
 
 def _yaml_string(value: str) -> str:
     return json.dumps(value)
+
+
+def _yaml_bool(value: bool) -> str:
+    return "true" if value else "false"

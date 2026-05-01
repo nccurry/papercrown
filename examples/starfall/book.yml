@@ -1,11 +1,10 @@
+title: Starfall Field Guide
+subtitle: A public sample for Paper Crown
 theme: clean-srd
+cover:
+  enabled: true
 
 contents:
-  - kind: inline
-    style: title
-    title: Starfall Field Guide
-    subtitle: A public sample for Paper Crown
-
   - kind: toc
     title: Contents
 

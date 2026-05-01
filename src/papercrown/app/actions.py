@@ -11,8 +11,8 @@ from papercrown.app.config import (
     BuildConfig,
     BuildConfigPatch,
     ConfigError,
+    load_book_build_config,
     load_project_config,
-    load_recipe_build_config,
     parse_jobs,
     resolve_build_config,
 )
@@ -34,7 +34,7 @@ from papercrown.build.requests import BuildRequest
 from papercrown.project import manifest as manifest_mod
 from papercrown.project import themes as themes_mod
 from papercrown.project.manifest import Manifest, build_manifest
-from papercrown.project.recipe import Recipe, RecipeError, load_recipe
+from papercrown.project.recipe import BookConfig, BookConfigError, load_book_config
 from papercrown.project.starter import InitError, StarterBookType, init_project
 from papercrown.render.build import build_outputs
 from papercrown.system import verify as verify_mod
@@ -56,11 +56,11 @@ class AppCommandError(Exception):
 
 
 @dataclass(frozen=True)
-class _RecipeContext:
+class _BookConfigContext:
     """Book inputs resolved from config layers."""
 
     config: BuildConfig
-    recipe: Recipe
+    recipe: BookConfig
     manifest: Manifest
 
 
@@ -121,7 +121,7 @@ def run_build(
     timings: bool | None,
 ) -> None:
     """Build PDFs or the static web artifact."""
-    context = _load_recipe_context(
+    context = _load_book_config_context(
         recipe,
         config=config,
         no_config=no_config,
@@ -160,7 +160,7 @@ def run_manifest(
     no_config: bool,
 ) -> None:
     """Print the resolved build manifest."""
-    context = _load_recipe_context(
+    context = _load_book_config_context(
         recipe,
         config=config,
         no_config=no_config,
@@ -180,7 +180,7 @@ def run_art_audit(
     """Audit the book art library against the Paper Crown art contract."""
     if output_format not in ART_OUTPUT_FORMATS:
         raise AppCommandError("--format must be 'text' or 'markdown'")
-    context = _load_recipe_context(
+    context = _load_book_config_context(
         recipe,
         config=config,
         no_config=no_config,
@@ -202,7 +202,7 @@ def run_art_contact_sheet(
     no_config: bool,
 ) -> None:
     """Write an HTML visual inventory of the book art library."""
-    context = _load_recipe_context(
+    context = _load_book_config_context(
         recipe,
         config=config,
         no_config=no_config,
@@ -223,7 +223,7 @@ def run_doctor(
     no_config: bool,
 ) -> int:
     """Run preflight diagnostics and return the report exit code."""
-    context = _load_recipe_context(
+    context = _load_book_config_context(
         recipe,
         config=config,
         no_config=no_config,
@@ -265,7 +265,7 @@ def run_verify(
     no_config: bool,
 ) -> int:
     """Verify generated outputs against the book manifest."""
-    context = _load_recipe_context(
+    context = _load_book_config_context(
         recipe,
         config=config,
         no_config=no_config,
@@ -327,7 +327,7 @@ def run_themes_copy(name: str, dest: Path, *, force: bool) -> None:
     """Copy a bundled theme so it can be customized."""
     try:
         copied = themes_mod.copy_bundled_theme(name, dest, overwrite=force)
-    except RecipeError as error:
+    except BookConfigError as error:
         raise AppCommandError(f"Theme error: {error}") from error
     print(f"Copied {name} to {output.display_path(copied)}")
 
@@ -349,7 +349,7 @@ def _resolve_config(
                 "no book provided; pass a book path, set book in papercrown.yaml, "
                 "or add book.yml"
             )
-        recipe_patch = load_recipe_build_config(recipe_path)
+        recipe_patch = load_book_build_config(recipe_path)
         return resolve_build_config(
             recipe_arg=recipe_arg,
             project=project_patch,
@@ -360,13 +360,13 @@ def _resolve_config(
         raise AppCommandError(f"Config error: {error}") from error
 
 
-def _load_recipe_context(
+def _load_book_config_context(
     recipe: Path | None,
     *,
     config: Path | None,
     no_config: bool,
     cli_patch: BuildConfigPatch,
-) -> _RecipeContext:
+) -> _BookConfigContext:
     """Resolve config, book, and manifest for a command."""
     build_config = _resolve_config(
         recipe,
@@ -374,19 +374,19 @@ def _load_recipe_context(
         no_config=no_config,
         cli_patch=cli_patch,
     )
-    recipe_obj, manifest = _load_recipe_and_manifest(build_config)
-    return _RecipeContext(config=build_config, recipe=recipe_obj, manifest=manifest)
+    recipe_obj, manifest = _load_book_config_and_manifest(build_config)
+    return _BookConfigContext(config=build_config, recipe=recipe_obj, manifest=manifest)
 
 
-def _load_recipe_and_manifest(config: BuildConfig) -> tuple[Recipe, Manifest]:
+def _load_book_config_and_manifest(config: BuildConfig) -> tuple[BookConfig, Manifest]:
     """Load the book config and manifest for a resolved build config."""
     try:
-        recipe = load_recipe(
+        recipe = load_book_config(
             config.recipe_path,
             defaults=config.project_defaults,
             defaults_base_dir=config.project_defaults_base_dir,
         )
-    except RecipeError as error:
+    except BookConfigError as error:
         raise AppCommandError(f"Book config error: {error}") from error
 
     try:
@@ -415,7 +415,7 @@ def _ensure_requested_chapter_exists(config: BuildConfig, manifest: Manifest) ->
 
 
 def _build_request(
-    context: _RecipeContext,
+    context: _BookConfigContext,
     *,
     filler_debug_overlay: bool,
 ) -> BuildRequest:

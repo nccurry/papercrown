@@ -11,7 +11,7 @@ from pathlib import Path
 
 from papercrown.assembly import markdown as assembly
 from papercrown.project.manifest import Chapter, ChapterFillerSlot, Splash
-from papercrown.project.recipe import load_recipe
+from papercrown.project.recipe import load_book_config
 from papercrown.project.vaults import Vault, VaultIndex
 
 
@@ -55,7 +55,7 @@ class TestAssembleChapterMarkdown:
             ).lstrip(),
             encoding="utf-8",
         )
-        recipe = load_recipe(recipe_path)
+        recipe = load_book_config(recipe_path)
         f = _write(
             tmp_path / "a.md",
             """
@@ -772,7 +772,7 @@ class TestAssembleChapterMarkdown:
             style="equipment",
             source_files=[combat, weapons, artifacts],
             source_titles=[None, "Weapons & Armor", "Prototype Artifacts"],
-            source_boundary_filler_slot="section-end",
+            source_boundary_filler_slots=["section-end"],
         )
 
         out = assembly.assemble_chapter_markdown(ch)
@@ -824,7 +824,7 @@ class TestAssembleChapterMarkdown:
             style="equipment",
             source_files=[first, second, third],
             source_filler_enabled=[False, True, True],
-            source_boundary_filler_slot="section-end",
+            source_boundary_filler_slots=["section-end"],
         )
 
         out = assembly.assemble_chapter_markdown(ch)

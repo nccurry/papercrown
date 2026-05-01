@@ -1,10 +1,10 @@
+title: Minimal Convention Book
+subtitle: Smoke Fixture
 theme: clean-srd
+cover:
+  enabled: true
 
 contents:
-  - kind: inline
-    style: title
-    title: Minimal Convention Book
-    subtitle: Smoke Fixture
   - kind: toc
   - Intro.md
   - Rules.md

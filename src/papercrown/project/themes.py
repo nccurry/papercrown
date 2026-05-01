@@ -11,7 +11,7 @@ from typing import Any
 import yaml
 
 from papercrown.media.image_treatments import image_treatment_css
-from papercrown.project.recipe import DEFAULT_THEME, Recipe, RecipeError
+from papercrown.project.recipe import DEFAULT_THEME, BookConfig, BookConfigError
 from papercrown.project.resources import TEMPLATE_FILE, THEMES_DIR
 
 
@@ -43,13 +43,13 @@ class ThemeSummary:
     tags: tuple[str, ...]
 
 
-def load_theme(recipe: Recipe) -> ThemePack:
+def load_theme(recipe: BookConfig) -> ThemePack:
     """Resolve the theme pack requested by ``recipe``."""
     root = _theme_root(recipe)
     name = getattr(recipe, "theme", DEFAULT_THEME)
     theme_yaml = root / "theme.yaml"
     if not theme_yaml.is_file():
-        raise RecipeError(f"theme {name!r} is missing theme.yaml: {theme_yaml}")
+        raise BookConfigError(f"theme {name!r} is missing theme.yaml: {theme_yaml}")
     metadata = _read_theme_yaml(theme_yaml)
     css_files = _resolve_css_files(root, metadata)
     template = _resolve_template(root, metadata)
@@ -114,19 +114,19 @@ def bundled_theme_summaries() -> list[ThemeSummary]:
 def copy_bundled_theme(name: str, dest: Path, *, overwrite: bool = False) -> Path:
     """Copy a bundled theme directory to ``dest`` and return the copied root."""
     if name not in bundled_theme_names():
-        raise RecipeError(
+        raise BookConfigError(
             f"unknown bundled theme {name!r}; choose one of: "
             + ", ".join(bundled_theme_names())
         )
     source = THEMES_DIR / name
     target = dest.resolve()
     if target.exists() and any(target.iterdir()) and not overwrite:
-        raise RecipeError(f"destination already exists and is not empty: {target}")
+        raise BookConfigError(f"destination already exists and is not empty: {target}")
     shutil.copytree(source, target, dirs_exist_ok=True)
     return target
 
 
-def _theme_root(recipe: Recipe) -> Path:
+def _theme_root(recipe: BookConfig) -> Path:
     name = getattr(recipe, "theme", DEFAULT_THEME)
     theme_dir = getattr(recipe, "theme_dir_override", None)
     if theme_dir is None:
@@ -139,7 +139,7 @@ def _theme_root(recipe: Recipe) -> Path:
             theme_dir = THEMES_DIR
     root = (theme_dir / name).resolve()
     if not root.is_dir():
-        raise RecipeError(
+        raise BookConfigError(
             f"theme {name!r} not found at {root}; "
             "set theme_dir or choose a bundled theme"
         )
@@ -150,11 +150,11 @@ def _read_theme_yaml(path: Path) -> dict[str, Any]:
     try:
         raw = yaml.safe_load(path.read_text(encoding="utf-8")) or {}
     except yaml.YAMLError as error:
-        raise RecipeError(f"invalid theme YAML in {path}: {error}") from error
+        raise BookConfigError(f"invalid theme YAML in {path}: {error}") from error
     except OSError as error:
-        raise RecipeError(f"could not read theme {path}: {error}") from error
+        raise BookConfigError(f"could not read theme {path}: {error}") from error
     if not isinstance(raw, dict):
-        raise RecipeError(f"theme root must be a mapping: {path}")
+        raise BookConfigError(f"theme root must be a mapping: {path}")
     return {str(key): value for key, value in raw.items()}
 
 
@@ -170,17 +170,17 @@ def _metadata_string(
 
 def _resolve_css_files(root: Path, metadata: dict[str, Any]) -> list[Path]:
     if "css" not in metadata:
-        raise RecipeError(f"theme.yaml must declare css: {root / 'theme.yaml'}")
+        raise BookConfigError(f"theme.yaml must declare css: {root / 'theme.yaml'}")
     css_names = _string_or_string_list(metadata.get("css"), field_name="css")
     if not css_names:
-        raise RecipeError(
+        raise BookConfigError(
             f"theme.yaml css must list at least one CSS file: {root / 'theme.yaml'}"
         )
     css_files: list[Path] = []
     for css_name in css_names:
         css_path = (root / css_name).resolve()
         if not css_path.is_file():
-            raise RecipeError(f"theme CSS file not found: {css_path}")
+            raise BookConfigError(f"theme CSS file not found: {css_path}")
         css_files.append(css_path)
     return css_files
 
@@ -190,10 +190,10 @@ def _resolve_template(root: Path, metadata: dict[str, Any]) -> Path:
     if template_raw is None:
         return TEMPLATE_FILE
     if not isinstance(template_raw, str) or not template_raw.strip():
-        raise RecipeError("theme.template must be a non-empty path string")
+        raise BookConfigError("theme.template must be a non-empty path string")
     template = (root / template_raw).resolve()
     if not template.is_file():
-        raise RecipeError(f"theme template not found: {template}")
+        raise BookConfigError(f"theme template not found: {template}")
     return template
 
 
@@ -205,7 +205,7 @@ def _resolve_asset_roots(root: Path, metadata: dict[str, Any]) -> list[Path]:
     ):
         asset_root = (root / asset_name).resolve()
         if not asset_root.is_dir():
-            raise RecipeError(f"theme asset directory not found: {asset_root}")
+            raise BookConfigError(f"theme asset directory not found: {asset_root}")
         asset_roots.append(asset_root)
     return list(dict.fromkeys(asset_roots))
 
@@ -217,7 +217,7 @@ def _string_or_string_list(value: Any, *, field_name: str) -> list[str]:
         stripped = value.strip()
         return [stripped] if stripped else []
     if not isinstance(value, list) or not all(isinstance(item, str) for item in value):
-        raise RecipeError(f"theme.{field_name} must be a string or list of strings")
+        raise BookConfigError(f"theme.{field_name} must be a string or list of strings")
     return [item.strip() for item in value if item.strip()]
 
 
@@ -226,7 +226,7 @@ def _theme_options_css(options: dict[str, str]) -> str | None:
     for key, value in sorted(options.items()):
         property_name = key if key.startswith("--") else f"--{key}"
         if not re.fullmatch(r"--[A-Za-z0-9_-]+", property_name):
-            raise RecipeError(
+            raise BookConfigError(
                 f"theme option {key!r} must be a valid CSS custom property name"
             )
         sanitized = str(value).replace(";", "")

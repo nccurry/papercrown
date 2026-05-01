@@ -14,7 +14,7 @@ from urllib.parse import unquote, urlparse
 from papercrown.build.options import BuildScope, OutputProfile
 from papercrown.project import paths
 from papercrown.project.manifest import Manifest, build_manifest
-from papercrown.project.recipe import Recipe, RecipeError, load_recipe
+from papercrown.project.recipe import BookConfig, BookConfigError, load_book_config
 
 
 @dataclass(frozen=True)
@@ -147,7 +147,7 @@ def derive_expected(
     return expected
 
 
-def check_web_image_refs(recipe: Recipe) -> WebImageRefResult:
+def check_web_image_refs(recipe: BookConfig) -> WebImageRefResult:
     """Check that local ``src=`` references in generated web output exist."""
     index_path = paths.web_book_path(recipe)
     if not index_path.is_file():
@@ -520,8 +520,8 @@ def main(argv: list[str] | None = None) -> int:
     scope = _normalize_scope(args)
 
     try:
-        recipe = load_recipe(args.recipe)
-    except RecipeError as error:
+        recipe = load_book_config(args.recipe)
+    except BookConfigError as error:
         print(f"Book config error: {error}", file=sys.stderr)
         return 2
 

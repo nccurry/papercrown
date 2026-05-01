@@ -7,11 +7,11 @@ from pathlib import Path
 
 from papercrown.art.roles import IMAGE_SUFFIXES, classify_art_path
 from papercrown.project.manifest_models import FillerArtClassification
-from papercrown.project.recipe import Recipe
+from papercrown.project.recipe import BookConfig
 from papercrown.project.slugs import slugify
 
 
-def art_path(recipe: Recipe, art_filename: str | None) -> Path | None:
+def art_path(recipe: BookConfig, art_filename: str | None) -> Path | None:
     """Resolve an explicit art filename relative to the recipe art directory."""
     if not art_filename:
         return None
@@ -20,7 +20,7 @@ def art_path(recipe: Recipe, art_filename: str | None) -> Path | None:
 
 
 def convention_art_path(
-    recipe: Recipe,
+    recipe: BookConfig,
     roles: set[str],
     *,
     slug: str | None = None,
@@ -33,7 +33,11 @@ def convention_art_path(
     for path in sorted(root.rglob("*"), key=lambda item: item.as_posix().lower()):
         if not path.is_file() or path.suffix.lower() not in IMAGE_SUFFIXES:
             continue
-        classification = classify_art_path(path.resolve(), art_root=root)
+        classification = classify_art_path(
+            path.resolve(),
+            art_root=root,
+            custom_roles=getattr(recipe, "art_roles", {}),
+        )
         if classification.role not in roles:
             continue
         if slug is not None and not _art_stem_matches_slug(
@@ -47,7 +51,7 @@ def convention_art_path(
 
 
 def resolve_art_asset(
-    recipe: Recipe,
+    recipe: BookConfig,
     *,
     art: str | None = None,
     role: str = "splash",
@@ -64,7 +68,11 @@ def resolve_art_asset(
         if not path.is_file() or path.suffix.lower() not in IMAGE_SUFFIXES:
             continue
         resolved = path.resolve()
-        classification = classify_art_path(resolved, art_root=root)
+        classification = classify_art_path(
+            resolved,
+            art_root=root,
+            custom_roles=getattr(recipe, "art_roles", {}),
+        )
         if classification.role != role:
             continue
         if context and not _art_candidate_matches(

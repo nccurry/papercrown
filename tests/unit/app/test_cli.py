@@ -147,12 +147,6 @@ def test_build_command_applies_config_recipe_and_cli_precedence(
         title: Cli Book
         vaults:
           v: vault
-        build:
-          scope: book
-          profile: digital
-          include_art: true
-          clean_pdf: true
-          page_damage: fast
         contents:
           - kind: file
             title: Foo
@@ -165,12 +159,13 @@ def test_build_command_applies_config_recipe_and_cli_precedence(
             """
             book: recipe.yaml
             build:
-              scope: sections
-              profile: print
+              scope: book
+              profile: digital
               include_art: false
               jobs: 2
               clean_pdf: false
               pagination: off
+              page_damage: fast
             """
         ).lstrip(),
         encoding="utf-8",
@@ -388,7 +383,7 @@ def test_new_command_aliases_init(tmp_path):
     assert (dest / "Overview.md").is_file()
 
 
-def test_no_config_ignores_project_config_but_keeps_recipe_build(
+def test_no_config_ignores_project_config(
     tmp_path,
     monkeypatch,
 ):
@@ -398,10 +393,6 @@ def test_no_config_ignores_project_config_but_keeps_recipe_build(
         title: No Config Book
         vaults:
           v: vault
-        build:
-          scope: book
-          profile: digital
-          page_damage: off
         contents:
           - kind: file
             title: Foo
@@ -425,9 +416,9 @@ def test_no_config_ignores_project_config_but_keeps_recipe_build(
 
     assert result.exit_code == 0, result.output
     request = captured["request"]
-    assert request.scope is BuildScope.BOOK
-    assert request.profile is OutputProfile.DIGITAL
-    assert request.page_damage_mode is PageDamageMode.OFF
+    assert request.scope is BuildScope.ALL
+    assert request.profile is OutputProfile.PRINT
+    assert request.page_damage_mode is PageDamageMode.AUTO
 
 
 def _patch_build_side_effects(tmp_path, monkeypatch):

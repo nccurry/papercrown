@@ -14,17 +14,15 @@ the config says otherwise.
 
 ## How to Use It
 
-Start with a theme, title item, and ordered content. Paths are resolved
+Start with top-level title fields, a theme, and ordered content. Paths are resolved
 relative to the book file unless they are absolute.
 
 ```yaml
+title: Starfall Field Guide
+subtitle: A public sample for Paper Crown
 theme: industrial
 
 contents:
-  - kind: inline
-    style: title
-    title: Starfall Field Guide
-    subtitle: A public sample for Paper Crown
   - kind: toc
   - title: Primer
     source: vault/Primer.md
@@ -32,7 +30,7 @@ contents:
 
 With no `vaults:` mapping, Paper Crown treats the book file's directory as a single
 content vault. `output_dir` defaults to the book file's directory, `output_name` is
-derived from the inline title's title text, `art_dir` defaults to `Art/`, and a
+derived from the top-level title text, `art_dir` defaults to `Art/`, and a
 matching local `themes/<theme>/` wins over bundled themes. The subtitle is not
 included in the default output folder name; set `output_name` only when you
 need a release-specific name or two books would otherwise collide.
