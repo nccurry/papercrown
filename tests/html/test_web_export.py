@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import base64
 import re
 import shutil
 import textwrap
@@ -13,6 +14,10 @@ from papercrown.project.recipe import load_book_config
 from papercrown.render import build
 from papercrown.system.export import Tools
 
+_PNG_1X1 = base64.b64decode(
+    "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+ip1sAAAAASUVORK5CYII="
+)
+
 
 def _write(path: Path, text: str) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
@@ -21,14 +26,17 @@ def _write(path: Path, text: str) -> None:
 
 def _make_web_recipe(tmp_path: Path) -> Path:
     (tmp_path / "art").mkdir()
-    (tmp_path / "art" / "setting.png").write_bytes(b"\x89PNG\r\n\x1a\n")
-    (tmp_path / "art" / "tail.png").write_bytes(b"\x89PNG\r\n\x1a\n")
+    (tmp_path / "art" / "diagram-flow.png").write_bytes(_PNG_1X1)
+    (tmp_path / "art" / "setting.png").write_bytes(_PNG_1X1)
+    (tmp_path / "art" / "tail.png").write_bytes(_PNG_1X1)
     _write(
         tmp_path / "vault" / "Setting.md",
         """
         # Setting
 
         ## Setting Overview
+
+        ![](diagram-flow.png)
 
         ### Setting Detail
 
@@ -117,6 +125,16 @@ def test_static_web_export_writes_self_contained_tree(tmp_path, require_pandoc):
     assert (web_root / "styles" / "core" / "50-ttrpg-components.css").is_file()
     assert any((web_root / "assets" / "fonts").iterdir())
     assert 'src="assets/images/' in html
+    for img in re.findall(r"<img\b[^>]*>", html):
+        assert 'loading="lazy"' in img
+        assert 'decoding="async"' in img
+        assert 'width="1"' in img
+        assert 'height="1"' in img
+        assert "alt=" in img
+    diagram_img = next(img for img in re.findall(r"<img\b[^>]*>", html) if "diagram-flow" in img)
+    assert 'alt="Diagram: Flow"' in diagram_img
+    tailpiece_img = next(img for img in re.findall(r"<img\b[^>]*>", html) if "tail-" in img)
+    assert 'alt=""' in tailpiece_img
 
     for ref in _local_refs(html):
         assert not Path(ref).is_absolute()

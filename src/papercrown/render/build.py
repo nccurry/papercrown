@@ -791,6 +791,7 @@ def build_web_book(
         web_root=web_root,
         search_roots=_build_web.web_asset_search_roots(recipe),
     )
+    html = _build_web.enhance_web_image_tags(html, web_root=web_root)
     out.write_text(html, encoding="utf-8")
     return out
 

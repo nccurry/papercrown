@@ -3,11 +3,14 @@
 from __future__ import annotations
 
 import hashlib
+import html as html_lib
 import os
 import re
 import shutil
 from pathlib import Path
 from urllib.parse import unquote, urlparse
+
+from PIL import Image, UnidentifiedImageError
 
 from papercrown.project import themes
 from papercrown.project.manifest import slugify
@@ -39,6 +42,65 @@ _WEB_ASSET_ATTR_RE = re.compile(
 _WINDOWS_ABSOLUTE_RE = re.compile(r"^[A-Za-z]:[\\/]")
 # Matches CSS url(...) references so copied stylesheets can be rebased.
 _CSS_URL_RE = re.compile(r"url\(\s*(?P<quote>['\"]?)(?P<value>[^'\")]+)(?P=quote)\s*\)")
+# Matches image tags for web-only accessibility and loading attributes.
+_IMG_TAG_RE = re.compile(
+    r"<img\b(?P<attrs>[^<>]*?)(?P<slash>/?)>",
+    re.IGNORECASE | re.DOTALL,
+)
+_HTML_ATTR_RE = re.compile(
+    r"""
+    (?P<name>[^\s=/>]+)
+    (?:
+        \s*=\s*
+        (?:
+            "(?P<double>[^"]*)"
+            |'(?P<single>[^']*)'
+            |(?P<bare>[^\s"'=<>`]+)
+        )
+    )?
+    """,
+    re.VERBOSE | re.DOTALL,
+)
+_HASH_SUFFIX_RE = re.compile(r"-(?:[0-9a-f]{10}|[0-9a-f]{12})$", re.IGNORECASE)
+_DIMENSION_IMAGE_SUFFIXES = WEB_IMAGE_SUFFIXES - {".svg"}
+_DECORATIVE_IMAGE_CLASSES = {
+    "chapter-art",
+    "cover-art",
+    "cover-back-art",
+    "section-divider-art",
+    "section-divider-frame-art",
+    "splash-img",
+    "splash-page-art",
+}
+_DECORATIVE_CONTAINER_RE = re.compile(
+    r"<(?:div|figure|section)\b[^>]*\bclass=[\"'][^\"']*"
+    r"(?:chapter-art-wrap|cover-art-wrap|ornament-tailpiece|section-divider-art-wrap|"
+    r"splash-art|splash-page)"
+    r"[^\"']*[\"'][^>]*>\s*(?:<p>\s*)?$",
+    re.IGNORECASE | re.DOTALL,
+)
+_DECORATIVE_IMAGE_PREFIXES = (
+    "cover-",
+    "divider-",
+    "filler-",
+    "header-",
+    "ornament-",
+    "page-finish-",
+    "surface-",
+    "wear-",
+)
+_ALT_PREFIX_LABELS = (
+    ("diagram", "Diagram"),
+    ("faction", "Faction art"),
+    ("frame", "Frame art"),
+    ("gear", "Gear art"),
+    ("power-header", "Power art"),
+    ("power-icon", "Power icon"),
+    ("spot-class", "Class art"),
+    ("spot", "Illustration"),
+    ("vista", "Scene"),
+    ("class", "Class art"),
+)
 
 
 def reset_web_output(web_root: Path) -> None:
@@ -141,6 +203,46 @@ def rewrite_web_asset_refs(
     return _WEB_ASSET_ATTR_RE.sub(replace, html)
 
 
+def enhance_web_image_tags(html: str, *, web_root: Path) -> str:
+    """Add web-only image attributes after assets have been copied locally."""
+
+    def replace(match: re.Match[str]) -> str:
+        attrs = _parse_img_attrs(match.group("attrs"))
+        src = _attr_value(attrs, "src")
+
+        if _attr_value(attrs, "loading") is None:
+            _set_attr(attrs, "loading", "lazy")
+        if _attr_value(attrs, "decoding") is None:
+            _set_attr(attrs, "decoding", "async")
+
+        if src:
+            dimensions = _web_image_dimensions(src, web_root=web_root)
+            if dimensions is not None:
+                width, height = dimensions
+                if _attr_value(attrs, "width") is None:
+                    _set_attr(attrs, "width", str(width))
+                if _attr_value(attrs, "height") is None:
+                    _set_attr(attrs, "height", str(height))
+
+        alt = _attr_value(attrs, "alt")
+        if alt is None or alt == "":
+            decorative = _has_decorative_image_context(html, match.start())
+            _set_attr(
+                attrs,
+                "alt",
+                (
+                    ""
+                    if decorative or _is_decorative_web_image(attrs, src)
+                    else _alt_text_from_src(src)
+                ),
+            )
+
+        slash = " /" if match.group("slash") else ""
+        return f"<img{_format_img_attrs(attrs)}{slash}>"
+
+    return _IMG_TAG_RE.sub(replace, html)
+
+
 def local_asset_path(
     value: str,
     *,
@@ -237,3 +339,135 @@ def copy_web_image(
     relative = dest.relative_to(web_root).as_posix()
     copied[resolved] = relative
     return relative
+
+
+def _parse_img_attrs(attrs_text: str) -> list[tuple[str, str | None]]:
+    attrs: list[tuple[str, str | None]] = []
+    for match in _HTML_ATTR_RE.finditer(attrs_text):
+        name = match.group("name")
+        if not name:
+            continue
+        value = (
+            match.group("double")
+            if match.group("double") is not None
+            else match.group("single")
+            if match.group("single") is not None
+            else match.group("bare")
+        )
+        attrs.append((name, value))
+    return attrs
+
+
+def _attr_value(attrs: list[tuple[str, str | None]], name: str) -> str | None:
+    lowered = name.lower()
+    for attr_name, value in attrs:
+        if attr_name.lower() == lowered:
+            return "" if value is None else html_lib.unescape(value)
+    return None
+
+
+def _set_attr(attrs: list[tuple[str, str | None]], name: str, value: str) -> None:
+    lowered = name.lower()
+    replaced = False
+    out: list[tuple[str, str | None]] = []
+    for attr_name, attr_value in attrs:
+        if attr_name.lower() == lowered:
+            if not replaced:
+                out.append((attr_name, value))
+                replaced = True
+            continue
+        out.append((attr_name, attr_value))
+    if not replaced:
+        out.append((name, value))
+    attrs[:] = out
+
+
+def _format_img_attrs(attrs: list[tuple[str, str | None]]) -> str:
+    if not attrs:
+        return ""
+    rendered: list[str] = []
+    for name, value in attrs:
+        if value is None:
+            rendered.append(name)
+        else:
+            escaped = html_lib.escape(value, quote=True)
+            rendered.append(f'{name}="{escaped}"')
+    return " " + " ".join(rendered)
+
+
+def _web_image_dimensions(src: str, *, web_root: Path) -> tuple[int, int] | None:
+    local = _web_relative_asset(src, web_root=web_root)
+    if local is None or local.suffix.lower() not in _DIMENSION_IMAGE_SUFFIXES:
+        return None
+    try:
+        with Image.open(local) as image:
+            return image.size
+    except (OSError, UnidentifiedImageError):
+        return None
+
+
+def _web_relative_asset(src: str, *, web_root: Path) -> Path | None:
+    if is_non_file_reference(src):
+        return None
+    parsed = urlparse(src)
+    if parsed.scheme:
+        return None
+    value = unquote(parsed.path)
+    if not value or _WINDOWS_ABSOLUTE_RE.match(value):
+        return None
+    path = Path(value)
+    if path.is_absolute():
+        return None
+    root = web_root.resolve()
+    candidate = (root / path).resolve()
+    try:
+        candidate.relative_to(root)
+    except ValueError:
+        return None
+    return candidate if candidate.is_file() else None
+
+
+def _is_decorative_web_image(
+    attrs: list[tuple[str, str | None]],
+    src: str | None,
+) -> bool:
+    classes = set((_attr_value(attrs, "class") or "").split())
+    if classes & _DECORATIVE_IMAGE_CLASSES:
+        return True
+    stem = _asset_stem(src)
+    return stem.startswith(_DECORATIVE_IMAGE_PREFIXES)
+
+
+def _has_decorative_image_context(html: str, pos: int) -> bool:
+    context = html[max(0, pos - 800) : pos]
+    return _DECORATIVE_CONTAINER_RE.search(context) is not None
+
+
+def _alt_text_from_src(src: str | None) -> str:
+    stem = _asset_stem(src)
+    if not stem:
+        return "Illustration"
+    for prefix, label in _ALT_PREFIX_LABELS:
+        prefix_text = f"{prefix}-"
+        if stem.startswith(prefix_text):
+            subject = _humanize_stem(stem.removeprefix(prefix_text))
+            return f"{label}: {subject}" if subject else label
+    subject = _humanize_stem(stem)
+    return f"Illustration: {subject}" if subject else "Illustration"
+
+
+def _asset_stem(src: str | None) -> str:
+    if not src:
+        return ""
+    parsed = urlparse(html_lib.unescape(src))
+    stem = Path(unquote(parsed.path)).stem.lower()
+    while True:
+        cleaned = _HASH_SUFFIX_RE.sub("", stem)
+        if cleaned == stem:
+            return cleaned
+        stem = cleaned
+
+
+def _humanize_stem(stem: str) -> str:
+    words = [word for word in re.split(r"[-_]+", stem) if word]
+    return " ".join(word.capitalize() for word in words)
