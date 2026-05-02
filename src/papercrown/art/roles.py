@@ -28,6 +28,7 @@ class ArtRoleSpec:
     transparent: bool | None = None
     auto_placeable: bool = False
     prefixes: tuple[str, ...] = ()
+    css_files: tuple[Path, ...] = ()
 
 
 class _ParsedArtName(TypedDict):

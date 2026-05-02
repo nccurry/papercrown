@@ -51,7 +51,8 @@ def load_theme(recipe: BookConfig) -> ThemePack:
     if not theme_yaml.is_file():
         raise BookConfigError(f"theme {name!r} is missing theme.yaml: {theme_yaml}")
     metadata = _read_theme_yaml(theme_yaml)
-    css_files = _resolve_css_files(root, metadata)
+    theme_css_files = _resolve_css_files(root, metadata)
+    css_files = [*theme_css_files, *_resolve_art_role_css_files(recipe)]
     template = _resolve_template(root, metadata)
     asset_roots = _resolve_asset_roots(root, metadata)
     inline_css = _join_css_blocks(
@@ -183,6 +184,22 @@ def _resolve_css_files(root: Path, metadata: dict[str, Any]) -> list[Path]:
             raise BookConfigError(f"theme CSS file not found: {css_path}")
         css_files.append(css_path)
     return css_files
+
+
+def _resolve_art_role_css_files(recipe: BookConfig) -> list[Path]:
+    """Return book-local CSS files declared by custom art roles."""
+    css_files: list[Path] = []
+    project_dir = getattr(recipe, "project_dir", Path.cwd())
+    for role, spec in getattr(recipe, "art_roles", {}).items():
+        for raw_path in spec.css_files:
+            path = raw_path if raw_path.is_absolute() else project_dir / raw_path
+            resolved = path.resolve()
+            if not resolved.is_file():
+                raise BookConfigError(
+                    f"art_roles.{role}.css file not found: {resolved}"
+                )
+            css_files.append(resolved)
+    return list(dict.fromkeys(css_files))
 
 
 def _resolve_template(root: Path, metadata: dict[str, Any]) -> Path:

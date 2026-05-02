@@ -669,6 +669,33 @@ class TestLoadBookConfigErrors:
         with pytest.raises(BookConfigError, match="preset"):
             load_book_config(p)
 
+    def test_art_roles_can_declare_css_files(self, tmp_path):
+        (tmp_path / "styles").mkdir()
+        css = tmp_path / "styles" / "power-header.css"
+        css.write_text(".power-header-art { float: right; }\n", encoding="utf-8")
+        p = _write_recipe(
+            tmp_path,
+            """
+            title: X
+            vaults:
+              custom: vault
+            art_roles:
+              power-header:
+                prefix: power-header
+                width: 6.0
+                height: 2.0
+                transparent: false
+                css: styles/power-header.css
+            contents:
+              - kind: file
+                source: custom:Foo.md
+        """,
+        )
+
+        recipe = load_book_config(p)
+
+        assert recipe.art_roles["power-header"].css_files == (css.resolve(),)
+
     def test_splash_target_and_placement_are_validated(self, tmp_path):
         p = _write_recipe(
             tmp_path,
