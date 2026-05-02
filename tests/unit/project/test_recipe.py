@@ -200,17 +200,18 @@ class TestLoadBookConfigHappy:
             ornaments:
               folio_frame: ornaments/folio.png
               corner_bracket: ornaments/corner.png
-            splashes:
-              - id: opening
-                art: splashes/opening.png
-                target: front-cover
-                placement: cover
-              - id: setting-corner
-                art: splashes/setting.png
-                chapter: Setting
-                target: after-heading
-                heading: Factions
-                placement: corner-right
+            art:
+              placements:
+                - id: opening
+                  art: splashes/opening.png
+                  target: front-cover
+                  placement: cover
+                - id: setting-corner
+                  art: splashes/setting.png
+                  chapter: Setting
+                  target: after-heading
+                  heading: Factions
+                  placement: corner-right
             fillers:
               enabled: true
               art_dir: fillers
@@ -283,11 +284,11 @@ class TestLoadBookConfigHappy:
         assert r.art_dir == (tmp_path / "art").resolve()
         assert r.ornaments.folio_frame == "ornaments/folio.png"
         assert r.ornaments.corner_bracket == "ornaments/corner.png"
-        assert len(r.splashes) == 2
-        assert r.splashes[0].id == "opening"
-        assert r.splashes[0].target == "front-cover"
-        assert r.splashes[1].chapter == "Setting"
-        assert r.splashes[1].heading == "Factions"
+        assert len(r.art_placements) == 2
+        assert r.art_placements[0].id == "opening"
+        assert r.art_placements[0].target == "front-cover"
+        assert r.art_placements[1].chapter == "Setting"
+        assert r.art_placements[1].heading == "Factions"
         assert r.fillers.enabled is True
         assert r.fillers.art_dir == "fillers"
         assert r.fillers.slots["chapter-end"].min_space_in == 0.65
@@ -600,22 +601,6 @@ class TestLoadBookConfigErrors:
         with pytest.raises(BookConfigError, match="ornaments"):
             load_book_config(p)
 
-    def test_splashes_must_be_list(self, tmp_path):
-        p = _write_recipe(
-            tmp_path,
-            """
-            title: X
-            vaults:
-              custom: vault
-            splashes: splashes/opening.png
-            contents:
-              - kind: file
-                source: custom:Foo.md
-        """,
-        )
-        with pytest.raises(BookConfigError, match="splashes"):
-            load_book_config(p)
-
     def test_image_treatments_validate_roles_and_presets(self, tmp_path):
         p = _write_recipe(
             tmp_path,
@@ -669,45 +654,19 @@ class TestLoadBookConfigErrors:
         with pytest.raises(BookConfigError, match="preset"):
             load_book_config(p)
 
-    def test_art_roles_can_declare_css_files(self, tmp_path):
-        (tmp_path / "styles").mkdir()
-        css = tmp_path / "styles" / "power-header.css"
-        css.write_text(".power-header-art { float: right; }\n", encoding="utf-8")
+    def test_art_placement_target_and_placement_are_validated(self, tmp_path):
         p = _write_recipe(
             tmp_path,
             """
             title: X
             vaults:
               custom: vault
-            art_roles:
-              power-header:
-                prefix: power-header
-                width: 6.0
-                height: 2.0
-                transparent: false
-                css: styles/power-header.css
-            contents:
-              - kind: file
-                source: custom:Foo.md
-        """,
-        )
-
-        recipe = load_book_config(p)
-
-        assert recipe.art_roles["power-header"].css_files == (css.resolve(),)
-
-    def test_splash_target_and_placement_are_validated(self, tmp_path):
-        p = _write_recipe(
-            tmp_path,
-            """
-            title: X
-            vaults:
-              custom: vault
-            splashes:
-              - id: bad
-                art: splashes/bad.png
-                target: chapter-start
-                placement: cover
+            art:
+              placements:
+                - id: bad
+                  art: splashes/bad.png
+                  target: chapter-start
+                  placement: cover
             contents:
               - kind: file
                 source: custom:Foo.md
@@ -722,11 +681,12 @@ class TestLoadBookConfigErrors:
             title: X
             vaults:
               custom: vault
-            splashes:
-              - id: bad
-                art: splashes/bad.png
-                target: front-cover
-                placement: sideways
+            art:
+              placements:
+                - id: bad
+                  art: splashes/bad.png
+                  target: front-cover
+                  placement: sideways
             contents:
               - kind: file
                 source: custom:Foo.md

@@ -75,9 +75,6 @@ generated bundle.
 
 ## Local Theme Example
 
-:::: {.art-slot role="splash" placement="bottom-half" art="papercrown-docs/splashes/splash-theme-gallery-spread.png"}
-::::
-
 This documentation is rendered with its own local theme. The book config
 selects a theme directory instead of using a bundled theme:
 

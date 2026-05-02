@@ -94,8 +94,6 @@ _ALT_PREFIX_LABELS = (
     ("faction", "Faction art"),
     ("frame", "Frame art"),
     ("gear", "Gear art"),
-    ("power-header", "Power art"),
-    ("power-icon", "Power icon"),
     ("spot-class", "Class art"),
     ("spot", "Illustration"),
     ("vista", "Scene"),
@@ -172,7 +170,7 @@ def _web_stylesheet_label(source: Path, *, styles_dir: Path) -> str:
     try:
         return source.relative_to(styles_dir).as_posix()
     except ValueError:
-        return f"art-roles/{source.name}"
+        return f"art-labels/{source.name}"
 
 
 def rebase_css_urls_for_output(

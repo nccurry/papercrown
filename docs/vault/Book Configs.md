@@ -70,8 +70,10 @@ Art lives under `Art/` by default and follows the [art contract](Art.md). Most
 books use three art APIs:
 
 - Markdown images for ordinary inline art: `![](map-station.png)`.
-- Markdown `.art-slot` blocks for explicit layout intent near the content.
-- Scoped YAML `art:` inserts only when source Markdown should stay untouched.
+- CSS-declared fixed labels for book-specific visual treatments:
+  `styles/power-header.css` styles `power-header-*.png`.
+- Top-level `art.placements` when Paper Crown should inject dynamic art without
+  editing source Markdown.
 
 The art contract defines canonical folders, filename shapes, automatic filler
 roles, and the checks performed by `papercrown art audit`.
@@ -79,21 +81,21 @@ roles, and the checks performed by `papercrown art audit`.
 Most explicit in-flow art belongs in Markdown next to the content it supports:
 
 ```markdown
-:::: {.art-slot role="splash" context="boarding" placement="bottom-half"}
-::::
+![Power header](power-header-void-engine.png){.wide}
 ```
 
-Use scoped YAML `art:` inserts only when the source Markdown should stay
-untouched:
+Use top-level YAML placements only when the source Markdown should stay
+untouched or the art is managed by Paper Crown's dynamic systems:
 
 ```yaml
-contents:
-  - title: Character Creation
-    source: Heroes/Character Creation.md
-    art:
-      - after_heading: Why are you out here?
-        art: splash-section-general-boarding-queue-bottom-01.png
-        placement: bottom-half
+art:
+  placements:
+    - id: character-creation-opening
+      art: splash-section-general-boarding-queue-bottom-01.png
+      target: after-heading
+      chapter: character-creation
+      heading: Why are you out here?
+      placement: bottom-half
 ```
 
 Images render without filters or blend modes by default. Use
@@ -144,14 +146,11 @@ Common chapter shapes:
 
 ## Compact Field Reference
 
-:::: {.art-slot role="splash" placement="bottom-half" art="papercrown-docs/splashes/splash-compact-reference-casefile-ritual.png"}
-::::
-
 | Field | Purpose |
 | --- | --- |
 | `contents` inline title item | Book identity, cover title text, and default output name |
 | `theme`, `theme_options`, `image_treatments` | Visual system and opt-in image role treatments |
-| `art_roles` | Book-specific art filename roles, nominal sizes, transparency checks, and role CSS |
+| `art.placements` | Dynamic art injected by Paper Crown, such as chapter splashes and cover/back-cover placements |
 | `vaults`, `vault_overlay` | Optional named Markdown roots and fallback search order |
 | `output_dir`, `output_name`, `cache_dir` | Optional caller-owned output and cache overrides |
 | `cover` | Optional cover settings; cover art can be inferred from canonical Art filenames |

@@ -17,7 +17,6 @@ single markdown blob that gets fed to Pandoc. Handles:
 from __future__ import annotations
 
 import re
-import shlex
 from collections.abc import Iterator
 from pathlib import Path
 
@@ -32,7 +31,6 @@ from papercrown.project.manifest import (
     GeneratedPart,
     Splash,
     TocPart,
-    resolve_art_asset,
     slugify,
 )
 from papercrown.project.recipe import BookConfig
@@ -268,12 +266,6 @@ def _decorate_chapter_markdown(
     )
     if include_splashes:
         combined = _insert_chapter_splashes(combined, splashes or [])
-    if recipe is not None:
-        combined = _replace_art_slot_blocks(
-            combined,
-            recipe,
-            include_art=include_art,
-        )
     if include_art:
         combined = _replace_thematic_breaks_with_ornament(
             combined,
@@ -1124,121 +1116,6 @@ def _insert_chapter_splashes(
         elif splash.target == "after-heading" and splash.heading_slug:
             out = _insert_block_after_heading(out, splash.heading_slug, block)
     return out
-
-
-def _replace_art_slot_blocks(
-    text: str,
-    recipe: BookConfig,
-    *,
-    include_art: bool,
-) -> str:
-    """Replace Markdown ``.art-slot`` fenced divs with resolved art blocks."""
-    lines = text.splitlines()
-    out: list[str] = []
-    in_code = False
-    i = 0
-    while i < len(lines):
-        line = lines[i]
-        stripped = line.lstrip()
-        if stripped.startswith("```") or stripped.startswith("~~~"):
-            in_code = not in_code
-            out.append(line)
-            i += 1
-            continue
-        match = None if in_code else _art_slot_fence(line)
-        if match is None:
-            out.append(line)
-            i += 1
-            continue
-
-        fence = match.group("fence")
-        attrs = _parse_fenced_div_attrs(match.group("attrs"))
-        j = i + 1
-        while j < len(lines) and lines[j].strip() != fence:
-            j += 1
-        if j >= len(lines):
-            out.append(line)
-            i += 1
-            continue
-
-        block = _render_art_slot(attrs, recipe, include_art=include_art)
-        if block:
-            if out and out[-1].strip():
-                out.append("")
-            out.extend(block.splitlines())
-            out.append("")
-        i = j + 1
-    return "\n".join(out).rstrip() + "\n"
-
-
-def _art_slot_fence(line: str) -> re.Match[str] | None:
-    match = re.match(r"^(?P<fence>:{3,})\s*\{(?P<attrs>[^}]*)\}\s*$", line)
-    if match is None:
-        return None
-    if ".art-slot" not in match.group("attrs").split():
-        return None
-    return match
-
-
-def _parse_fenced_div_attrs(attrs: str) -> dict[str, str]:
-    parsed: dict[str, str] = {}
-    try:
-        tokens = shlex.split(attrs)
-    except ValueError:
-        tokens = attrs.split()
-    for token in tokens:
-        if token.startswith("#") and len(token) > 1:
-            parsed["id"] = token[1:]
-            continue
-        if token.startswith(".") and len(token) > 1:
-            classes = parsed.setdefault("classes", "")
-            parsed["classes"] = f"{classes} {token[1:]}".strip()
-            continue
-        if "=" not in token:
-            continue
-        key, value = token.split("=", 1)
-        parsed[key.strip()] = value.strip()
-    return parsed
-
-
-def _render_art_slot(
-    attrs: dict[str, str],
-    recipe: BookConfig,
-    *,
-    include_art: bool,
-) -> str:
-    if not include_art:
-        return ""
-    role = attrs.get("role") or "splash"
-    context = attrs.get("context")
-    subject = attrs.get("subject")
-    art = attrs.get("art")
-    art_path = resolve_art_asset(
-        recipe,
-        art=art,
-        role=role,
-        context=context,
-        subject=subject,
-    )
-    slot_id = attrs.get("id") or slugify(
-        "-".join(part for part in (role, context, subject, art) if part)
-    )
-    if art_path is None:
-        label = art or context or subject or role
-        return f"<!-- papercrown art slot unresolved: {label} -->"
-    if role == "splash":
-        return _art_blocks.render_splash_block(
-            Splash(
-                id=slot_id,
-                art_path=art_path,
-                target="chapter-start",
-                placement=attrs.get("placement") or "bottom-half",
-            )
-        )
-    return _art_blocks.render_image_block(
-        art_path,
-        classes=f".art-slot-art .art-role-{slugify(role)}",
-    )
 
 
 def _insert_block_at_line(text: str, index: int, block: str) -> str:

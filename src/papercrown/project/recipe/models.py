@@ -61,7 +61,6 @@ from collections.abc import Mapping
 from dataclasses import dataclass, field
 from pathlib import Path
 
-from papercrown.art.roles import ArtRoleSpec
 from papercrown.media.image_treatments import (
     IMAGE_TREATMENT_PRESETS,
     IMAGE_TREATMENT_ROLE_SELECTORS,
@@ -515,8 +514,8 @@ class FillersSpec:
 # ---------------------------------------------------------------------------
 
 
-# BookConfig targets that describe when splash art should be placed.
-SPLASH_TARGETS = {
+# BookConfig targets that describe when dynamic art should be placed.
+ART_PLACEMENT_TARGETS = {
     "front-cover",
     "back-cover",
     "chapter-start",
@@ -533,32 +532,37 @@ SPLASH_PLACEMENTS = {
 
 
 @dataclass(frozen=True)
-class SplashSpec:
-    """One large recipe-level splash art placement."""
+class ArtPlacementSpec:
+    """One dynamic art placement declared in book configuration."""
 
-    id: str
-    art: str
+    id: str | None
+    role: str
+    art: str | None
+    context: str | None
+    subject: str | None
     target: str
     placement: str
     chapter: str | None = None
     heading: str | None = None
 
     @classmethod
-    def from_dict(cls, raw: Mapping[str, object], *, index: int) -> SplashSpec:
-        """Parse and validate one item in the top-level ``splashes:`` list."""
-        loc = f"splashes[{index}]"
-        splash_id = _slug_or_none(raw.get("id"), loc=loc)
-        if splash_id is None:
-            raise BookConfigError(f"{loc}.id is required")
-        art = _str_or_none(raw.get("art"))
-        if art is None:
-            raise BookConfigError(f"{loc}.art is required")
+    def from_dict(
+        cls,
+        raw: Mapping[str, object],
+        *,
+        index: int,
+    ) -> ArtPlacementSpec:
+        """Parse and validate one item in ``art.placements``."""
+        loc = f"art.placements[{index}]"
+        role = _str_or_none(raw.get("role")) or "splash"
+        if role != "splash":
+            raise BookConfigError(f"{loc}.role currently supports only 'splash'")
         target = _str_or_none(raw.get("target"))
-        if target not in SPLASH_TARGETS:
+        if target not in ART_PLACEMENT_TARGETS:
             raise BookConfigError(
-                f"{loc}.target must be one of {sorted(SPLASH_TARGETS)}"
+                f"{loc}.target must be one of {sorted(ART_PLACEMENT_TARGETS)}"
             )
-        placement = _str_or_none(raw.get("placement"))
+        placement = _str_or_none(raw.get("placement")) or "bottom-half"
         if placement not in SPLASH_PLACEMENTS:
             raise BookConfigError(
                 f"{loc}.placement must be one of {sorted(SPLASH_PLACEMENTS)}"
@@ -580,8 +584,11 @@ class SplashSpec:
             )
 
         return cls(
-            id=splash_id,
-            art=art,
+            id=_slug_or_none(raw.get("id"), loc=loc),
+            role=role,
+            art=_str_or_none(raw.get("art")),
+            context=_str_or_none(raw.get("context")),
+            subject=_str_or_none(raw.get("subject")),
             target=target,
             placement=placement,
             chapter=chapter,
@@ -1162,9 +1169,8 @@ class BookConfig:
     image_treatments: dict[str, str] = field(default_factory=dict)
     metadata: BookMetadataSpec = field(default_factory=BookMetadataSpec)
     art_dir_override: Path | None = None  # optional override for art assets
-    art_roles: dict[str, ArtRoleSpec] = field(default_factory=dict)
     ornaments: OrnamentsSpec = field(default_factory=OrnamentsSpec)
-    splashes: list[SplashSpec] = field(default_factory=list)
+    art_placements: list[ArtPlacementSpec] = field(default_factory=list)
     fillers: FillersSpec = field(default_factory=FillersSpec)
     page_damage: PageDamageSpec = field(default_factory=PageDamageSpec)
 
@@ -1380,114 +1386,6 @@ def _image_treatments_mapping(value: object) -> dict[str, str]:
             )
         treatments[role] = treatment
     return treatments
-
-
-def _art_roles_mapping(value: object) -> dict[str, ArtRoleSpec]:
-    """Validate project-declared art role classifiers."""
-    if value is None:
-        return {}
-    if not isinstance(value, Mapping):
-        raise BookConfigError("art_roles must be a mapping")
-    roles: dict[str, ArtRoleSpec] = {}
-    for raw_role, raw_spec in value.items():
-        role = _slug_or_none(raw_role, loc="art_roles") or ""
-        if not role:
-            raise BookConfigError("art_roles keys must be non-empty")
-        if role in roles:
-            raise BookConfigError(f"art_roles.{role} is duplicated")
-        if not isinstance(raw_spec, Mapping):
-            raise BookConfigError(f"art_roles.{role} must be a mapping")
-        shape = _str_or_none(raw_spec.get("shape"))
-        if shape is not None and shape not in FILLER_SHAPES:
-            raise BookConfigError(
-                f"art_roles.{role}.shape must be one of {sorted(FILLER_SHAPES)}"
-            )
-        roles[role] = ArtRoleSpec(
-            role=role,
-            expected_folder=(
-                _str_or_none(raw_spec.get("folder"))
-                or _str_or_none(raw_spec.get("expected_folder"))
-            ),
-            nominal_width_in=_optional_inch_value(
-                raw_spec.get("width"),
-                loc=f"art_roles.{role}.width",
-            ),
-            nominal_height_in=_optional_inch_value(
-                raw_spec.get("height"),
-                loc=f"art_roles.{role}.height",
-            ),
-            shape=shape,
-            transparent=_optional_bool(
-                raw_spec.get("transparent"),
-                loc=f"art_roles.{role}.transparent",
-            ),
-            auto_placeable=bool(raw_spec.get("auto_placeable", False)),
-            prefixes=_role_prefixes(raw_spec.get("prefixes", raw_spec.get("prefix"))),
-            css_files=_role_css_files(raw_spec.get("css", raw_spec.get("css_files"))),
-        )
-    return roles
-
-
-def _optional_inch_value(value: object, *, loc: str) -> float | None:
-    """Parse an optional role size from ``1.5`` or ``1.5in``."""
-    if value is None:
-        return None
-    if isinstance(value, bool):
-        raise BookConfigError(f"{loc} must be a positive number or inch string")
-    if isinstance(value, int | float):
-        parsed = float(value)
-        if parsed <= 0:
-            raise BookConfigError(f"{loc} must be greater than 0")
-        return parsed
-    return _inch_value(value, loc=loc)
-
-
-def _optional_bool(value: object, *, loc: str) -> bool | None:
-    """Validate an optional boolean."""
-    if value is None:
-        return None
-    if not isinstance(value, bool):
-        raise BookConfigError(f"{loc} must be true or false")
-    return value
-
-
-def _role_prefixes(value: object) -> tuple[str, ...]:
-    """Normalize project art role prefixes."""
-    if value is None:
-        return ()
-    raw_prefixes: list[object]
-    if isinstance(value, str):
-        raw_prefixes = [value]
-    elif isinstance(value, list):
-        raw_prefixes = value
-    else:
-        raise BookConfigError("art_roles prefixes must be a string or list")
-    prefixes: list[str] = []
-    for i, item in enumerate(raw_prefixes):
-        prefix = _slug_or_none(item, loc=f"art_roles.prefixes[{i}]")
-        if prefix is not None:
-            prefixes.append(prefix)
-    return tuple(prefixes)
-
-
-def _role_css_files(value: object) -> tuple[Path, ...]:
-    """Normalize project art role CSS file references."""
-    if value is None:
-        return ()
-    raw_paths: list[object]
-    if isinstance(value, str):
-        raw_paths = [value]
-    elif isinstance(value, list):
-        raw_paths = value
-    else:
-        raise BookConfigError("art_roles css must be a string or list")
-    paths: list[Path] = []
-    for item in raw_paths:
-        css_path = _str_or_none(item)
-        if css_path is None:
-            continue
-        paths.append(Path(css_path))
-    return tuple(paths)
 
 
 def _slug_or_none(value: object, *, loc: str) -> str | None:

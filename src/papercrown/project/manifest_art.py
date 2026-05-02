@@ -36,7 +36,6 @@ def convention_art_path(
         classification = classify_art_path(
             path.resolve(),
             art_root=root,
-            custom_roles=getattr(recipe, "art_roles", {}),
         )
         if classification.role not in roles:
             continue
@@ -71,7 +70,6 @@ def resolve_art_asset(
         classification = classify_art_path(
             resolved,
             art_root=root,
-            custom_roles=getattr(recipe, "art_roles", {}),
         )
         if classification.role != role:
             continue

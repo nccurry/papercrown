@@ -11,7 +11,6 @@ from pathlib import Path
 
 from papercrown.assembly import markdown as assembly
 from papercrown.project.manifest import Chapter, ChapterFillerSlot, Splash
-from papercrown.project.recipe import load_book_config
 from papercrown.project.vaults import Vault, VaultIndex
 
 
@@ -40,37 +39,19 @@ class TestAssembleChapterMarkdown:
         assert out.startswith("# A")
         assert "body" in out
 
-    def test_markdown_art_slot_renders_resolved_splash(self, tmp_path):
-        art = tmp_path / "Art" / "splashes" / "splash-general-boarding-01.png"
-        art.parent.mkdir(parents=True)
-        art.write_text("fake", encoding="utf-8")
-        recipe_path = tmp_path / "book.yml"
-        recipe_path.write_text(
-            textwrap.dedent(
-                """
-                title: Test
-                contents:
-                  - source: a.md
-                """
-            ).lstrip(),
-            encoding="utf-8",
-        )
-        recipe = load_book_config(recipe_path)
+    def test_markdown_images_pass_through_for_pandoc_labeling(self, tmp_path):
         f = _write(
             tmp_path / "a.md",
             """
             # A
             body
 
-            :::: {.art-slot role="splash" context="boarding" placement="bottom-half"}
-            ::::
+            ![Power drive](power-header-drive.png){.wide}
         """,
         )
         ch = Chapter(title="A", slug="a", source_files=[f])
-        out = assembly.assemble_chapter_markdown(ch, recipe=recipe)
-        assert ".splash-art .splash-bottom-half" in out
-        assert art.as_posix() in out
-        assert ".art-slot" not in out
+        out = assembly.assemble_chapter_markdown(ch)
+        assert "![Power drive](power-header-drive.png){.wide}" in out
 
     def test_demotes_h1_in_subsequent_files(self, tmp_path):
         f1 = _write(tmp_path / "a.md", "# A\nbody A\n")

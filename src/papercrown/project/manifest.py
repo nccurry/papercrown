@@ -55,13 +55,13 @@ from papercrown.project.manifest_models import (
 from papercrown.project.recipe import (
     PAGE_DAMAGE_FAMILIES,
     PAGE_DAMAGE_SIZES,
+    ArtPlacementSpec,
     BookConfig,
     ContentItemSpec,
     FillerAssetSpec,
     FillerHeadingMarkerSpec,
     FillerMarkersSpec,
     SourceRef,
-    SplashSpec,
 )
 from papercrown.project.slugs import slugify
 from papercrown.project.vaults import VaultIndex, WikilinkTarget
@@ -257,7 +257,6 @@ def _auto_filler_assets(
         classification = classify_art_path(
             resolved,
             art_root=root,
-            custom_roles=recipe.art_roles,
         )
         is_tailpiece = (
             allow_tailpieces
@@ -383,31 +382,57 @@ def _find_chapter(chapters: list[Chapter], name: str) -> Chapter | None:
 
 
 def _build_splashes(
-    specs: list[SplashSpec],
+    specs: list[ArtPlacementSpec],
     recipe: BookConfig,
     chapters: list[Chapter],
     warnings: list[str],
 ) -> list[Splash]:
-    """Resolve top-level splash specs to filesystem paths and chapter slugs."""
+    """Resolve dynamic art placements to filesystem paths and chapter slugs."""
     splashes: list[Splash] = []
     has_back_cover = any(spec.target == "back-cover" for spec in specs)
-    for spec in specs:
+    for index, spec in enumerate(specs):
         chapter_slug: str | None = None
         if spec.chapter:
             chapter = _find_chapter(chapters, spec.chapter)
             if chapter is None:
                 raise ManifestError(
-                    f"splash {spec.id!r} references unknown chapter {spec.chapter!r}"
+                    "art placement "
+                    f"{spec.id or index + 1!r} references unknown chapter "
+                    f"{spec.chapter!r}"
                 )
             chapter_slug = chapter.slug
 
-        art_path = _art_path(recipe, spec.art)
+        art_path = resolve_art_asset(
+            recipe,
+            art=spec.art,
+            role=spec.role,
+            context=spec.context,
+            subject=spec.subject or (chapter_slug if spec.context is None else None),
+        )
+        placement_id = spec.id or slugify(
+            "-".join(
+                part
+                for part in (
+                    spec.role,
+                    spec.context,
+                    spec.subject,
+                    chapter_slug,
+                    spec.target,
+                    spec.heading,
+                    str(index + 1),
+                )
+                if part
+            )
+        )
         if art_path is None:
-            warnings.append(f"splash {spec.id!r}: art not found: {spec.art}")
+            label = spec.art or spec.context or spec.subject or spec.role
+            warnings.append(
+                f"art placement {placement_id!r}: art not found for {label!r}"
+            )
 
         splashes.append(
             Splash(
-                id=spec.id,
+                id=placement_id,
                 art_path=art_path,
                 target=spec.target,
                 placement=spec.placement,
@@ -1159,7 +1184,7 @@ def build_manifest(recipe: BookConfig) -> Manifest:
         parts, part_chapters = _content_part(spec, recipe, vault_index, warnings)
         contents.extend(parts)
         chapters.extend(part_chapters)
-    splashes = _build_splashes(recipe.splashes, recipe, chapters, warnings)
+    splashes = _build_splashes(recipe.art_placements, recipe, chapters, warnings)
     fillers = _build_filler_catalog(recipe, warnings)
     page_damage = _build_page_damage_catalog(recipe, warnings)
     _attach_chapter_filler_slots(chapters, fillers, recipe.fillers.markers, warnings)

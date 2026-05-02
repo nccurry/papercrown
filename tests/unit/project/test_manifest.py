@@ -206,7 +206,7 @@ class TestKindFile:
         assert m.chapters[0].headpiece_path == headpiece.resolve()
         assert m.chapters[0].break_ornament_path == break_ornament.resolve()
 
-    def test_splashes_resolve_relative_to_art_dir(self, mini_workspace):
+    def test_art_placements_resolve_relative_to_art_dir(self, mini_workspace):
         ws, base, _ = mini_workspace
         art = ws / "art"
         (art / "splashes").mkdir(parents=True)
@@ -221,17 +221,18 @@ class TestKindFile:
             art_dir: art
             vaults:
               base: base
-            splashes:
-              - id: front
-                art: splashes/front.png
-                target: front-cover
-                placement: cover
-              - id: setting-corner
-                art: splashes/corner.png
-                chapter: Setting
-                target: after-heading
-                heading: Factions
-                placement: corner-right
+            art:
+              placements:
+                - id: front
+                  art: splashes/front.png
+                  target: front-cover
+                  placement: cover
+                - id: setting-corner
+                  art: splashes/corner.png
+                  chapter: Setting
+                  target: after-heading
+                  heading: Factions
+                  placement: corner-right
             contents:
               - kind: file
                 title: Setting
@@ -878,7 +879,7 @@ class TestKindFile:
             "filler 'escaped': art not found" in warning for warning in m.warnings
         )
 
-    def test_splash_unknown_chapter_raises(self, mini_workspace):
+    def test_art_placement_unknown_chapter_raises(self, mini_workspace):
         ws, base, _ = mini_workspace
         rp = _write_recipe(
             ws,
@@ -886,12 +887,13 @@ class TestKindFile:
             title: Test
             vaults:
               base: base
-            splashes:
-              - id: missing
-                art: splashes/missing.png
-                chapter: Missing
-                target: chapter-start
-                placement: bottom-half
+            art:
+              placements:
+                - id: missing
+                  art: splashes/missing.png
+                  chapter: Missing
+                  target: chapter-start
+                  placement: bottom-half
             contents:
               - kind: file
                 title: Setting

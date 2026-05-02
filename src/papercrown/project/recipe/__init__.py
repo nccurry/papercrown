@@ -2,6 +2,7 @@
 
 from papercrown.project.recipe.loader import _load_book_config_mapping, load_book_config
 from papercrown.project.recipe.models import (
+    ART_PLACEMENT_TARGETS,
     CONTENT_ITEM_KINDS,
     DEFAULT_PAGE_DAMAGE_SKIP,
     DEFAULT_THEME,
@@ -11,8 +12,8 @@ from papercrown.project.recipe.models import (
     PAGE_DAMAGE_SIZES,
     PAGE_DAMAGE_SKIP_TARGETS,
     SPLASH_PLACEMENTS,
-    SPLASH_TARGETS,
     ArtInsertSpec,
+    ArtPlacementSpec,
     BookConfig,
     BookConfigError,
     BookMetadataSpec,
@@ -30,12 +31,12 @@ from papercrown.project.recipe.models import (
     PageDamageSpec,
     SourceItem,
     SourceRef,
-    SplashSpec,
     VaultSpec,
 )
 
 __all__ = [
     "BookMetadataSpec",
+    "ArtPlacementSpec",
     "ArtInsertSpec",
     "CONTENT_ITEM_KINDS",
     "ContentItemSpec",
@@ -62,8 +63,7 @@ __all__ = [
     "SourceItem",
     "SourceRef",
     "SPLASH_PLACEMENTS",
-    "SPLASH_TARGETS",
-    "SplashSpec",
+    "ART_PLACEMENT_TARGETS",
     "VaultSpec",
     "_load_book_config_mapping",
     "load_book_config",

@@ -24,27 +24,27 @@ intent:
 
 - Use ordinary Markdown images for inline art that belongs exactly where it
   appears: `![](map-station.png)`.
-- Use Markdown `.art-slot` blocks for explicit art placement near the content
-  it supports.
-- Use scoped book config `art:` inserts only when the Markdown source should remain
-  untouched.
+- Use top-level `art.placements` for Paper Crown-managed dynamic art such as
+  chapter splashes, cover/back-cover art, and after-heading splashes.
+- Add fixed book-specific art labels by creating `styles/<label>.css`; images
+  whose filenames start with `<label>-` get matching classes automatically.
 
 Set `art_dir` only when the art library lives somewhere other than `Art/`. Use
 `papercrown art audit book.yml` when adding or moving art.
 
 ```markdown
-:::: {.art-slot role="splash" placement="bottom-half" art="splash-dock-queue.png"}
-::::
+![Void engine](power-header-void-engine.png)
 ```
 
 ```yaml
-contents:
-  - title: Character Creation
-    source: Heroes/Character Creation.md
-    art:
-      - after_heading: Why are you out here?
-        art: splash-dock-queue.png
-        placement: bottom-half
+art:
+  placements:
+    - id: character-creation-opening
+      art: splash-dock-queue.png
+      target: after-heading
+      chapter: character-creation
+      heading: Why are you out here?
+      placement: bottom-half
 ```
 
 ## How to Adapt It
@@ -54,18 +54,22 @@ diagrams that need to carry their own rectangular composition. Use transparent
 PNGs for ornaments, spots, page wear, and decorative fillers that should sit on
 the paper surface.
 
-Book-specific art vocabularies belong in `art_roles`. Declare the filename
-prefix, nominal print size, transparency expectation, and any supporting CSS in
-the same role entry. Role CSS is loaded after the selected theme CSS.
+Book-specific fixed art vocabularies are CSS conventions, not book-config
+schema. Create `styles/<label>.css` in the project, or `art-labels/<label>.css`
+inside a theme. The label name, filename prefix, and CSS class are all the same
+value. For example, `styles/power-header.css` declares the `power-header`
+label, and `power-header-void-engine.png` receives `.power-header` and
+`.art-role-power-header` during rendering. Existing Markdown image classes are
+preserved as variant classes.
 
-```yaml
-art_roles:
-  power-header:
-    prefix: power-header
-    width: 6.0
-    height: 2.0
-    transparent: false
-    css: styles/power-header.css
+```css
+.power-header {
+  margin-block: 1rem;
+}
+
+.power-header img {
+  width: 6in;
+}
 ```
 
 ## How It Works

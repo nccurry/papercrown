@@ -153,6 +153,7 @@ def make_base_context(
         template=theme.template,
         css_files=[*CORE_CSS_FILES, *theme.css_files],
         inline_css=inline_css,
+        art_labels=list(theme.art_labels),
         lua_filters=list(LUA_FILTERS),
         resource_paths=deduped_resource_paths,
         fingerprint_paths=list(theme.fingerprint_paths),

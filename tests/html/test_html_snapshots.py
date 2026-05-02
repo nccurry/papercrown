@@ -178,6 +178,27 @@ class TestOutputProfileRendering:
 
 
 class TestLuaFilterRendering:
+    def test_css_declared_art_labels_wrap_standalone_images_and_label_inline_images(
+        self,
+    ):
+        ctx = _make_ctx_for_book()
+        ctx.art_labels = ["power", "power-header", "power-icon"]
+
+        html = pipeline.render_markdown_to_html(
+            "![Header](power-header-void-engine.png){.wide}\n\n"
+            ':::: {.power title="Flame Dart"}\n\n'
+            "![](power-header-flame-dart.png)\n\n"
+            "::::\n\n"
+            "Text ![Icon](power-icon-thrust.png){.tiny} inline.\n",
+            ctx,
+        )
+
+        assert 'class="art-image power-header art-role-power-header wide"' in html
+        assert 'class="wide power-header art-role-power-header"' in html
+        assert 'class="art-image power-header art-role-power-header"' in html
+        assert 'class="tiny power-icon art-role-power-icon"' in html
+        assert 'class="art-image power art-role-power wide"' not in html
+
     def test_stat_line_lists_render_without_list_markers(self):
         html = pipeline.render_markdown_to_html(
             "- **Easy:** DC 8.\n- **Medium:** DC 12.\n- **Hard:** DC 15.\n",

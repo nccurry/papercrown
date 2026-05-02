@@ -222,6 +222,7 @@ class RenderContext:
     css_files: list[Path]  # ordered stylesheets
     lua_filters: list[Path]  # ordered list
     resource_paths: list[Path]  # for Pandoc --resource-path
+    art_labels: list[str] = field(default_factory=list)
     inline_css: list[str] = field(default_factory=list)
     fingerprint_paths: list[Path] = field(default_factory=list)
 

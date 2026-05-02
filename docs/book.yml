@@ -8,6 +8,45 @@ theme: papercrown-docs
 cover:
   enabled: true
 
+art:
+  placements:
+    - id: quick-start-core-flow
+      art: papercrown-docs/splashes/splash-core-flow-launch-sequence.png
+      target: after-heading
+      chapter: quick-start
+      heading: Core Flow
+      placement: bottom-half
+    - id: architecture-product-model
+      art: papercrown-docs/splashes/splash-product-model-codex-route.png
+      target: after-heading
+      chapter: architecture
+      heading: Product Model
+      placement: bottom-half
+    - id: book-configs-compact-reference
+      art: papercrown-docs/splashes/splash-compact-reference-casefile-ritual.png
+      target: after-heading
+      chapter: book-configs
+      heading: Compact Field Reference
+      placement: bottom-half
+    - id: themes-local-example
+      art: papercrown-docs/splashes/splash-theme-gallery-spread.png
+      target: after-heading
+      chapter: themes
+      heading: Local Theme Example
+      placement: bottom-half
+    - id: publishing-github-pages
+      art: papercrown-docs/splashes/splash-pages-field-guide-press.png
+      target: after-heading
+      chapter: builds-and-publishing
+      heading: GitHub Pages
+      placement: bottom-half
+    - id: developer-bootstrap
+      art: papercrown-docs/splashes/splash-repository-bootstrap-launch-panel.png
+      target: after-heading
+      chapter: developer-guide
+      heading: Repository Bootstrap
+      placement: bottom-half
+
 metadata:
   authors:
     - nccurry

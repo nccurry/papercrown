@@ -11,6 +11,7 @@ import yaml
 
 from papercrown.project.recipe.models import (
     DEFAULT_THEME,
+    ArtPlacementSpec,
     BookConfig,
     BookConfigError,
     BookMetadataSpec,
@@ -19,9 +20,7 @@ from papercrown.project.recipe.models import (
     FillersSpec,
     OrnamentsSpec,
     PageDamageSpec,
-    SplashSpec,
     VaultSpec,
-    _art_roles_mapping,
     _filename_slug,
     _image_treatments_mapping,
     _slug_or_none,
@@ -108,7 +107,9 @@ def load_book_config(
         raise BookConfigError("metadata must be a mapping when provided")
     theme_options = _theme_options_mapping(raw.get("theme_options"))
     image_treatments = _image_treatments_mapping(raw.get("image_treatments"))
-    art_roles = _art_roles_mapping(raw.get("art_roles"))
+    art_raw = raw.get("art")
+    if art_raw is not None and not isinstance(art_raw, Mapping):
+        raise BookConfigError("art must be a mapping when provided")
 
     cover_raw = raw.get("cover")
     if cover_raw is not None and not isinstance(cover_raw, Mapping):
@@ -122,7 +123,7 @@ def load_book_config(
     page_damage_raw = raw.get("page_damage")
     if page_damage_raw is not None and not isinstance(page_damage_raw, Mapping):
         raise BookConfigError("page_damage must be a mapping when provided")
-    splashes = _parse_splashes(raw.get("splashes"))
+    art_placements = _parse_art_placements(art_raw)
     contents = _parse_contents(contents_raw)
     _validate_chapter_sources(contents, "contents", declared_vaults=set(vaults))
 
@@ -144,10 +145,9 @@ def load_book_config(
         image_treatments=image_treatments,
         metadata=BookMetadataSpec.from_dict(metadata_raw),
         art_dir_override=art_dir_override,
-        art_roles=art_roles,
         ornaments=OrnamentsSpec.from_dict(ornaments_raw),
         cover=cover,
-        splashes=splashes,
+        art_placements=art_placements,
         fillers=FillersSpec.from_dict(fillers_raw),
         page_damage=PageDamageSpec.from_dict(page_damage_raw),
         contents=contents,
@@ -233,19 +233,24 @@ def _optional_resolved_path(
     return resolved
 
 
-def _parse_splashes(raw: object) -> list[SplashSpec]:
-    """Parse the optional top-level splash art list."""
-    splashes_raw = raw or []
-    if not isinstance(splashes_raw, list):
-        raise BookConfigError("splashes must be a list when provided")
-    splashes: list[SplashSpec] = []
-    for i, splash_raw in enumerate(splashes_raw):
-        if not isinstance(splash_raw, Mapping):
+def _parse_art_placements(raw: object) -> list[ArtPlacementSpec]:
+    """Parse optional dynamic art placements."""
+    if raw is None:
+        return []
+    if not isinstance(raw, Mapping):
+        raise BookConfigError("art must be a mapping when provided")
+    placements_raw = raw.get("placements") or []
+    if not isinstance(placements_raw, list):
+        raise BookConfigError("art.placements must be a list when provided")
+    placements: list[ArtPlacementSpec] = []
+    for i, placement_raw in enumerate(placements_raw):
+        if not isinstance(placement_raw, Mapping):
             raise BookConfigError(
-                f"splashes[{i}] must be a mapping, got {type(splash_raw).__name__}"
+                "art.placements"
+                f"[{i}] must be a mapping, got {type(placement_raw).__name__}"
             )
-        splashes.append(SplashSpec.from_dict(splash_raw, index=i))
-    return splashes
+        placements.append(ArtPlacementSpec.from_dict(placement_raw, index=i))
+    return placements
 
 
 def _parse_contents(
@@ -444,34 +449,6 @@ def _normalize_recipe_filesystem_paths(
     theme_dir_raw = raw.get("theme_dir")
     if isinstance(theme_dir_raw, str) and theme_dir_raw.strip():
         raw["theme_dir"] = str(_resolve_vault_path(theme_dir_raw, recipe_dir))
-    _normalize_art_role_css_paths(raw, recipe_dir)
-
-
-def _normalize_art_role_css_paths(raw: dict[str, object], recipe_dir: Path) -> None:
-    """Rewrite art-role CSS paths as absolute strings in place."""
-    art_roles_raw = raw.get("art_roles")
-    if not isinstance(art_roles_raw, Mapping):
-        return
-    normalized: dict[str, object] = {}
-    for role, spec in art_roles_raw.items():
-        if not isinstance(spec, Mapping):
-            normalized[str(role)] = spec
-            continue
-        role_spec = {str(key): value for key, value in spec.items()}
-        for key in ("css", "css_files"):
-            css_raw = role_spec.get(key)
-            if isinstance(css_raw, str) and css_raw.strip():
-                role_spec[key] = str(_resolve_vault_path(css_raw, recipe_dir))
-                continue
-            if isinstance(css_raw, list):
-                role_spec[key] = [
-                    str(_resolve_vault_path(item, recipe_dir))
-                    if isinstance(item, str) and item.strip()
-                    else item
-                    for item in css_raw
-                ]
-        normalized[str(role)] = role_spec
-    raw["art_roles"] = normalized
 
 
 def _merge_vault_includes(

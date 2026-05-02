@@ -131,9 +131,13 @@ def test_static_web_export_writes_self_contained_tree(tmp_path, require_pandoc):
         assert 'width="1"' in img
         assert 'height="1"' in img
         assert "alt=" in img
-    diagram_img = next(img for img in re.findall(r"<img\b[^>]*>", html) if "diagram-flow" in img)
+    diagram_img = next(
+        img for img in re.findall(r"<img\b[^>]*>", html) if "diagram-flow" in img
+    )
     assert 'alt="Diagram: Flow"' in diagram_img
-    tailpiece_img = next(img for img in re.findall(r"<img\b[^>]*>", html) if "tail-" in img)
+    tailpiece_img = next(
+        img for img in re.findall(r"<img\b[^>]*>", html) if "tail-" in img
+    )
     assert 'alt=""' in tailpiece_img
 
     for ref in _local_refs(html):
@@ -141,22 +145,11 @@ def test_static_web_export_writes_self_contained_tree(tmp_path, require_pandoc):
         assert (web_root / ref).exists(), ref
 
 
-def test_static_web_bundle_includes_art_role_css_outside_theme_root(tmp_path):
-    (tmp_path / "styles").mkdir()
-    _write(tmp_path / "styles" / "power-header.css", ".power-header-art{float:right;}")
+def test_static_web_bundle_includes_project_art_label_css(tmp_path):
     recipe_path = _make_web_recipe(tmp_path)
-    raw = recipe_path.read_text(encoding="utf-8")
-    recipe_path.write_text(
-        raw
-        + textwrap.dedent(
-            """
-            art_roles:
-              power-header:
-                prefix: power-header
-                css: ../styles/power-header.css
-            """
-        ),
-        encoding="utf-8",
+    _write(
+        recipe_path.parent / "styles" / "power-header.css",
+        ".power-header{float:right;}",
     )
     recipe = load_book_config(recipe_path)
     web_root = tmp_path / "web"
@@ -165,7 +158,7 @@ def test_static_web_bundle_includes_art_role_css_outside_theme_root(tmp_path):
     css = (web_root / "styles" / "book.css").read_text(encoding="utf-8")
 
     assert "power-header.css" in css
-    assert ".power-header-art{float:right;}" in css
+    assert ".power-header{float:right;}" in css
 
 
 def test_static_web_export_recovers_lossy_spell_list_embeds(tmp_path, require_pandoc):

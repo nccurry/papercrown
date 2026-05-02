@@ -6,7 +6,7 @@ import hashlib
 import html as html_lib
 import math
 from collections import Counter
-from collections.abc import Iterable, Mapping
+from collections.abc import Iterable
 from dataclasses import dataclass, field
 from pathlib import Path
 
@@ -15,9 +15,9 @@ from PIL import Image, ImageChops, UnidentifiedImageError
 from papercrown.art.roles import (
     IMAGE_SUFFIXES,
     ArtAssetClassification,
-    ArtRoleSpec,
     classify_art_path,
 )
+from papercrown.project import themes
 from papercrown.project.manifest import Manifest
 from papercrown.project.recipe import BookConfig, ContentItemSpec
 from papercrown.system.diagnostics import (
@@ -159,7 +159,7 @@ class ArtAuditResult:
     """All data emitted by a book art audit."""
 
     art_root: Path
-    art_roles: Mapping[str, ArtRoleSpec] = field(default_factory=dict)
+    art_labels: tuple[str, ...] = ()
     assets: list[AuditedArtAsset] = field(default_factory=list)
     references: list[ArtReference] = field(default_factory=list)
     diagnostics: DiagnosticReport = field(default_factory=DiagnosticReport)
@@ -192,13 +192,14 @@ def audit_recipe_art(
 ) -> ArtAuditResult:
     """Audit a recipe's art root, references, and image metadata."""
     art_root = recipe.art_dir.resolve()
-    result = ArtAuditResult(art_root=art_root, art_roles=recipe.art_roles)
+    art_labels = themes.load_theme(recipe).art_labels
+    result = ArtAuditResult(art_root=art_root, art_labels=art_labels)
     result.references.extend(_recipe_art_references(recipe))
     result.references.extend(_manifest_art_references(manifest))
     _add_filler_slot_policy_diagnostics(result, recipe)
     _add_reference_diagnostics(result)
     if art_root.is_dir():
-        result.assets.extend(_discover_art_assets(art_root, recipe.art_roles))
+        result.assets.extend(_discover_art_assets(art_root, art_labels))
         _add_asset_diagnostics(result, include_unclassified=include_unclassified)
     elif result.references or recipe.fillers.enabled or recipe.page_damage.enabled:
         result.diagnostics.add(
@@ -356,7 +357,7 @@ def write_art_contact_sheet(result: ArtAuditResult, path: Path) -> Path:
 
 def _discover_art_assets(
     art_root: Path,
-    art_roles: Mapping[str, ArtRoleSpec],
+    art_labels: Iterable[str],
 ) -> list[AuditedArtAsset]:
     assets: list[AuditedArtAsset] = []
     for path in sorted(art_root.rglob("*"), key=lambda item: item.as_posix().lower()):
@@ -367,7 +368,7 @@ def _discover_art_assets(
         classification = classify_art_path(
             resolved,
             art_root=art_root,
-            custom_roles=art_roles,
+            art_labels=art_labels,
         )
         assets.append(
             AuditedArtAsset(
@@ -762,7 +763,7 @@ def _add_reference_diagnostics(result: ArtAuditResult) -> None:
         classification = classify_art_path(
             reference.path,
             art_root=result.art_root,
-            custom_roles=result.art_roles,
+            art_labels=result.art_labels,
         )
         if classification.role not in reference.expected_roles:
             result.diagnostics.add(
@@ -796,16 +797,17 @@ def _recipe_art_references(recipe: BookConfig) -> list[ArtReference]:
         refs.append(
             _reference(recipe, "corner_bracket", recipe.ornaments.corner_bracket)
         )
-    for splash in recipe.splashes:
-        expected_roles = _expected_splash_roles(splash.target)
-        refs.append(
-            _reference(
-                recipe,
-                f"splash {splash.id}",
-                splash.art,
-                expected_roles=expected_roles,
+    for placement in recipe.art_placements:
+        if placement.art:
+            expected_roles = _expected_splash_roles(placement.target)
+            refs.append(
+                _reference(
+                    recipe,
+                    f"art placement {placement.id or placement.target}",
+                    placement.art,
+                    expected_roles=expected_roles,
+                )
             )
-        )
     for asset in recipe.fillers.assets:
         expected = _expected_filler_roles(asset.shape)
         refs.append(

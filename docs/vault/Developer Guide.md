@@ -74,9 +74,6 @@ can trigger noisy GLib-GIO UWP app-info warnings during PDF builds.
 
 ## Repository Bootstrap
 
-:::: {.art-slot role="splash" placement="bottom-half" art="papercrown-docs/splashes/splash-repository-bootstrap-launch-panel.png"}
-::::
-
 Maintainers working from a source checkout can use one bootstrap command.
 Bootstrap only makes sure Task is available, then hands off to
 `task deps:install`.

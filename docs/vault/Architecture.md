@@ -6,9 +6,6 @@ library, then render PDF and web outputs.
 
 ## Product Model
 
-:::: {.art-slot role="splash" placement="bottom-half" art="papercrown-docs/splashes/splash-product-model-codex-route.png"}
-::::
-
 | Layer | What you own | What Paper Crown does |
 | --- | --- | --- |
 | Vault | Markdown notes, images, and Obsidian-style links | Resolves source files and embeds |

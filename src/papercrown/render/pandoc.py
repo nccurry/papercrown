@@ -36,6 +36,9 @@ def build_pandoc_metadata(ctx: Any) -> list[str]:
             args += ["--metadata", f"{key}={value}"]
     if ctx.valid_anchors:
         args += ["--metadata", f"valid-anchors={ctx.valid_anchors}"]
+    if getattr(ctx, "art_labels", None):
+        labels = ",".join(ctx.art_labels)
+        args += ["--metadata", f"art-labels={labels}"]
     if ctx.chapter_art and ctx.chapter_art.is_file():
         args += ["--variable", f"chapter-art={ctx.chapter_art.as_posix()}"]
     args += ["--metadata", f"output-profile={ctx.output_profile}"]

@@ -174,24 +174,17 @@ def test_theme_css_list_can_use_arbitrary_source_filenames(tmp_path):
     assert [path.name for path in theme.css_files] == ["base.css", "print-polish.css"]
 
 
-def test_art_role_css_files_are_layered_after_theme_css(tmp_path):
+def test_project_art_label_css_files_are_layered_after_theme_css(tmp_path):
     (tmp_path / "styles").mkdir()
-    role_css = tmp_path / "styles" / "power-header.css"
-    role_css.write_text(".power-header-art { float: right; }\n", encoding="utf-8")
+    label_css = tmp_path / "styles" / "power-header.css"
+    label_css.write_text(".power-header { float: right; }\n", encoding="utf-8")
     recipe_path = _write_recipe(
         tmp_path,
         """
-        title: Role CSS Book
+        title: Label CSS Book
         theme: clean-srd
         vaults:
           v: vault
-        art_roles:
-          power-header:
-            prefix: power-header
-            width: 6.0
-            height: 2.0
-            transparent: false
-            css: styles/power-header.css
         contents:
           - kind: file
             source: v:Book.md
@@ -207,23 +200,31 @@ def test_art_role_css_files_are_layered_after_theme_css(tmp_path):
     theme = themes.load_theme(recipe)
     ctx = build_mod.make_base_context(tools, recipe, profile=OutputProfile.PRINT)
 
-    assert theme.css_files[-1] == role_css.resolve()
-    assert role_css.resolve() in theme.fingerprint_paths
-    assert ctx.css_files[-1] == role_css.resolve()
+    assert theme.css_files[-1] == label_css.resolve()
+    assert label_css.resolve() in theme.fingerprint_paths
+    assert ctx.css_files[-1] == label_css.resolve()
+    assert "power-header" in ctx.art_labels
 
 
-def test_missing_art_role_css_file_fails_theme_load(tmp_path):
+def test_theme_art_label_css_files_are_layered_after_theme_css(tmp_path):
+    theme_root = tmp_path / "themes" / "my-theme"
+    label_dir = theme_root / "art-labels"
+    label_dir.mkdir(parents=True)
+    (theme_root / "theme.yaml").write_text(
+        "name: My Theme\ncss: base.css\n",
+        encoding="utf-8",
+    )
+    (theme_root / "base.css").write_text(":root { --accent: red; }\n", encoding="utf-8")
+    label_css = label_dir / "power-header.css"
+    label_css.write_text(".power-header { float: right; }\n", encoding="utf-8")
     recipe_path = _write_recipe(
         tmp_path,
         """
-        title: Missing Role CSS Book
-        theme: clean-srd
+        title: Theme Label Book
+        theme_dir: themes
+        theme: my-theme
         vaults:
           v: vault
-        art_roles:
-          power-header:
-            prefix: power-header
-            css: styles/missing.css
         contents:
           - kind: file
             source: v:Book.md
@@ -231,8 +232,10 @@ def test_missing_art_role_css_file_fails_theme_load(tmp_path):
     )
     recipe = load_book_config(recipe_path)
 
-    with pytest.raises(BookConfigError, match="art_roles.power-header.css"):
-        themes.load_theme(recipe)
+    theme = themes.load_theme(recipe)
+
+    assert [path.name for path in theme.css_files] == ["base.css", "power-header.css"]
+    assert theme.art_labels == ("power-header",)
 
 
 def test_local_themes_directory_is_discovered_by_default(tmp_path):

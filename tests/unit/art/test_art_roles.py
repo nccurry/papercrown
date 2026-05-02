@@ -9,7 +9,7 @@ from PIL import Image, ImageDraw
 
 from papercrown.art import audit as audit_mod
 from papercrown.art.audit import audit_recipe_art
-from papercrown.art.roles import ROLE_REGISTRY, ArtRoleSpec, classify_art_path
+from papercrown.art.roles import ROLE_REGISTRY, classify_art_path
 from papercrown.project.manifest import build_manifest
 from papercrown.project.recipe import load_book_config
 
@@ -75,61 +75,43 @@ def test_classify_art_path_recognizes_flat_filename_roles(tmp_path: Path):
         assert classify_art_path(art / filename, art_root=art).role == role
 
 
-def test_classify_art_path_accepts_project_declared_roles(tmp_path: Path):
+def test_classify_art_path_accepts_css_declared_labels(tmp_path: Path):
     art = tmp_path / "Art"
-    roles = {
-        "power-header": ArtRoleSpec(
-            "power-header",
-            "powers/headers",
-            6.0,
-            2.0,
-            transparent=False,
-            prefixes=("power-header",),
-        )
-    }
 
     classified = classify_art_path(
         art / "power-header-void-lance.png",
         art_root=art,
-        custom_roles=roles,
+        art_labels=("power-header",),
     )
 
     assert classified.role == "power-header"
     assert classified.context == "void"
     assert classified.subject == "lance"
     assert classified.variant is None
-    assert classified.nominal_width_in == 6.0
+    assert classified.nominal_width_in is None
+    assert classified.matched_convention == "css-label"
 
 
-def test_art_audit_uses_book_config_declared_roles(tmp_path: Path):
+def test_art_audit_uses_css_declared_labels(tmp_path: Path):
     vault = tmp_path / "vault"
     art = tmp_path / "art"
+    styles = tmp_path / "styles"
     vault.mkdir()
     art.mkdir()
+    styles.mkdir()
+    (styles / "power-header.css").write_text(".power-header {}\n", encoding="utf-8")
+    (styles / "power-icon.css").write_text(".power-icon {}\n", encoding="utf-8")
     (vault / "Foo.md").write_text("# Foo\n", encoding="utf-8")
     Image.new("RGB", (1800, 600), (255, 255, 255)).save(
         art / "power-header-void-lance.png"
     )
-    Image.new("RGBA", (150, 150), (0, 0, 0, 0)).save(
-        art / "power-icon-void-lance.png"
-    )
+    Image.new("RGBA", (150, 150), (0, 0, 0, 0)).save(art / "power-icon-void-lance.png")
     recipe_path = tmp_path / "recipe.yaml"
     recipe_path.write_text(
         textwrap.dedent(
             """
             title: Custom Art Book
             art_dir: art
-            art_roles:
-              power-header:
-                prefix: power-header
-                width: 6.0
-                height: 2.0
-                transparent: false
-              power-icon:
-                prefix: power-icon
-                width: 0.5
-                height: 0.5
-                transparent: true
             vaults:
               v: vault
             contents:
@@ -380,11 +362,12 @@ def test_art_audit_expects_cover_roles_for_cover_targets(tmp_path: Path):
               art: covers/cover-front-foo-01.png
             vaults:
               v: vault
-            splashes:
-              - id: back
-                art: covers/cover-back-foo-01.png
-                target: back-cover
-                placement: back-cover
+            art:
+              placements:
+                - id: back
+                  art: covers/cover-back-foo-01.png
+                  target: back-cover
+                  placement: back-cover
             contents:
               - kind: file
                 title: Foo

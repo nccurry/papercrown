@@ -94,9 +94,6 @@ skip that check during PDF-only workflows.
 
 ## GitHub Pages
 
-:::: {.art-slot role="splash" placement="bottom-half" art="papercrown-docs/splashes/splash-pages-field-guide-press.png"}
-::::
-
 The documentation site is built by Paper Crown and deployed by GitHub Actions.
 The source lives under `docs/`; generated HTML lives under `docs/site/` and is
 not committed.

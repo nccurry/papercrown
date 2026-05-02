@@ -28,9 +28,6 @@ papercrown verify
 
 ## Core Flow
 
-:::: {.art-slot role="splash" placement="bottom-half" art="papercrown-docs/splashes/splash-core-flow-launch-sequence.png"}
-::::
-
 1. Write Markdown in a vault.
 2. Describe the book in `book.yml`.
 3. Run `papercrown manifest` to inspect the resolved book.

@@ -11,6 +11,12 @@ from typing import Any
 import yaml
 
 from papercrown.media.image_treatments import image_treatment_css
+from papercrown.project.art_labels import (
+    ArtLabelCatalog,
+    merge_art_label_catalogs,
+    project_art_label_catalog,
+    theme_art_label_catalog,
+)
 from papercrown.project.recipe import DEFAULT_THEME, BookConfig, BookConfigError
 from papercrown.project.resources import TEMPLATE_FILE, THEMES_DIR
 
@@ -22,6 +28,7 @@ class ThemePack:
     name: str
     root: Path
     css_files: list[Path]
+    art_labels: tuple[str, ...]
     template: Path
     resource_paths: list[Path] = field(default_factory=list)
     fingerprint_paths: list[Path] = field(default_factory=list)
@@ -52,7 +59,8 @@ def load_theme(recipe: BookConfig) -> ThemePack:
         raise BookConfigError(f"theme {name!r} is missing theme.yaml: {theme_yaml}")
     metadata = _read_theme_yaml(theme_yaml)
     theme_css_files = _resolve_css_files(root, metadata)
-    css_files = [*theme_css_files, *_resolve_art_role_css_files(recipe)]
+    art_label_catalog = _resolve_art_label_catalog(recipe, root)
+    css_files = [*theme_css_files, *art_label_catalog.css_files]
     template = _resolve_template(root, metadata)
     asset_roots = _resolve_asset_roots(root, metadata)
     inline_css = _join_css_blocks(
@@ -76,6 +84,7 @@ def load_theme(recipe: BookConfig) -> ThemePack:
         tags=tuple(_string_or_string_list(metadata.get("tags", []), field_name="tags")),
         root=root,
         css_files=css_files,
+        art_labels=art_label_catalog.labels,
         template=template,
         resource_paths=[root, *asset_roots],
         fingerprint_paths=fingerprint_paths,
@@ -186,20 +195,13 @@ def _resolve_css_files(root: Path, metadata: dict[str, Any]) -> list[Path]:
     return css_files
 
 
-def _resolve_art_role_css_files(recipe: BookConfig) -> list[Path]:
-    """Return book-local CSS files declared by custom art roles."""
-    css_files: list[Path] = []
+def _resolve_art_label_catalog(recipe: BookConfig, theme_root: Path) -> ArtLabelCatalog:
+    """Return theme and project CSS-declared art labels."""
     project_dir = getattr(recipe, "project_dir", Path.cwd())
-    for role, spec in getattr(recipe, "art_roles", {}).items():
-        for raw_path in spec.css_files:
-            path = raw_path if raw_path.is_absolute() else project_dir / raw_path
-            resolved = path.resolve()
-            if not resolved.is_file():
-                raise BookConfigError(
-                    f"art_roles.{role}.css file not found: {resolved}"
-                )
-            css_files.append(resolved)
-    return list(dict.fromkeys(css_files))
+    return merge_art_label_catalogs(
+        theme_art_label_catalog(theme_root),
+        project_art_label_catalog(project_dir),
+    )
 
 
 def _resolve_template(root: Path, metadata: dict[str, Any]) -> Path:
