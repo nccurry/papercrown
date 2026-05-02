@@ -48,7 +48,7 @@ papercrown build book.yml --profile draft --filler-debug-overlay
 | `--chapter <slug-or-title>` | Build one section while iterating |
 | `--jobs auto` | Parallelize independent PDF work |
 | `--draft-mode fast` or `visual` | Decide whether draft builds skip or keep art |
-| `--page-damage auto`, `off`, `fast`, `full`, or `proof` | Control PDF page-wear overlays |
+| `--wear auto`, `off`, `fast`, `full`, or `proof` | Control PDF page-wear overlays |
 | `--filler-debug-overlay` | Write a sibling `*.filler-debug.pdf` with measured filler slots and placement decisions |
 
 Generated files live under one caller-owned tree:

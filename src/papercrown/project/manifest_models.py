@@ -131,9 +131,7 @@ class Chapter:
     source_strip_related: list[bool] = field(default_factory=list)
     source_filler_enabled: list[bool] = field(default_factory=list)
     source_boundary_filler_slots: list[str] = field(default_factory=list)
-    subclass_filler_slots: list[str] = field(
-        default_factory=lambda: ["subclass-end"]
-    )
+    subclass_filler_slots: list[str] = field(default_factory=lambda: ["subclass-end"])
     heading_filler_markers: list[ChapterHeadingFillerMarker] | None = None
     fillers_enabled: bool = True
     children: list[Chapter] = field(default_factory=list)

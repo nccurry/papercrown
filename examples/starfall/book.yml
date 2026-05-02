@@ -1,8 +1,9 @@
 title: Starfall Field Guide
 subtitle: A public sample for Paper Crown
 theme: clean-srd
-cover:
-  enabled: true
+art:
+  cover:
+    enabled: true
 
 contents:
   - kind: toc

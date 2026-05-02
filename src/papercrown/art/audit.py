@@ -201,12 +201,12 @@ def audit_recipe_art(
     if art_root.is_dir():
         result.assets.extend(_discover_art_assets(art_root, art_labels))
         _add_asset_diagnostics(result, include_unclassified=include_unclassified)
-    elif result.references or recipe.fillers.enabled or recipe.page_damage.enabled:
+    elif result.references or recipe.fillers.enabled or recipe.wear.enabled:
         result.diagnostics.add(
             Diagnostic(
                 code="art.root-missing",
                 severity=DiagnosticSeverity.ERROR,
-                message="book art_dir does not exist",
+                message="book art.library does not exist",
                 path=art_root,
             )
         )
@@ -820,39 +820,39 @@ def _recipe_art_references(recipe: BookConfig) -> list[ArtReference]:
         )
     for spec in _walk_specs(recipe.contents):
         label = spec.title or spec.kind
-        if spec.art:
+        if spec.art.divider:
             refs.append(
                 _reference(
                     recipe,
                     f"chapter {label}",
-                    spec.art,
+                    spec.art.divider,
                     expected_roles=RECIPE_CHAPTER_ART_ROLES,
                 )
             )
-        if spec.headpiece:
+        if spec.art.headpiece:
             refs.append(
                 _reference(
                     recipe,
                     f"chapter {label} headpiece",
-                    spec.headpiece,
+                    spec.art.headpiece,
                     expected_roles=REFERENCE_ORNAMENT_HEADPIECE_ROLES,
                 )
             )
-        if spec.break_ornament:
+        if spec.art.break_ornament:
             refs.append(
                 _reference(
                     recipe,
                     f"chapter {label} break ornament",
-                    spec.break_ornament,
+                    spec.art.break_ornament,
                     expected_roles=REFERENCE_ORNAMENT_BREAK_ROLES,
                 )
             )
-        if spec.tailpiece:
+        if spec.art.tailpiece:
             refs.append(
                 _reference(
                     recipe,
                     f"chapter {label} tailpiece",
-                    spec.tailpiece,
+                    spec.art.tailpiece,
                     expected_roles=REFERENCE_ORNAMENT_TAILPIECE_ROLES,
                 )
             )
@@ -960,8 +960,8 @@ def _filler_reference(
     expected_roles: Iterable[str] | None = None,
 ) -> ArtReference:
     root = recipe.art_dir
-    if recipe.fillers.art_dir:
-        root = root / recipe.fillers.art_dir
+    if recipe.fillers.folder:
+        root = root / recipe.fillers.folder
     return ArtReference(
         label=label,
         path=(root / art).resolve(),

@@ -77,29 +77,31 @@ def test_chapter_spec_splits_divider_art_from_insert_art():
     chapter = ContentItemSpec.from_dict(
         {
             "source": "v:Intro.md",
-            "art": [
-                {
-                    "role": "splash",
-                    "art": "splashes/intro.png",
-                    "after_heading": "Opening",
-                }
-            ],
+            "art": {
+                "placements": [
+                    {
+                        "role": "splash",
+                        "image": "splashes/intro.png",
+                        "after_heading": "Opening",
+                    }
+                ]
+            },
         },
         index=0,
     )
     divider = ContentItemSpec.from_dict(
         {
             "source": "v:Divider.md",
-            "art": "dividers/intro.png",
+            "art": {"divider": "dividers/intro.png"},
         },
         index=1,
     )
 
-    assert chapter.art is None
-    assert chapter.art_inserts[0].target == "after-heading"
-    assert chapter.art_inserts[0].heading == "Opening"
-    assert divider.art == "dividers/intro.png"
-    assert divider.art_inserts == []
+    assert chapter.art.divider is None
+    assert chapter.art.placements[0].target == "after-heading"
+    assert chapter.art.placements[0].heading == "Opening"
+    assert divider.art.divider == "dividers/intro.png"
+    assert divider.art.placements == []
 
 
 # ---------------------------------------------------------------------------
@@ -132,8 +134,9 @@ class TestLoadBookConfigHappy:
             subtitle: Rules Book
             cover_eyebrow: Player's Handbook
             theme: clean-srd
-            cover:
-              enabled: true
+            art:
+              cover:
+                enabled: true
             contents:
               - Intro.md
         """,
@@ -196,66 +199,67 @@ class TestLoadBookConfigHappy:
             vault_overlay: [base, over]
             output_dir: build
             output_name: my-book
-            art_dir: art
-            ornaments:
-              folio_frame: ornaments/folio.png
-              corner_bracket: ornaments/corner.png
             art:
+              library: art
+              cover:
+                enabled: true
+                image: cover.png
+              ornaments:
+                folio_frame: ornaments/folio.png
+                corner_bracket: ornaments/corner.png
               placements:
                 - id: opening
-                  art: splashes/opening.png
+                  image: splashes/opening.png
                   target: front-cover
                   placement: cover
                 - id: setting-corner
-                  art: splashes/setting.png
+                  image: splashes/setting.png
                   chapter: Setting
                   target: after-heading
                   heading: Factions
                   placement: corner-right
-            fillers:
-              enabled: true
-              art_dir: fillers
-              slots:
-                chapter-end:
-                  min_space: 0.65in
-                  max_space: 3.5in
-                  shapes: [tailpiece, spot, small-wide]
-                section-end:
-                  min_space: 0.65in
-                  max_space: 2.25in
-                  shapes: [tailpiece]
-              assets:
-                - id: tailpiece-airlock
-                  art: ornaments/tail.png
-                  shape: tailpiece
-                  height: 0.65in
-            page_damage:
-              enabled: true
-              art_dir: page-wear
-              seed: wear-test-v1
-              density: 0.4
-              max_assets_per_page: 3
-              opacity: 0.22
-              glaze_opacity: 0.45
-              glaze_texture: surface-dust-speckle.png
-              skip: [cover, divider]
-            image_treatments:
-              ornament: ink-blend
-              filler: raw
-              cover: print-punch
-            cover:
-              enabled: true
-              art: cover.png
+              fillers:
+                enabled: true
+                folder: fillers
+                slots:
+                  chapter-end:
+                    min_space: 0.65in
+                    max_space: 3.5in
+                    shapes: [tailpiece, spot, small-wide]
+                  section-end:
+                    min_space: 0.65in
+                    max_space: 2.25in
+                    shapes: [tailpiece]
+                assets:
+                  - id: tailpiece-airlock
+                    image: ornaments/tail.png
+                    shape: tailpiece
+                    height: 0.65in
+              wear:
+                enabled: true
+                folder: page-wear
+                seed: wear-test-v1
+                density: 0.4
+                max_assets_per_page: 3
+                opacity: 0.22
+                glaze_opacity: 0.45
+                glaze_texture: surface-dust-speckle.png
+                skip: [cover, divider]
+              treatments:
+                ornament: ink-blend
+                filler: raw
+                cover: print-punch
             contents:
               - kind: file
                 style: setting
                 title: Setting
                 slug: custom-setting
                 eyebrow: Setting Primer
-                art: setting.png
-                headpiece: ornaments/head.png
-                break_ornament: ornaments/break.png
-                tailpiece: ornaments/tail.png
+                art:
+                  divider: setting.png
+                  headpiece: ornaments/head.png
+                  break: ornaments/break.png
+                  tailpiece: ornaments/tail.png
                 source: base:Setting.md
                 full_page_sections:
                   - Character Creation
@@ -266,10 +270,12 @@ class TestLoadBookConfigHappy:
                 child_style: class
                 individual_pdfs: true
                 individual_pdf_subdir: classes
-                art_per_class: true
-                class_art_pattern: classes/dividers/class-{slug}.png
-                class_spot_art_pattern: class-spots/spot-class-{slug}.png
-                replace_existing_opening_art: true
+                art:
+                  children:
+                    per_child: true
+                    divider_pattern: classes/dividers/class-{slug}.png
+                    opening_spot_pattern: class-spots/spot-class-{slug}.png
+                    replace_opening_art: true
             """,
             vault_dirs=["vault_a", "vault_b", "art"],
         )
@@ -290,7 +296,7 @@ class TestLoadBookConfigHappy:
         assert r.art_placements[1].chapter == "Setting"
         assert r.art_placements[1].heading == "Factions"
         assert r.fillers.enabled is True
-        assert r.fillers.art_dir == "fillers"
+        assert r.fillers.folder == "fillers"
         assert r.fillers.slots["chapter-end"].min_space_in == 0.65
         assert r.fillers.slots["chapter-end"].shapes == [
             "tailpiece",
@@ -301,35 +307,37 @@ class TestLoadBookConfigHappy:
         assert r.fillers.slots["section-end"].shapes == ["tailpiece"]
         assert r.fillers.assets[0].id == "tailpiece-airlock"
         assert r.fillers.assets[0].height_in == 0.65
-        assert r.page_damage.enabled is True
-        assert r.page_damage.art_dir == "page-wear"
-        assert r.page_damage.seed == "wear-test-v1"
-        assert r.page_damage.density == 0.4
-        assert r.page_damage.max_assets_per_page == 3
-        assert r.page_damage.opacity == 0.22
-        assert r.page_damage.glaze_opacity == 0.45
-        assert r.page_damage.glaze_texture == "surface-dust-speckle.png"
-        assert r.page_damage.skip == ["cover", "divider"]
-        assert r.image_treatments == {
+        assert r.wear.enabled is True
+        assert r.wear.folder == "page-wear"
+        assert r.wear.seed == "wear-test-v1"
+        assert r.wear.density == 0.4
+        assert r.wear.max_assets_per_page == 3
+        assert r.wear.opacity == 0.22
+        assert r.wear.glaze_opacity == 0.45
+        assert r.wear.glaze_texture == "surface-dust-speckle.png"
+        assert r.wear.skip == ["cover", "divider"]
+        assert r.treatments == {
             "ornament": "ink-blend",
             "filler": "raw",
             "cover": "print-punch",
         }
         assert r.vault_overlay == ["base", "over"]
         assert r.contents[0].slug == "custom-setting"
-        assert r.contents[0].headpiece == "ornaments/head.png"
-        assert r.contents[0].break_ornament == "ornaments/break.png"
-        assert r.contents[0].tailpiece == "ornaments/tail.png"
+        assert r.contents[0].art.headpiece == "ornaments/head.png"
+        assert r.contents[0].art.break_ornament == "ornaments/break.png"
+        assert r.contents[0].art.tailpiece == "ornaments/tail.png"
         assert r.contents[0].full_page_sections == ["Character Creation"]
         assert r.contents[0].toc_depth == 2
         ch = r.contents[1]
         assert ch.kind == "classes-catalog"
         assert ch.individual_pdfs is True
         assert ch.individual_pdf_subdir == "classes"
-        assert ch.art_per_class is True
-        assert ch.class_art_pattern == "classes/dividers/class-{slug}.png"
-        assert ch.class_spot_art_pattern == "class-spots/spot-class-{slug}.png"
-        assert ch.replace_existing_opening_art is True
+        assert ch.art.children.per_child is True
+        assert ch.art.children.divider_pattern == "classes/dividers/class-{slug}.png"
+        assert (
+            ch.art.children.opening_spot_pattern == "class-spots/spot-class-{slug}.png"
+        )
+        assert ch.art.children.replace_opening_art is True
         assert ch.child_style == "class"
 
     def test_sequence_recipe_parses_ordered_sources(self, tmp_path):
@@ -389,8 +397,9 @@ class TestLoadBookConfigHappy:
                 vaults:
                   base: vault
                 output_name: base-book
-                cover:
-                  enabled: true
+                art:
+                  cover:
+                    enabled: true
                 contents:
                   - kind: file
                     title: Base
@@ -592,7 +601,8 @@ class TestLoadBookConfigErrors:
             title: X
             vaults:
               custom: vault
-            ornaments: ornaments/folio.png
+            art:
+              ornaments: ornaments/folio.png
             contents:
               - kind: file
                 source: custom:Foo.md
@@ -601,23 +611,24 @@ class TestLoadBookConfigErrors:
         with pytest.raises(BookConfigError, match="ornaments"):
             load_book_config(p)
 
-    def test_image_treatments_validate_roles_and_presets(self, tmp_path):
+    def test_art_treatments_validate_roles_and_presets(self, tmp_path):
         p = _write_recipe(
             tmp_path,
             """
             title: X
             vaults:
               custom: vault
-            image_treatments:
-              filler: none
-              ornament: ink-blend
+            art:
+              treatments:
+                filler: none
+                ornament: ink-blend
             contents:
               - kind: file
                 source: custom:Foo.md
         """,
         )
         recipe = load_book_config(p)
-        assert recipe.image_treatments == {
+        assert recipe.treatments == {
             "filler": "raw",
             "ornament": "ink-blend",
         }
@@ -628,8 +639,9 @@ class TestLoadBookConfigErrors:
             title: X
             vaults:
               custom: vault
-            image_treatments:
-              portraits: raw
+            art:
+              treatments:
+                portraits: raw
             contents:
               - kind: file
                 source: custom:Foo.md
@@ -644,8 +656,9 @@ class TestLoadBookConfigErrors:
             title: X
             vaults:
               custom: vault
-            image_treatments:
-              filler: sharpen
+            art:
+              treatments:
+                filler: sharpen
             contents:
               - kind: file
                 source: custom:Foo.md
@@ -664,7 +677,7 @@ class TestLoadBookConfigErrors:
             art:
               placements:
                 - id: bad
-                  art: splashes/bad.png
+                  image: splashes/bad.png
                   target: chapter-start
                   placement: cover
             contents:
@@ -684,7 +697,7 @@ class TestLoadBookConfigErrors:
             art:
               placements:
                 - id: bad
-                  art: splashes/bad.png
+                  image: splashes/bad.png
                   target: front-cover
                   placement: sideways
             contents:
@@ -702,13 +715,14 @@ class TestLoadBookConfigErrors:
             title: X
             vaults:
               custom: vault
-            fillers:
-              enabled: true
-              slots:
-                chapter-end:
-                  min_space: 0.65in
-                  max_space: 3.5in
-                  shapes: [sideways]
+            art:
+              fillers:
+                enabled: true
+                slots:
+                  chapter-end:
+                    min_space: 0.65in
+                    max_space: 3.5in
+                    shapes: [sideways]
             contents:
               - kind: file
                 source: custom:Foo.md
@@ -723,18 +737,19 @@ class TestLoadBookConfigErrors:
             title: X
             vaults:
               custom: vault
-            fillers:
-              enabled: true
-              slots:
-                chapter-end:
-                  min_space: 0
-                  max_space: 3.5in
-                  shapes: [tailpiece]
-              assets:
-                - id: bad
-                  art: ornaments/bad.png
-                  shape: tailpiece
-                  height: lots
+            art:
+              fillers:
+                enabled: true
+                slots:
+                  chapter-end:
+                    min_space: 0
+                    max_space: 3.5in
+                    shapes: [tailpiece]
+                assets:
+                  - id: bad
+                    image: ornaments/bad.png
+                    shape: tailpiece
+                    height: lots
             contents:
               - kind: file
                 source: custom:Foo.md
@@ -743,20 +758,21 @@ class TestLoadBookConfigErrors:
         with pytest.raises(BookConfigError, match="inch"):
             load_book_config(p)
 
-    def test_page_damage_validates_mapping_ranges_and_skip_targets(self, tmp_path):
+    def test_wear_validates_mapping_ranges_and_skip_targets(self, tmp_path):
         p = _write_recipe(
             tmp_path,
             """
             title: X
             vaults:
               custom: vault
-            page_damage: yes
+            art:
+              wear: yes
             contents:
               - kind: file
                 source: custom:Foo.md
         """,
         )
-        with pytest.raises(BookConfigError, match="page_damage"):
+        with pytest.raises(BookConfigError, match="art.wear"):
             load_book_config(p)
 
         p = _write_recipe(
@@ -765,9 +781,10 @@ class TestLoadBookConfigErrors:
             title: X
             vaults:
               custom: vault
-            page_damage:
-              enabled: true
-              density: 1.4
+            art:
+              wear:
+                enabled: true
+                density: 1.4
             contents:
               - kind: file
                 source: custom:Foo.md
@@ -782,9 +799,10 @@ class TestLoadBookConfigErrors:
             title: X
             vaults:
               custom: vault
-            page_damage:
-              enabled: true
-              glaze_opacity: 1.4
+            art:
+              wear:
+                enabled: true
+                glaze_opacity: 1.4
             contents:
               - kind: file
                 source: custom:Foo.md
@@ -799,9 +817,10 @@ class TestLoadBookConfigErrors:
             title: X
             vaults:
               custom: vault
-            page_damage:
-              enabled: true
-              skip: [cover, glossary]
+            art:
+              wear:
+                enabled: true
+                skip: [cover, glossary]
             contents:
               - kind: file
                 source: custom:Foo.md
@@ -817,29 +836,31 @@ class TestLoadBookConfigErrors:
             title: X
             vaults:
               custom: vault
-            fillers:
-              enabled: true
-              slots:
-                chapter-end:
-                  min_space: 0.65in
-                  max_space: 5.5in
-                  shapes: [tailpiece, plate, page-finish]
-              markers:
-                terminal:
-                  chapter_slots: chapter-end
-                  class_slots: false
-                source_boundary: false
-                subclass: false
-                headings:
-                  - chapter: Reference
-                    slot: chapter-end
-                    heading_level: 2
-                    slot_kind: reference-section
-                    context: reference
+            art:
+              fillers:
+                enabled: true
+                slots:
+                  chapter-end:
+                    min_space: 0.65in
+                    max_space: 5.5in
+                    shapes: [tailpiece, plate, page-finish]
+                markers:
+                  terminal:
+                    chapter_slots: chapter-end
+                    class_slots: false
+                  source_boundary: false
+                  subclass: false
+                  headings:
+                    - chapter: Reference
+                      slot: chapter-end
+                      heading_level: 2
+                      slot_kind: reference-section
+                      context: reference
             contents:
               - kind: sequence
                 title: Reference
-                fillers: false
+                art:
+                  fillers: false
                 sources:
                   - source: custom:Foo.md
                     filler: false
@@ -857,7 +878,7 @@ class TestLoadBookConfigErrors:
         assert recipe.fillers.markers.source_boundary.sequence_slots == ()
         assert recipe.fillers.markers.subclass.slots == ()
         assert recipe.fillers.markers.headings[0].slot_kind == "reference-section"
-        assert recipe.contents[0].fillers_enabled is False
+        assert recipe.contents[0].art.fillers_enabled is False
         assert recipe.contents[0].sources[0].filler_enabled is False
 
     def test_fillers_parse_multi_slot_marker_policy(self, tmp_path):
@@ -867,21 +888,22 @@ class TestLoadBookConfigErrors:
             title: X
             vaults:
               custom: vault
-            fillers:
-              enabled: true
-              slots:
-                chapter-end:
-                  min_space: 0.65in
-                  max_space: 5.5in
-                  shapes: [tailpiece]
-              markers:
-                terminal:
-                  chapter_slots: [chapter-end, chapter-bottom-band]
-                  class_slots: [class-end, class-bottom-band]
-                source_boundary:
-                  sequence_slots: [section-end, section-bottom-band]
-                subclass:
-                  slots: [subclass-end, subclass-bottom-band]
+            art:
+              fillers:
+                enabled: true
+                slots:
+                  chapter-end:
+                    min_space: 0.65in
+                    max_space: 5.5in
+                    shapes: [tailpiece]
+                markers:
+                  terminal:
+                    chapter_slots: [chapter-end, chapter-bottom-band]
+                    class_slots: [class-end, class-bottom-band]
+                  source_boundary:
+                    sequence_slots: [section-end, section-bottom-band]
+                  subclass:
+                    slots: [subclass-end, subclass-bottom-band]
             contents:
               - kind: file
                 source: custom:Foo.md
@@ -917,37 +939,6 @@ class TestLoadBookConfigErrors:
         """,
         )
         with pytest.raises(BookConfigError, match="contents"):
-            load_book_config(p)
-
-    @pytest.mark.parametrize(
-        ("field", "hint"),
-        [
-            ("chapters", "use contents instead"),
-            ("front_matter", "ordinary contents items"),
-            ("back_matter", "ordinary contents items"),
-            ("build", "papercrown.yaml"),
-            ("include_chapters", "use include_contents instead"),
-        ],
-    )
-    def test_legacy_recipe_fields_fail_clearly(self, tmp_path, field, hint):
-        legacy_value = "[]"
-        if field == "include_chapters":
-            legacy_value = "old-chapters.yaml"
-        if field == "build":
-            legacy_value = "{scope: book}"
-        p = _write_recipe(
-            tmp_path,
-            f"""
-            title: X
-            vaults:
-              custom: vault
-            contents:
-              - kind: file
-                source: custom:Foo.md
-            {field}: {legacy_value}
-        """,
-        )
-        with pytest.raises(BookConfigError, match=hint):
             load_book_config(p)
 
     def test_empty_contents(self, tmp_path):

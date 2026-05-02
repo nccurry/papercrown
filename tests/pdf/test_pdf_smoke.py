@@ -366,7 +366,7 @@ def test_fast_page_damage_pass_renders_real_overlay(tmp_path):
         css_files=[css],
         lua_filters=[],
         resource_paths=[],
-        page_damage_mode="fast",
+        wear_mode="fast",
     )
     pipeline.render_html_to_pdf(
         """

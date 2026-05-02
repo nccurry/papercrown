@@ -133,13 +133,15 @@ class TestKindFile:
             ws,
             """
             title: Test
-            art_dir: art
+            art:
+              library: art
             vaults:
               base: base
             contents:
               - kind: file
                 title: Setting
-                tailpiece: ornaments/tail.png
+                art:
+                  tailpiece: ornaments/tail.png
                 source: base:Setting.md
         """,
         )
@@ -156,7 +158,8 @@ class TestKindFile:
             ws,
             """
             title: Test
-            art_dir: art
+            art:
+              library: art
             vaults:
               base: base
             contents:
@@ -164,10 +167,11 @@ class TestKindFile:
                 title: Setting
                 source: base:Setting.md
                 art:
-                  - id: boarding
-                    after_heading: Factions
-                    art: splashes/boarding.png
-                    placement: bottom-half
+                  placements:
+                    - id: boarding
+                      after_heading: Factions
+                      image: splashes/boarding.png
+                      placement: bottom-half
         """,
         )
         m = build_manifest(load_book_config(rp))
@@ -191,14 +195,16 @@ class TestKindFile:
             ws,
             """
             title: Test
-            art_dir: art
+            art:
+              library: art
             vaults:
               base: base
             contents:
               - kind: file
                 title: Setting
-                headpiece: ornaments/head.png
-                break_ornament: ornaments/break.png
+                art:
+                  headpiece: ornaments/head.png
+                  break: ornaments/break.png
                 source: base:Setting.md
         """,
         )
@@ -218,21 +224,21 @@ class TestKindFile:
             ws,
             """
             title: Test
-            art_dir: art
-            vaults:
-              base: base
             art:
+              library: art
               placements:
                 - id: front
-                  art: splashes/front.png
+                  image: splashes/front.png
                   target: front-cover
                   placement: cover
                 - id: setting-corner
-                  art: splashes/corner.png
+                  image: splashes/corner.png
                   chapter: Setting
                   target: after-heading
                   heading: Factions
                   placement: corner-right
+            vaults:
+              base: base
             contents:
               - kind: file
                 title: Setting
@@ -256,25 +262,27 @@ class TestKindFile:
             ws,
             """
             title: Test
-            art_dir: art
+            art:
+              library: art
+              fillers:
+                enabled: true
+                slots:
+                  chapter-end:
+                    min_space: 0.65in
+                    max_space: 3.5in
+                    shapes: [tailpiece]
+                assets:
+                  - id: tail
+                    image: ornaments/tail.png
+                    shape: tailpiece
+                    height: 0.65in
             vaults:
               base: base
-            fillers:
-              enabled: true
-              slots:
-                chapter-end:
-                  min_space: 0.65in
-                  max_space: 3.5in
-                  shapes: [tailpiece]
-              assets:
-                - id: tail
-                  art: ornaments/tail.png
-                  shape: tailpiece
-                  height: 0.65in
             contents:
               - kind: file
                 title: Setting
-                tailpiece: ornaments/tail.png
+                art:
+                  tailpiece: ornaments/tail.png
                 source: base:Setting.md
               - kind: file
                 title: Backgrounds
@@ -311,17 +319,18 @@ class TestKindFile:
             title: Test
             vaults:
               base: base
-            fillers:
-              enabled: true
-              slots:
-                chapter-end:
-                  min_space: 0.65in
-                  max_space: 8.5in
-                  shapes: [spot, small-wide, bottom-band]
-                section-end:
-                  min_space: 1.2in
-                  max_space: 8.5in
-                  shapes: [spot, small-wide, bottom-band]
+            art:
+              fillers:
+                enabled: true
+                slots:
+                  chapter-end:
+                    min_space: 0.65in
+                    max_space: 8.5in
+                    shapes: [spot, small-wide, bottom-band]
+                  section-end:
+                    min_space: 1.2in
+                    max_space: 8.5in
+                    shapes: [spot, small-wide, bottom-band]
             contents:
               - kind: group
                 title: Original Rules
@@ -373,30 +382,31 @@ class TestKindFile:
             title: Test
             vaults:
               base: base
-            fillers:
-              enabled: true
-              slots:
-                chapter-end:
-                  min_space: 0.65in
-                  max_space: 8.5in
-                  shapes: [tailpiece, spot]
-                chapter-bottom-band:
-                  min_space: 2.4in
-                  max_space: 4.25in
-                  shapes: [bottom-band]
-                section-end:
-                  min_space: 1.2in
-                  max_space: 8.5in
-                  shapes: [spot]
-                section-bottom-band:
-                  min_space: 2.4in
-                  max_space: 4.25in
-                  shapes: [bottom-band]
-              markers:
-                terminal:
-                  chapter_slots: [chapter-end, chapter-bottom-band]
-                source_boundary:
-                  sequence_slots: [section-end, section-bottom-band]
+            art:
+              fillers:
+                enabled: true
+                slots:
+                  chapter-end:
+                    min_space: 0.65in
+                    max_space: 8.5in
+                    shapes: [tailpiece, spot]
+                  chapter-bottom-band:
+                    min_space: 2.4in
+                    max_space: 4.25in
+                    shapes: [bottom-band]
+                  section-end:
+                    min_space: 1.2in
+                    max_space: 8.5in
+                    shapes: [spot]
+                  section-bottom-band:
+                    min_space: 2.4in
+                    max_space: 4.25in
+                    shapes: [bottom-band]
+                markers:
+                  terminal:
+                    chapter_slots: [chapter-end, chapter-bottom-band]
+                  source_boundary:
+                    sequence_slots: [section-end, section-bottom-band]
             contents:
               - kind: file
                 title: Setting
@@ -438,22 +448,23 @@ class TestKindFile:
             title: Test
             vaults:
               base: base
-            fillers:
-              enabled: true
-              slots:
-                chapter-end:
-                  min_space: 0.65in
-                  max_space: 8.5in
-                  shapes: [spot, plate, page-finish]
-                section-end:
-                  min_space: 1.2in
-                  max_space: 8.5in
-                  shapes: [spot, plate, page-finish]
-              markers:
-                terminal: false
-                source_boundary: false
-                subclass: false
-                headings: []
+            art:
+              fillers:
+                enabled: true
+                slots:
+                  chapter-end:
+                    min_space: 0.65in
+                    max_space: 8.5in
+                    shapes: [spot, plate, page-finish]
+                  section-end:
+                    min_space: 1.2in
+                    max_space: 8.5in
+                    shapes: [spot, plate, page-finish]
+                markers:
+                  terminal: false
+                  source_boundary: false
+                  subclass: false
+                  headings: []
             contents:
               - kind: file
                 title: Setting
@@ -481,7 +492,7 @@ class TestKindFile:
         assert combat.source_filler_enabled == [False, True]
         assert combat.heading_filler_markers == []
 
-    def test_page_damage_assets_resolve_from_filename_conventions(self, mini_workspace):
+    def test_wear_assets_resolve_from_filename_conventions(self, mini_workspace):
         ws, base, _ = mini_workspace
         art = ws / "art"
         wear_dir = art / "page-wear"
@@ -497,19 +508,20 @@ class TestKindFile:
             ws,
             """
             title: Test
-            art_dir: art
+            art:
+              library: art
+              wear:
+                enabled: true
+                folder: page-wear
+                seed: manifest-test
+                density: 0.5
+                max_assets_per_page: 2
+                opacity: 0.25
+                glaze_opacity: 0.5
+                glaze_texture: surface-paper-fiber-wash.png
+                skip: [cover, toc]
             vaults:
               base: base
-            page_damage:
-              enabled: true
-              art_dir: page-wear
-              seed: manifest-test
-              density: 0.5
-              max_assets_per_page: 2
-              opacity: 0.25
-              glaze_opacity: 0.5
-              glaze_texture: surface-paper-fiber-wash.png
-              skip: [cover, toc]
             contents:
               - kind: file
                 title: Setting
@@ -684,16 +696,17 @@ class TestKindFile:
             ws,
             """
             title: Test
-            art_dir: art
+            art:
+              library: art
+              fillers:
+                enabled: true
+                slots:
+                  chapter-end:
+                    min_space: 0.65in
+                    max_space: 3.5in
+                    shapes: [small-wide, bottom-band]
             vaults:
               base: base
-            fillers:
-              enabled: true
-              slots:
-                chapter-end:
-                  min_space: 0.65in
-                  max_space: 3.5in
-                  shapes: [small-wide, bottom-band]
             contents:
               - kind: file
                 title: Setting
@@ -735,16 +748,17 @@ class TestKindFile:
             ws,
             """
             title: Test
-            art_dir: art
+            art:
+              library: art
+              fillers:
+                enabled: true
+                slots:
+                  chapter-end:
+                    min_space: 0.65in
+                    max_space: 3.5in
+                    shapes: [tailpiece]
             vaults:
               base: base
-            fillers:
-              enabled: true
-              slots:
-                chapter-end:
-                  min_space: 0.65in
-                  max_space: 3.5in
-                  shapes: [tailpiece]
             contents:
               - kind: file
                 title: Setting
@@ -782,8 +796,9 @@ class TestKindFile:
                 ws,
                 """
                 title: Test
-                cover:
-                  enabled: true
+                art:
+                  cover:
+                    enabled: true
                 vaults:
                   base: base
                 contents:
@@ -839,26 +854,27 @@ class TestKindFile:
             ws,
             """
             title: Test
-            art_dir: art
+            art:
+              library: art
+              fillers:
+                enabled: true
+                folder: fillers
+                slots:
+                  chapter-end:
+                    min_space: 0.65in
+                    max_space: 3.5in
+                    shapes: [spot]
+                assets:
+                  - id: explicit
+                    image: explicit-spot.png
+                    shape: spot
+                    height: 1.35in
+                  - id: escaped
+                    image: ../ornaments/ornament-tailpiece-airlock.png
+                    shape: tailpiece
+                    height: 0.65in
             vaults:
               base: base
-            fillers:
-              enabled: true
-              art_dir: fillers
-              slots:
-                chapter-end:
-                  min_space: 0.65in
-                  max_space: 3.5in
-                  shapes: [spot]
-              assets:
-                - id: explicit
-                  art: explicit-spot.png
-                  shape: spot
-                  height: 1.35in
-                - id: escaped
-                  art: ../ornaments/ornament-tailpiece-airlock.png
-                  shape: tailpiece
-                  height: 0.65in
             contents:
               - kind: file
                 title: Setting
@@ -890,7 +906,7 @@ class TestKindFile:
             art:
               placements:
                 - id: missing
-                  art: splashes/missing.png
+                  image: splashes/missing.png
                   chapter: Missing
                   target: chapter-start
                   placement: bottom-half
@@ -1048,15 +1064,17 @@ class TestKindClassesCatalog:
             ws,
             """
             title: Test
-            art_dir: art
+            art:
+              library: art
             vaults:
               base: base
             contents:
               - kind: classes-catalog
                 source: base:Heroes/Classes List.md
-                headpiece: ornaments/head.png
-                break_ornament: ornaments/break.png
-                tailpiece: ornaments/tail.png
+                art:
+                  headpiece: ornaments/head.png
+                  break: ornaments/break.png
+                  tailpiece: ornaments/tail.png
         """,
         )
 
@@ -1123,7 +1141,7 @@ class TestKindClassesCatalog:
         # Class chapter still built with the resolved files
         assert len(m.chapters[0].source_files) == 2
 
-    def test_class_spot_art_pattern_resolves_for_children(self, mini_workspace):
+    def test_child_opening_spot_pattern_resolves_for_children(self, mini_workspace):
         ws, base, _ = mini_workspace
         art = ws / "art"
         (art / "class-spots").mkdir(parents=True)
@@ -1135,14 +1153,17 @@ class TestKindClassesCatalog:
             ws,
             """
             title: Test
-            art_dir: art
+            art:
+              library: art
             vaults:
               base: base
             contents:
               - kind: classes-catalog
                 source: base:Heroes/Classes List.md
-                class_spot_art_pattern: class-spots/spot-class-{slug}.png
-                replace_existing_opening_art: true
+                art:
+                  children:
+                    opening_spot_pattern: class-spots/spot-class-{slug}.png
+                    replace_opening_art: true
         """,
         )
         m = build_manifest(load_book_config(rp))
@@ -1153,7 +1174,9 @@ class TestKindClassesCatalog:
         assert mage.replace_opening_art is True
         assert not m.warnings
 
-    def test_class_art_pattern_resolves_divider_art_for_children(self, mini_workspace):
+    def test_child_divider_pattern_resolves_divider_art_for_children(
+        self, mini_workspace
+    ):
         ws, base, _ = mini_workspace
         art = ws / "art"
         (art / "classes" / "dividers").mkdir(parents=True)
@@ -1165,13 +1188,16 @@ class TestKindClassesCatalog:
             ws,
             """
             title: Test
-            art_dir: art
+            art:
+              library: art
             vaults:
               base: base
             contents:
               - kind: classes-catalog
                 source: base:Heroes/Classes List.md
-                class_art_pattern: classes/dividers/class-{slug}.png
+                art:
+                  children:
+                    divider_pattern: classes/dividers/class-{slug}.png
         """,
         )
         m = build_manifest(load_book_config(rp))
@@ -1513,7 +1539,7 @@ class TestKindSequence:
 
 class TestBookConfigPathProperties:
     def test_project_dir_is_book_config_directory(self, tmp_path):
-        from papercrown.project.recipe import BookConfig, CoverSpec
+        from papercrown.project.recipe import ArtSpec, BookConfig, CoverSpec
 
         project = tmp_path / "project"
         config_dir = project / "books"
@@ -1527,7 +1553,7 @@ class TestBookConfigPathProperties:
             cover_footer=None,
             vaults={},
             vault_overlay=[],
-            cover=CoverSpec(),
+            art=ArtSpec(cover=CoverSpec()),
             contents=[],
             recipe_path=rp.resolve(),
         )
@@ -1535,7 +1561,7 @@ class TestBookConfigPathProperties:
         assert r.art_dir == (config_dir / "Art").resolve()
 
     def test_project_dir_when_recipe_alongside(self, tmp_path):
-        from papercrown.project.recipe import BookConfig, CoverSpec
+        from papercrown.project.recipe import ArtSpec, BookConfig, CoverSpec
 
         rp = tmp_path / "myrecipe.yaml"
         rp.write_text("title: t\n", encoding="utf-8")
@@ -1546,14 +1572,14 @@ class TestBookConfigPathProperties:
             cover_footer=None,
             vaults={},
             vault_overlay=[],
-            cover=CoverSpec(),
+            art=ArtSpec(cover=CoverSpec()),
             contents=[],
             recipe_path=rp.resolve(),
         )
         assert r.project_dir == tmp_path.resolve()
 
-    def test_art_dir_can_be_overridden(self, tmp_path):
-        from papercrown.project.recipe import BookConfig, CoverSpec
+    def test_art_library_can_be_overridden(self, tmp_path):
+        from papercrown.project.recipe import ArtSpec, BookConfig, CoverSpec
 
         rp = tmp_path / "recipes" / "foo.yaml"
         rp.parent.mkdir()
@@ -1567,9 +1593,8 @@ class TestBookConfigPathProperties:
             cover_footer=None,
             vaults={},
             vault_overlay=[],
-            cover=CoverSpec(),
+            art=ArtSpec(library=str(art_dir.resolve()), cover=CoverSpec()),
             contents=[],
             recipe_path=rp.resolve(),
-            art_dir_override=art_dir.resolve(),
         )
         assert r.art_dir == art_dir.resolve()

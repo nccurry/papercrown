@@ -27,8 +27,8 @@ from papercrown.build.options import (
     BuildTarget,
     DraftMode,
     OutputProfile,
-    PageDamageMode,
     PaginationMode,
+    WearMode,
 )
 from papercrown.build.requests import BuildRequest
 from papercrown.project import manifest as manifest_mod
@@ -76,7 +76,7 @@ def build_cli_patch(
     clean_pdf: bool | None = None,
     pagination: PaginationMode | None = None,
     draft_mode: DraftMode | None = None,
-    page_damage: PageDamageMode | None = None,
+    wear: WearMode | None = None,
     timings: bool | None = None,
 ) -> BuildConfigPatch:
     """Return a config patch from explicit command-line options."""
@@ -96,7 +96,7 @@ def build_cli_patch(
         clean_pdf=clean_pdf,
         pagination_mode=pagination,
         draft_mode=draft_mode,
-        page_damage_mode=page_damage,
+        wear_mode=wear,
         timings=timings,
     )
 
@@ -116,7 +116,7 @@ def run_build(
     clean_pdf: bool | None,
     pagination: PaginationMode | None,
     draft_mode: DraftMode | None,
-    page_damage: PageDamageMode | None,
+    wear: WearMode | None,
     filler_debug_overlay: bool,
     timings: bool | None,
 ) -> None:
@@ -136,7 +136,7 @@ def run_build(
             clean_pdf=clean_pdf,
             pagination=pagination,
             draft_mode=draft_mode,
-            page_damage=page_damage,
+            wear=wear,
             timings=timings,
         ),
     )
@@ -433,7 +433,7 @@ def _build_request(
         clean_pdf=config.clean_pdf,
         pagination_mode=config.pagination_mode,
         draft_mode=config.draft_mode,
-        page_damage_mode=config.page_damage_mode,
+        wear_mode=config.wear_mode,
         filler_debug_overlay=filler_debug_overlay,
         timings=config.timings,
     )

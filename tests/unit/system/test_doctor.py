@@ -41,13 +41,15 @@ def test_doctor_reports_missing_recipe_art_before_tool_checks(tmp_path, monkeypa
         textwrap.dedent(
             """
             title: My Book
-            art_dir: art
+            art:
+              library: art
             vaults:
               v: vault
             contents:
               - kind: file
                 title: Foo
-                art: missing.png
+                art:
+                  divider: missing.png
                 source: v:Foo.md
             """
         ).lstrip(),
@@ -121,24 +123,25 @@ def test_doctor_warns_for_invalid_filler_and_page_wear_assets(
         textwrap.dedent(
             """
             title: My Book
-            art_dir: art
+            art:
+              library: art
+              fillers:
+                enabled: true
+                slots:
+                  chapter-end:
+                    min_space: 0.65in
+                    max_space: 3.5in
+                    shapes: [spot]
+                assets:
+                  - id: bad-spot
+                    image: filler-spot-general-bad.png
+                    shape: spot
+                    height: 1.35in
+              wear:
+                enabled: true
+                folder: page-wear
             vaults:
               v: vault
-            fillers:
-              enabled: true
-              slots:
-                chapter-end:
-                  min_space: 0.65in
-                  max_space: 3.5in
-                  shapes: [spot]
-              assets:
-                - id: bad-spot
-                  art: filler-spot-general-bad.png
-                  shape: spot
-                  height: 1.35in
-            page_damage:
-              enabled: true
-              art_dir: page-wear
             contents:
               - kind: file
                 title: Foo

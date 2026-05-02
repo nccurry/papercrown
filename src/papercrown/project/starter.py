@@ -330,7 +330,7 @@ def _render_recipe(
     with_cover: bool,
 ) -> str:
     optional_blocks: list[str] = []
-    optional_blocks.append(f"cover:\n  enabled: {_yaml_bool(with_cover)}\n")
+    optional_blocks.append(f"art:\n  cover:\n    enabled: {_yaml_bool(with_cover)}\n")
     if vault_ref is not None:
         optional_blocks.append(f"vaults:\n  content: {_yaml_string(vault_ref)}\n")
     optional_yaml = "\n".join(optional_blocks)

@@ -53,8 +53,8 @@ from papercrown.project.manifest_models import (
     TocPart,
 )
 from papercrown.project.recipe import (
-    PAGE_DAMAGE_FAMILIES,
-    PAGE_DAMAGE_SIZES,
+    WEAR_FAMILIES,
+    WEAR_SIZES,
     ArtPlacementSpec,
     BookConfig,
     ContentItemSpec,
@@ -66,7 +66,7 @@ from papercrown.project.recipe import (
 from papercrown.project.slugs import slugify
 from papercrown.project.vaults import VaultIndex, WikilinkTarget
 
-# Image extensions accepted for filler art discovered from art_dir.
+# Image extensions accepted for filler art discovered from the art library.
 FILLER_IMAGE_SUFFIXES = IMAGE_SUFFIXES
 # Image extensions accepted for page-wear overlays.
 PAGE_DAMAGE_IMAGE_SUFFIXES = {".png", ".webp"}
@@ -145,8 +145,8 @@ def _chapter_art_path(
     title: str,
 ) -> Path | None:
     """Resolve explicit or convention-derived chapter divider/header art."""
-    if spec.art:
-        return _art_path(recipe, spec.art)
+    if spec.art.divider:
+        return _art_path(recipe, spec.art.divider)
     return convention_art_path(
         recipe,
         {"chapter-header", "chapter-divider"},
@@ -177,9 +177,9 @@ def _class_spot_art_path(recipe: BookConfig, slug: str) -> Path | None:
 
 def _filler_art_root(recipe: BookConfig) -> Path:
     """Return the root used for filler assets."""
-    art_dir = recipe.fillers.art_dir
-    if art_dir:
-        return (recipe.art_dir / art_dir).resolve()
+    folder = recipe.fillers.folder
+    if folder:
+        return (recipe.art_dir / folder).resolve()
     return recipe.art_dir.resolve()
 
 
@@ -195,8 +195,8 @@ def _filler_art_path(recipe: BookConfig, spec: FillerAssetSpec) -> Path | None:
 
 
 def _page_damage_art_root(recipe: BookConfig) -> Path:
-    """Return the root used for page-damage assets."""
-    return (recipe.art_dir / recipe.page_damage.art_dir).resolve()
+    """Return the root used for page-wear assets."""
+    return (recipe.art_dir / recipe.wear.folder).resolve()
 
 
 def _page_damage_asset_from_path(
@@ -204,14 +204,14 @@ def _page_damage_asset_from_path(
     *,
     art_root: Path,
 ) -> PageDamageAsset | None:
-    """Build a page-damage asset from a filename convention, if valid."""
+    """Build a page-wear asset from a filename convention, if valid."""
     stem = path.stem.lower()
     match = PAGE_DAMAGE_FILENAME_RE.fullmatch(stem)
     if match is None:
         return None
     family = match.group("family")
     size = match.group("size")
-    if family not in PAGE_DAMAGE_FAMILIES or size not in PAGE_DAMAGE_SIZES:
+    if family not in WEAR_FAMILIES or size not in WEAR_SIZES:
         return None
     try:
         relative = path.relative_to(art_root)
@@ -284,7 +284,7 @@ def _auto_filler_assets(
 
 
 def _per_class_art(recipe: BookConfig, slug: str) -> Path | None:
-    """Look for recipe.art_dir/<slug>.png fallbacks for a generated child."""
+    """Look for art-library ``<slug>.png`` fallbacks for a generated child."""
     for ext in ("png", "jpg", "jpeg", "webp"):
         candidate = recipe.art_dir / f"{slug}.{ext}"
         if candidate.is_file():
@@ -346,16 +346,16 @@ def _chapter_from_spec(
         ),
         spot_art_path=spot_art_path,
         replace_opening_art=replace_opening_art,
-        tailpiece_path=_art_path(recipe, spec.tailpiece),
-        headpiece_path=_art_path(recipe, spec.headpiece),
-        break_ornament_path=_art_path(recipe, spec.break_ornament),
+        tailpiece_path=_art_path(recipe, spec.art.tailpiece),
+        headpiece_path=_art_path(recipe, spec.art.headpiece),
+        break_ornament_path=_art_path(recipe, spec.art.break_ornament),
         source_files=list(source_files or []),
         source_titles=list(source_titles or []),
         source_strip_related=list(source_strip_related or []),
         source_filler_enabled=list(source_filler_enabled or []),
         source_boundary_filler_slots=list(source_boundary_filler_slots or []),
         subclass_filler_slots=list(recipe.fillers.markers.subclass.slots),
-        fillers_enabled=spec.fillers_enabled,
+        fillers_enabled=spec.art.fillers_enabled,
         children=list(children or []),
         individual_pdf=individual_pdf,
         individual_pdf_subdir=individual_pdf_subdir,
@@ -363,7 +363,7 @@ def _chapter_from_spec(
         divider=divider,
         full_page_sections=list(spec.full_page_sections),
         toc_depth=spec.toc_depth,
-        art_inserts=list(spec.art_inserts),
+        art_inserts=list(spec.art.placements),
     )
 
 
@@ -556,14 +556,14 @@ def _build_page_damage_catalog(
     recipe: BookConfig,
     warnings: list[str],
 ) -> PageDamageCatalog:
-    """Resolve transparent page-damage assets from the recipe art directory."""
-    spec = recipe.page_damage
+    """Resolve transparent page-wear assets from the recipe art library."""
+    spec = recipe.wear
     if not spec.enabled:
         return PageDamageCatalog()
 
     root = _page_damage_art_root(recipe)
     if not root.is_dir():
-        warnings.append(f"page_damage: art_dir not found: {root}")
+        warnings.append(f"wear: folder not found: {root}")
         return PageDamageCatalog(
             enabled=True,
             seed=spec.seed or recipe.title,
@@ -584,18 +584,17 @@ def _build_page_damage_catalog(
         if asset is None:
             if path.stem.lower().startswith("wear-"):
                 warnings.append(
-                    "page_damage: ignored asset with invalid name/family/size: "
-                    f"{path.name}"
+                    f"wear: ignored asset with invalid name/family/size: {path.name}"
                 )
             continue
         if asset.id in seen_ids:
-            warnings.append(f"page_damage {asset.id!r}: duplicate id ignored")
+            warnings.append(f"wear {asset.id!r}: duplicate id ignored")
             continue
         seen_ids.add(asset.id)
         assets.append(asset)
 
     if not assets:
-        warnings.append(f"page_damage: no wear assets found in {root}")
+        warnings.append(f"wear: no assets found in {root}")
 
     return PageDamageCatalog(
         enabled=True,
@@ -940,28 +939,28 @@ def _build_classes_catalog_chapters(
             continue
         art = _art_path_from_pattern(
             recipe,
-            spec.class_art_pattern,
+            spec.art.children.divider_pattern,
             slug=slug,
             title=clean_name,
         )
-        if art is None and spec.art_per_class:
+        if art is None and spec.art.children.per_child:
             art = _per_class_art(recipe, slug)
         if art is None:
             art = _class_art_path(recipe, slug)
-        if spec.class_art_pattern and art is None:
+        if spec.art.children.divider_pattern and art is None:
             warnings.append(
                 f"classes-catalog {src.name} [{class_name}]: "
                 f"class divider art not found for slug {slug!r}"
             )
         spot_art = _art_path_from_pattern(
             recipe,
-            spec.class_spot_art_pattern,
+            spec.art.children.opening_spot_pattern,
             slug=slug,
             title=clean_name,
         )
         if spot_art is None:
             spot_art = _class_spot_art_path(recipe, slug)
-        if spec.class_spot_art_pattern and spot_art is None:
+        if spec.art.children.opening_spot_pattern and spot_art is None:
             warnings.append(
                 f"classes-catalog {src.name} [{class_name}]: "
                 f"class spot art not found for slug {slug!r}"
@@ -975,7 +974,7 @@ def _build_classes_catalog_chapters(
             art_path=art,
             use_spec_art=False,
             spot_art_path=spot_art,
-            replace_opening_art=spec.replace_existing_opening_art,
+            replace_opening_art=spec.art.children.replace_opening_art,
             source_files=files,
             style=spec.child_style,
             individual_pdf=spec.individual_pdfs,

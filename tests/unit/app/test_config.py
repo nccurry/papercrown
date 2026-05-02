@@ -19,8 +19,8 @@ from papercrown.build.options import (
     BuildTarget,
     DraftMode,
     OutputProfile,
-    PageDamageMode,
     PaginationMode,
+    WearMode,
 )
 
 
@@ -41,7 +41,7 @@ def test_project_build_block_parses_all_option_types(tmp_path):
               clean_pdf: false
               pagination: fix
               draft_mode: visual
-              page_damage: false
+              wear: false
               timings: true
             """
         ).lstrip(),
@@ -61,7 +61,7 @@ def test_project_build_block_parses_all_option_types(tmp_path):
     assert patch.clean_pdf is False
     assert patch.pagination_mode is PaginationMode.FIX
     assert patch.draft_mode is DraftMode.VISUAL
-    assert patch.page_damage_mode is PageDamageMode.OFF
+    assert patch.wear_mode is WearMode.OFF
     assert patch.timings is True
 
 
@@ -116,7 +116,7 @@ def test_project_and_cli_layers_apply_in_order(tmp_path):
               profile: digital
               pagination: off
               draft_mode: fast
-              page_damage: fast
+              wear: fast
               jobs: 2
               clean_pdf: false
             """
@@ -130,7 +130,7 @@ def test_project_and_cli_layers_apply_in_order(tmp_path):
         profile=OutputProfile.DRAFT,
         pagination_mode=PaginationMode.FIX,
         draft_mode=DraftMode.VISUAL,
-        page_damage_mode=PageDamageMode.PROOF,
+        wear_mode=WearMode.PROOF,
     )
     resolved = resolve_build_config(
         recipe_arg=None,
@@ -145,7 +145,7 @@ def test_project_and_cli_layers_apply_in_order(tmp_path):
     assert resolved.profile is OutputProfile.DRAFT
     assert resolved.pagination_mode is PaginationMode.FIX
     assert resolved.draft_mode is DraftMode.VISUAL
-    assert resolved.page_damage_mode is PageDamageMode.PROOF
+    assert resolved.wear_mode is WearMode.PROOF
     assert resolved.jobs == 2
     assert resolved.clean_pdf is False
 

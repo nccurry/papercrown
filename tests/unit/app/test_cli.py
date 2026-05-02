@@ -15,8 +15,8 @@ from papercrown.build.options import (
     BuildScope,
     DraftMode,
     OutputProfile,
-    PageDamageMode,
     PaginationMode,
+    WearMode,
 )
 from papercrown.render.build import BuildResult
 from papercrown.system.export import Tools
@@ -44,7 +44,7 @@ def test_build_help_exposes_clean_break_flags():
     }
     assert "--scope" in options
     assert "--draft-mode" in options
-    assert "--page-damage" in options
+    assert "--wear" in options
     assert "--pagination" in options
     assert "--jobs" in options
     assert "--clean-pdf" in options
@@ -121,10 +121,10 @@ def test_old_action_aliases_are_not_accepted():
     assert result.exit_code != 0
 
 
-def test_cli_patch_tracks_explicit_page_damage_mode():
-    patch = actions.build_cli_patch(page_damage=PageDamageMode.PROOF)
+def test_cli_patch_tracks_explicit_wear_mode():
+    patch = actions.build_cli_patch(wear=WearMode.PROOF)
 
-    assert patch.page_damage_mode is PageDamageMode.PROOF
+    assert patch.wear_mode is WearMode.PROOF
 
 
 def test_jobs_auto_is_capped_to_small_worker_count():
@@ -165,7 +165,7 @@ def test_build_command_applies_config_recipe_and_cli_precedence(
               jobs: 2
               clean_pdf: false
               pagination: off
-              page_damage: fast
+              wear: fast
             """
         ).lstrip(),
         encoding="utf-8",
@@ -182,7 +182,7 @@ def test_build_command_applies_config_recipe_and_cli_precedence(
             "draft",
             "--draft-mode",
             "visual",
-            "--page-damage",
+            "--wear",
             "proof",
             "--pagination",
             "fix",
@@ -201,7 +201,7 @@ def test_build_command_applies_config_recipe_and_cli_precedence(
     assert request.scope is BuildScope.BOOK
     assert request.profile is OutputProfile.DRAFT
     assert request.draft_mode is DraftMode.VISUAL
-    assert request.page_damage_mode is PageDamageMode.PROOF
+    assert request.wear_mode is WearMode.PROOF
     assert request.pagination_mode is PaginationMode.FIX
     assert 1 <= request.jobs <= 4
     assert request.include_art is False
@@ -292,7 +292,8 @@ def test_art_audit_command_reports_role_counts(tmp_path):
         tmp_path,
         """
         title: Art Audit Book
-        art_dir: art
+        art:
+          library: art
         vaults:
           v: vault
         contents:
@@ -317,7 +318,8 @@ def test_art_contact_sheet_command_writes_html(tmp_path):
         tmp_path,
         """
         title: Art Contact Sheet Book
-        art_dir: art
+        art:
+          library: art
         vaults:
           v: vault
         contents:
@@ -418,7 +420,7 @@ def test_no_config_ignores_project_config(
     request = captured["request"]
     assert request.scope is BuildScope.ALL
     assert request.profile is OutputProfile.PRINT
-    assert request.page_damage_mode is PageDamageMode.AUTO
+    assert request.wear_mode is WearMode.AUTO
 
 
 def _patch_build_side_effects(tmp_path, monkeypatch):

@@ -271,7 +271,7 @@ class RenderContext:
     draft_placeholders: bool = False
     draft_mode: str = ""
     pagination_mode: str = "report"
-    page_damage_mode: str = "auto"
+    wear_mode: str = "auto"
     pagination_report_path: Path | None = None
     filler_debug_overlay_path: Path | None = None
     timings: bool = False
@@ -341,7 +341,7 @@ def render_markdown_to_pdf(
     ctx.page_background_underlay = (
         page_damage_catalog is not None
         and page_damage_catalog.enabled
-        and ctx.page_damage_mode == "full"
+        and ctx.wear_mode == "full"
     )
     html = render_markdown_to_html(markdown, ctx)
     stage_start = _log_timing(ctx, "pandoc html", stage_start)
@@ -658,7 +658,7 @@ def _write_final_pdf(
 ) -> _PdfWriteResult:
     """Choose and run the final PDF write strategy."""
     if damage_catalog is not None and damage_catalog.enabled:
-        if ctx.page_damage_mode == "full":
+        if ctx.wear_mode == "full":
             _write_pdf_with_page_art(
                 document,
                 out_pdf,
@@ -668,7 +668,7 @@ def _write_final_pdf(
                 base_url=session.base_url,
                 ctx=ctx,
             )
-            return _PdfWriteResult(timing_label=f"pdf write ({ctx.page_damage_mode})")
+            return _PdfWriteResult(timing_label=f"pdf write ({ctx.wear_mode})")
         _write_pdf_with_page_damage_fast(
             document,
             out_pdf,
@@ -679,7 +679,7 @@ def _write_final_pdf(
             ctx=ctx,
         )
         return _PdfWriteResult(
-            timing_label=f"pdf write ({ctx.page_damage_mode})",
+            timing_label=f"pdf write ({ctx.wear_mode})",
             pdf_already_cleaned=True,
         )
 

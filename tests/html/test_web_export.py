@@ -49,7 +49,8 @@ def _make_web_recipe(tmp_path: Path) -> Path:
         """
         title: Web Test Book
         output_dir: ../output
-        art_dir: ../art
+        art:
+          library: ../art
         vaults:
           v: ../vault
         contents:
@@ -57,8 +58,9 @@ def _make_web_recipe(tmp_path: Path) -> Path:
           - kind: file
             title: Setting
             source: v:Setting.md
-            art: setting.png
-            tailpiece: tail.png
+            art:
+              divider: setting.png
+              tailpiece: tail.png
           - kind: file
             title: Rules
             source: v:Rules.md

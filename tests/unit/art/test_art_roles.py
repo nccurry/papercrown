@@ -111,7 +111,8 @@ def test_art_audit_uses_css_declared_labels(tmp_path: Path):
         textwrap.dedent(
             """
             title: Custom Art Book
-            art_dir: art
+            art:
+              library: art
             vaults:
               v: vault
             contents:
@@ -151,7 +152,8 @@ def test_art_audit_validates_alpha_and_unclassified_assets(tmp_path: Path):
         textwrap.dedent(
             """
             title: Audit Book
-            art_dir: art
+            art:
+              library: art
             vaults:
               v: vault
             contents:
@@ -197,7 +199,8 @@ def test_art_audit_warns_about_duplicates_sparse_art_and_backgrounds(
         textwrap.dedent(
             """
             title: Art Quality Book
-            art_dir: art
+            art:
+              library: art
             vaults:
               v: vault
             contents:
@@ -238,16 +241,17 @@ def test_art_audit_warns_about_bottom_band_slot_and_top_safety(
         textwrap.dedent(
             """
             title: Bottom Band Audit Book
-            art_dir: art
+            art:
+              library: art
+              fillers:
+                enabled: true
+                slots:
+                  chapter-end:
+                    min_space: 0.65in
+                    max_space: 5.0in
+                    shapes: [spot, bottom-band]
             vaults:
               v: vault
-            fillers:
-              enabled: true
-              slots:
-                chapter-end:
-                  min_space: 0.65in
-                  max_space: 5.0in
-                  shapes: [spot, bottom-band]
             contents:
               - kind: file
                 title: Foo
@@ -285,7 +289,8 @@ def test_art_audit_allows_cross_role_ornament_reuse(tmp_path: Path):
         textwrap.dedent(
             """
             title: Ornament Reuse Book
-            art_dir: art
+            art:
+              library: art
             vaults:
               v: vault
             contents:
@@ -356,18 +361,18 @@ def test_art_audit_expects_cover_roles_for_cover_targets(tmp_path: Path):
         textwrap.dedent(
             """
             title: Cover Contract Book
-            art_dir: art
-            cover:
-              enabled: true
-              art: covers/cover-front-foo-01.png
-            vaults:
-              v: vault
             art:
+              library: art
+              cover:
+                enabled: true
+                image: covers/cover-front-foo-01.png
               placements:
                 - id: back
-                  art: covers/cover-back-foo-01.png
+                  image: covers/cover-back-foo-01.png
                   target: back-cover
                   placement: back-cover
+            vaults:
+              v: vault
             contents:
               - kind: file
                 title: Foo
@@ -412,25 +417,26 @@ def test_art_audit_allows_namespaced_art_packs_and_filler_art_dir(
         textwrap.dedent(
             """
             title: Pack Audit Book
-            art_dir: art
-            cover:
-              enabled: true
-              art: docs-pack/covers/cover-front-docs-pack.png
+            art:
+              library: art
+              cover:
+                enabled: true
+                image: docs-pack/covers/cover-front-docs-pack.png
+              fillers:
+                enabled: true
+                folder: docs-pack
+                slots:
+                  chapter-end:
+                    min_space: 0.65in
+                    max_space: 3.5in
+                    shapes: [spot]
+                assets:
+                  - id: docs-spot
+                    image: fillers/spot/filler-spot-general-token-01.png
+                    shape: spot
+                    height: 1.35in
             vaults:
               v: vault
-            fillers:
-              enabled: true
-              art_dir: docs-pack
-              slots:
-                chapter-end:
-                  min_space: 0.65in
-                  max_space: 3.5in
-                  shapes: [spot]
-              assets:
-                - id: docs-spot
-                  art: fillers/spot/filler-spot-general-token-01.png
-                  shape: spot
-                  height: 1.35in
             contents:
               - kind: file
                 title: Foo
@@ -474,28 +480,30 @@ def test_art_audit_allows_flat_art_library(tmp_path: Path):
         textwrap.dedent(
             """
             title: Flat Art Book
-            art_dir: art
-            cover:
-              enabled: true
-              art: scene-01-port-meridian-arrival.png
+            art:
+              library: art
+              cover:
+                enabled: true
+                image: scene-01-port-meridian-arrival.png
+              fillers:
+                enabled: true
+                slots:
+                  chapter-end:
+                    min_space: 0.65in
+                    max_space: 3.5in
+                    shapes: [spot]
+                assets:
+                  - id: docs-spot
+                    image: filler-spot-general-token-01.png
+                    shape: spot
+                    height: 1.35in
             vaults:
               v: vault
-            fillers:
-              enabled: true
-              slots:
-                chapter-end:
-                  min_space: 0.65in
-                  max_space: 3.5in
-                  shapes: [spot]
-              assets:
-                - id: docs-spot
-                  art: filler-spot-general-token-01.png
-                  shape: spot
-                  height: 1.35in
             contents:
               - kind: file
                 title: Foo
-                art: scene-01-port-meridian-arrival.png
+                art:
+                  divider: scene-01-port-meridian-arrival.png
                 source: v:Foo.md
             """
         ).lstrip(),

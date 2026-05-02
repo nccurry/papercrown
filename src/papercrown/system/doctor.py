@@ -14,8 +14,8 @@ from papercrown.build.options import BuildTarget
 from papercrown.media.images import diagnose_image
 from papercrown.project.manifest import Manifest, classify_filler_art_path
 from papercrown.project.recipe import (
-    PAGE_DAMAGE_FAMILIES,
-    PAGE_DAMAGE_SIZES,
+    WEAR_FAMILIES,
+    WEAR_SIZES,
     BookConfig,
     ContentItemSpec,
 )
@@ -236,7 +236,7 @@ def _add_page_wear_asset_diagnostics(
         return
     for asset in manifest.page_damage.assets:
         report.extend(diagnose_image(asset.art_path, code_prefix="page-wear-image"))
-        if asset.family not in PAGE_DAMAGE_FAMILIES:
+        if asset.family not in WEAR_FAMILIES:
             report.add(
                 Diagnostic(
                     code="page-wear.family",
@@ -245,7 +245,7 @@ def _add_page_wear_asset_diagnostics(
                     path=asset.art_path,
                 )
             )
-        if asset.size not in PAGE_DAMAGE_SIZES:
+        if asset.size not in WEAR_SIZES:
             report.add(
                 Diagnostic(
                     code="page-wear.size",
@@ -394,15 +394,15 @@ def _recipe_art_references(recipe: BookConfig) -> Iterator[tuple[str, Path]]:
             (recipe.art_dir / recipe.ornaments.corner_bracket).resolve(),
         )
     for spec in _walk_specs(recipe.contents):
-        if spec.art:
+        if spec.art.divider:
             yield (
                 f"chapter {spec.title or spec.kind}",
-                (recipe.art_dir / spec.art).resolve(),
+                (recipe.art_dir / spec.art.divider).resolve(),
             )
-        if spec.tailpiece:
+        if spec.art.tailpiece:
             yield (
                 f"chapter {spec.title or spec.kind} tailpiece",
-                (recipe.art_dir / spec.tailpiece).resolve(),
+                (recipe.art_dir / spec.art.tailpiece).resolve(),
             )
 
 

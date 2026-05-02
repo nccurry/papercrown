@@ -15,8 +15,8 @@ from papercrown.build.options import (
     BuildTarget,
     DraftMode,
     OutputProfile,
-    PageDamageMode,
     PaginationMode,
+    WearMode,
 )
 from papercrown.build.requests import BuildRequest, BuildResult
 from papercrown.media import images
@@ -77,7 +77,7 @@ class _PdfJobOptions:
     include_art: bool = True
     draft_mode: DraftMode = DraftMode.FAST
     pagination_mode: PaginationMode = PaginationMode.REPORT
-    page_damage_mode: PageDamageMode = PageDamageMode.AUTO
+    wear_mode: WearMode = WearMode.AUTO
     clean_pdf: bool = True
     image_session: images.ImageOptimizationSession | None = None
     filler_debug_overlay: bool = False
@@ -100,13 +100,13 @@ def _image_profile_for(profile: OutputProfile, draft_mode: DraftMode) -> str:
     return profile.value
 
 
-def _effective_page_damage_mode(request: BuildRequest) -> PageDamageMode:
-    """Return the concrete page-damage mode for a build request."""
-    if request.page_damage_mode is not PageDamageMode.AUTO:
-        return request.page_damage_mode
+def _effective_wear_mode(request: BuildRequest) -> WearMode:
+    """Return the concrete page-wear mode for a build request."""
+    if request.wear_mode is not WearMode.AUTO:
+        return request.wear_mode
     if _is_fast_draft(request.profile, request.draft_mode):
-        return PageDamageMode.OFF
-    return PageDamageMode.FAST
+        return WearMode.OFF
+    return WearMode.FAST
 
 
 def _image_cache_root(recipe: BookConfig) -> Path:
@@ -123,7 +123,7 @@ def make_base_context(
     include_art: bool = True,
     draft_mode: DraftMode = DraftMode.FAST,
     pagination_mode: PaginationMode = PaginationMode.REPORT,
-    page_damage_mode: PageDamageMode = PageDamageMode.AUTO,
+    wear_mode: WearMode = WearMode.AUTO,
     clean_pdf: bool = True,
     image_session: images.ImageOptimizationSession | None = None,
 ) -> pipeline.RenderContext:
@@ -171,7 +171,7 @@ def make_base_context(
     ctx.draft_placeholders = _is_fast_draft(profile, draft_mode)
     ctx.draft_mode = draft_mode.value if profile is OutputProfile.DRAFT else ""
     ctx.pagination_mode = pagination_mode.value
-    ctx.page_damage_mode = page_damage_mode.value
+    ctx.wear_mode = wear_mode.value
     if include_art and not _is_fast_draft(profile, draft_mode):
         ctx.ornament_folio_frame = _optimized_box_image(
             _recipe_ornament_path(recipe, "folio_frame"),
@@ -214,7 +214,7 @@ def context_for_chapter(
     include_art: bool = True,
     draft_mode: DraftMode = DraftMode.FAST,
     pagination_mode: PaginationMode = PaginationMode.REPORT,
-    page_damage_mode: PageDamageMode = PageDamageMode.AUTO,
+    wear_mode: WearMode = WearMode.AUTO,
     clean_pdf: bool = True,
     image_session: images.ImageOptimizationSession | None = None,
 ) -> pipeline.RenderContext:
@@ -226,7 +226,7 @@ def context_for_chapter(
         include_art=include_art,
         draft_mode=draft_mode,
         pagination_mode=pagination_mode,
-        page_damage_mode=page_damage_mode,
+        wear_mode=wear_mode,
         clean_pdf=clean_pdf,
         image_session=image_session,
     )
@@ -256,7 +256,7 @@ def context_for_book(
     include_art: bool = True,
     draft_mode: DraftMode = DraftMode.FAST,
     pagination_mode: PaginationMode = PaginationMode.REPORT,
-    page_damage_mode: PageDamageMode = PageDamageMode.AUTO,
+    wear_mode: WearMode = WearMode.AUTO,
     clean_pdf: bool = True,
     image_session: images.ImageOptimizationSession | None = None,
 ) -> pipeline.RenderContext:
@@ -268,7 +268,7 @@ def context_for_book(
         include_art=include_art,
         draft_mode=draft_mode,
         pagination_mode=pagination_mode,
-        page_damage_mode=page_damage_mode,
+        wear_mode=wear_mode,
         clean_pdf=clean_pdf,
         image_session=image_session,
     )
@@ -505,7 +505,7 @@ def _prepare_chapter_pdf_job(
     include_art = options.include_art
     draft_mode = options.draft_mode
     pagination_mode = options.pagination_mode
-    page_damage_mode = options.page_damage_mode
+    wear_mode = options.wear_mode
     clean_pdf = options.clean_pdf
     image_session = options.image_session
     filler_debug_overlay = options.filler_debug_overlay
@@ -546,7 +546,7 @@ def _prepare_chapter_pdf_job(
         include_art=include_art,
         draft_mode=draft_mode,
         pagination_mode=pagination_mode,
-        page_damage_mode=page_damage_mode,
+        wear_mode=wear_mode,
         clean_pdf=clean_pdf,
         image_session=image_session,
     )
@@ -568,15 +568,13 @@ def _prepare_chapter_pdf_job(
         page_damage_catalog=_render_page_damage_catalog(
             (
                 manifest.page_damage
-                if manifest is not None
-                and render_art
-                and page_damage_mode is not PageDamageMode.OFF
+                if manifest is not None and render_art and wear_mode is not WearMode.OFF
                 else None
             ),
             profile=_image_profile_for(profile, draft_mode),
             cache_root=_image_cache_root(recipe),
             image_session=image_session,
-            proof=page_damage_mode is PageDamageMode.PROOF,
+            proof=wear_mode is WearMode.PROOF,
             visual_draft=(
                 profile is OutputProfile.DRAFT and draft_mode is DraftMode.VISUAL
             ),
@@ -600,7 +598,7 @@ def build_chapter_pdf(
     include_art: bool = True,
     draft_mode: DraftMode = DraftMode.FAST,
     pagination_mode: PaginationMode = PaginationMode.REPORT,
-    page_damage_mode: PageDamageMode = PageDamageMode.AUTO,
+    wear_mode: WearMode = WearMode.AUTO,
     clean_pdf: bool = True,
     timings: bool = False,
     image_session: images.ImageOptimizationSession | None = None,
@@ -618,7 +616,7 @@ def build_chapter_pdf(
             include_art=include_art,
             draft_mode=draft_mode,
             pagination_mode=pagination_mode,
-            page_damage_mode=page_damage_mode,
+            wear_mode=wear_mode,
             clean_pdf=clean_pdf,
             image_session=image_session,
             filler_debug_overlay=filler_debug_overlay,
@@ -650,7 +648,7 @@ def _prepare_combined_book_job(
     include_art = options.include_art
     draft_mode = options.draft_mode
     pagination_mode = options.pagination_mode
-    page_damage_mode = options.page_damage_mode
+    wear_mode = options.wear_mode
     clean_pdf = options.clean_pdf
     image_session = options.image_session
     filler_debug_overlay = options.filler_debug_overlay
@@ -694,7 +692,7 @@ def _prepare_combined_book_job(
         include_art=include_art,
         draft_mode=draft_mode,
         pagination_mode=pagination_mode,
-        page_damage_mode=page_damage_mode,
+        wear_mode=wear_mode,
         clean_pdf=clean_pdf,
         image_session=image_session,
     )
@@ -716,13 +714,13 @@ def _prepare_combined_book_job(
         page_damage_catalog=_render_page_damage_catalog(
             (
                 manifest.page_damage
-                if render_art and page_damage_mode is not PageDamageMode.OFF
+                if render_art and wear_mode is not WearMode.OFF
                 else None
             ),
             profile=_image_profile_for(profile, draft_mode),
             cache_root=_image_cache_root(recipe),
             image_session=image_session,
-            proof=page_damage_mode is PageDamageMode.PROOF,
+            proof=wear_mode is WearMode.PROOF,
             visual_draft=(
                 profile is OutputProfile.DRAFT and draft_mode is DraftMode.VISUAL
             ),
@@ -832,7 +830,7 @@ def _append_single_chapter(
             include_art=request.include_art,
             draft_mode=request.draft_mode,
             pagination_mode=request.pagination_mode,
-            page_damage_mode=_effective_page_damage_mode(request),
+            wear_mode=_effective_wear_mode(request),
             clean_pdf=request.clean_pdf,
             timings=request.timings,
             image_session=image_session,
@@ -930,13 +928,13 @@ def build_outputs(
 
     render_cache = ArtifactCache.load(request.recipe.cache_dir / "render-state.json")
     timer.mark("render cache load")
-    effective_page_damage_mode = _effective_page_damage_mode(request)
+    effective_wear_mode = _effective_wear_mode(request)
     pdf_job_options = _PdfJobOptions(
         profile=request.profile,
         include_art=request.include_art,
         draft_mode=request.draft_mode,
         pagination_mode=request.pagination_mode,
-        page_damage_mode=effective_page_damage_mode,
+        wear_mode=effective_wear_mode,
         clean_pdf=request.clean_pdf,
         image_session=image_session,
         filler_debug_overlay=request.filler_debug_overlay,
@@ -1296,7 +1294,7 @@ def _render_job(job: PdfRenderJob) -> None:
     job.ctx.page_background_underlay = (
         job.page_damage_catalog is not None
         and job.page_damage_catalog.enabled
-        and job.ctx.page_damage_mode == PageDamageMode.FULL.value
+        and job.ctx.wear_mode == WearMode.FULL.value
     )
     pipeline.render_markdown_to_pdf(
         job.markdown,
@@ -1319,7 +1317,7 @@ def _render_job_fingerprint(job: PdfRenderJob) -> str:
     job.ctx.page_background_underlay = (
         job.page_damage_catalog is not None
         and job.page_damage_catalog.enabled
-        and job.ctx.page_damage_mode == PageDamageMode.FULL.value
+        and job.ctx.wear_mode == WearMode.FULL.value
     )
     return _render_fingerprint(job.markdown, job.ctx, input_paths=job.input_paths)
 
@@ -1407,7 +1405,7 @@ def _render_fingerprint(
         "draft_mode": ctx.draft_mode,
         "draft_placeholders": ctx.draft_placeholders,
         "pagination_mode": ctx.pagination_mode,
-        "page_damage_mode": ctx.page_damage_mode,
+        "wear_mode": ctx.wear_mode,
         "filler_debug_overlay": ctx.filler_debug_overlay_path is not None,
     }
     return fingerprint_files(paths_for_hash, extra=extra)
@@ -1495,7 +1493,7 @@ def _shared_image_paths(recipe: BookConfig, manifest: Manifest | None) -> list[P
             paths_for_hash.append(filler_asset.art_path)
         for damage_asset in manifest.page_damage.assets:
             paths_for_hash.append(damage_asset.art_path)
-    if recipe.page_damage.enabled:
+    if recipe.wear.enabled:
         paths_for_hash.extend(
             texture_path
             for texture_path in TEXTURES_DIR.glob("*.png")

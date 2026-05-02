@@ -1,6 +1,6 @@
 # Art
 
-Paper Crown treats `art_dir` as a named art library. The book owns the files;
+Paper Crown treats `art.library` as a named art library. The book owns the files;
 Paper Crown classifies them by role, validates the names, and only auto-places
 art from roles that are explicitly safe for automatic layout.
 
@@ -11,10 +11,10 @@ mis-sized assets before a release build.
 :::: {.sidebar #art-library title="Art Library Contract" tags="docs,art"}
 ### Art Library Contract
 
-Keep art under the book config's `art_dir`, use role-shaped filenames, and reserve
+Keep art under the book config's `art.library`, use role-shaped filenames, and reserve
 transparent PNGs for assets that should float on paper instead of carrying
 their own rectangular background. Art can either live in the canonical role
-folders below or directly in `art_dir` when filenames are globally unique.
+folders below or directly in the art library when filenames are globally unique.
 ::::
 
 ## How to Use It
@@ -29,7 +29,7 @@ intent:
 - Add fixed book-specific art labels by creating `styles/<label>.css`; images
   whose filenames start with `<label>-` get matching classes automatically.
 
-Set `art_dir` only when the art library lives somewhere other than `Art/`. Use
+Set `art.library` only when the art library lives somewhere other than `Art/`. Use
 `papercrown art audit book.yml` when adding or moving art.
 
 ```markdown
@@ -40,7 +40,7 @@ Set `art_dir` only when the art library lives somewhere other than `Art/`. Use
 art:
   placements:
     - id: character-creation-opening
-      art: splash-dock-queue.png
+      image: splash-dock-queue.png
       target: after-heading
       chapter: character-creation
       heading: Why are you out here?
@@ -138,8 +138,9 @@ upscale small art to fill large spaces. When a gap is large enough, Paper Crown
 prefers larger dedicated art and may downscale it to the measured space instead
 of reusing a smaller role.
 
-Book config `art_dir` is the root for the whole art library. If `fillers.art_dir`
-is set, filler asset paths are resolved under `art_dir / fillers.art_dir`;
+Book config `art.library` is the root for the whole art library. If
+`art.fillers.folder` is set, filler asset paths are resolved under
+`art.library / art.fillers.folder`;
 auto-discovery and audit still report roles according to the canonical folders
 inside that library.
 
@@ -201,14 +202,15 @@ art should float over the page, but opacity is not a naming-contract error for
 illustrations that already include their own background.
 
 Paper Crown renders image pixels as authored by default. Book config
-`image_treatments` can opt specific roles into a named visual treatment when an
+`art.treatments` can opt specific roles into a named visual treatment when an
 asset set is intentionally designed for it:
 
 ```yaml
-image_treatments:
-  ornament: ink-blend
-  filler: raw
-  cover: raw
+art:
+  treatments:
+    ornament: ink-blend
+    filler: raw
+    cover: raw
 ```
 
 Supported treatments are:
@@ -234,33 +236,34 @@ usually remain `raw`.
 The book config controls where invisible filler measurement markers are
 inserted. Markdown headings provide the measured anchor points, but source
 Markdown is not the primary control surface for automatic filler policy.
-If `fillers.markers` is omitted, Paper Crown synthesizes the historical default
+If `art.fillers.markers` is omitted, Paper Crown synthesizes the historical default
 policy: terminal chapter/class markers, sequence source-boundary markers,
 subclass markers, frame-family markers, and background-section markers.
 
 ```yaml
-fillers:
-  enabled: true
-  slots:
-    chapter-end:
-      min_space: 0.65in
-      max_space: 6.0in
-      shapes: [tailpiece, spot, small-wide, plate, page-finish]
-  markers:
-    terminal:
-      chapter_slots: [chapter-end]
-      class_slots: [class-end]
-    source_boundary:
-      sequence_slots: [section-end]
-    subclass:
-      slots: [subclass-end]
-    headings:
-      - chapter: frames
-        slot: frame-family-end
-        heading_level: 1
-        slot_kind: frame-family
-        skip_first: true
-        context: frame
+art:
+  fillers:
+    enabled: true
+    slots:
+      chapter-end:
+        min_space: 0.65in
+        max_space: 6.0in
+        shapes: [tailpiece, spot, small-wide, plate, page-finish]
+    markers:
+      terminal:
+        chapter_slots: [chapter-end]
+        class_slots: [class-end]
+      source_boundary:
+        sequence_slots: [section-end]
+      subclass:
+        slots: [subclass-end]
+      headings:
+        - chapter: frames
+          slot: frame-family-end
+          heading_level: 1
+          slot_kind: frame-family
+          skip_first: true
+          context: frame
 ```
 
 Set `terminal`, `source_boundary`, or `subclass` to `false` to disable that
@@ -273,7 +276,8 @@ contents:
   - kind: file
     title: Legal
     source: rules:Legal.md
-    fillers: false
+    art:
+      fillers: false
 ```
 
 Sequence sources can opt out of source-boundary markers after that source:
@@ -292,8 +296,10 @@ illustration, a transparent ornament, or an automatically placed filler.
 Class catalogs can name both divider art and opening spot art by slug:
 
 ```yaml
-class_art_pattern: classes/dividers/class-{slug}.png
-class_spot_art_pattern: classes/spots/spot-class-{slug}.png
+art:
+  children:
+    divider_pattern: classes/dividers/class-{slug}.png
+    opening_spot_pattern: classes/spots/spot-class-{slug}.png
 ```
 
 The slug is the normalized class entry slug used by the catalog.

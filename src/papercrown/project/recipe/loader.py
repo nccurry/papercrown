@@ -11,18 +11,13 @@ import yaml
 
 from papercrown.project.recipe.models import (
     DEFAULT_THEME,
-    ArtPlacementSpec,
+    ArtSpec,
     BookConfig,
     BookConfigError,
     BookMetadataSpec,
     ContentItemSpec,
-    CoverSpec,
-    FillersSpec,
-    OrnamentsSpec,
-    PageDamageSpec,
     VaultSpec,
     _filename_slug,
-    _image_treatments_mapping,
     _slug_or_none,
     _str_or_none,
     _theme_options_mapping,
@@ -69,8 +64,6 @@ def load_book_config(
             (defaults_base_dir or recipe_path.parent).resolve(),
         )
         raw = _deep_merge(defaults_raw, raw)
-    _reject_legacy_recipe_shape(raw)
-
     contents_raw = _normalize_contents(raw.get("contents"))
     _reject_inline_title_content(contents_raw)
     title, subtitle, cover_eyebrow, cover_footer = _title_fields(raw)
@@ -81,12 +74,6 @@ def load_book_config(
     vaults = _load_vaults(raw, recipe_dir=recipe_dir, project_dir=project_dir)
     vault_overlay = _vault_overlay(raw, vaults)
 
-    art_dir_override = _optional_resolved_path(
-        raw,
-        "art_dir",
-        recipe_dir,
-        must_exist=True,
-    )
     output_dir_override = _optional_resolved_path(raw, "output_dir", recipe_dir)
     cache_dir_override = _optional_resolved_path(raw, "cache_dir", recipe_dir)
     theme_dir_override = _optional_resolved_path(
@@ -106,28 +93,9 @@ def load_book_config(
     if metadata_raw is not None and not isinstance(metadata_raw, Mapping):
         raise BookConfigError("metadata must be a mapping when provided")
     theme_options = _theme_options_mapping(raw.get("theme_options"))
-    image_treatments = _image_treatments_mapping(raw.get("image_treatments"))
-    art_raw = raw.get("art")
-    if art_raw is not None and not isinstance(art_raw, Mapping):
-        raise BookConfigError("art must be a mapping when provided")
-
-    cover_raw = raw.get("cover")
-    if cover_raw is not None and not isinstance(cover_raw, Mapping):
-        raise BookConfigError("cover must be a mapping when provided")
-    ornaments_raw = raw.get("ornaments")
-    if ornaments_raw is not None and not isinstance(ornaments_raw, Mapping):
-        raise BookConfigError("ornaments must be a mapping when provided")
-    fillers_raw = raw.get("fillers")
-    if fillers_raw is not None and not isinstance(fillers_raw, Mapping):
-        raise BookConfigError("fillers must be a mapping when provided")
-    page_damage_raw = raw.get("page_damage")
-    if page_damage_raw is not None and not isinstance(page_damage_raw, Mapping):
-        raise BookConfigError("page_damage must be a mapping when provided")
-    art_placements = _parse_art_placements(art_raw)
+    art = ArtSpec.from_dict(raw.get("art"))
     contents = _parse_contents(contents_raw)
     _validate_chapter_sources(contents, "contents", declared_vaults=set(vaults))
-
-    cover = _cover_spec(cover_raw)
 
     return BookConfig(
         title=title.strip(),
@@ -136,20 +104,14 @@ def load_book_config(
         cover_footer=cover_footer,
         vaults=vaults,
         vault_overlay=vault_overlay,
+        art=art,
         output_dir_override=output_dir_override,
         output_name=output_name,
         cache_dir_override=cache_dir_override,
         theme=theme,
         theme_dir_override=theme_dir_override,
         theme_options=theme_options,
-        image_treatments=image_treatments,
         metadata=BookMetadataSpec.from_dict(metadata_raw),
-        art_dir_override=art_dir_override,
-        ornaments=OrnamentsSpec.from_dict(ornaments_raw),
-        cover=cover,
-        art_placements=art_placements,
-        fillers=FillersSpec.from_dict(fillers_raw),
-        page_damage=PageDamageSpec.from_dict(page_damage_raw),
         contents=contents,
         recipe_path=recipe_path,
     )
@@ -233,26 +195,6 @@ def _optional_resolved_path(
     return resolved
 
 
-def _parse_art_placements(raw: object) -> list[ArtPlacementSpec]:
-    """Parse optional dynamic art placements."""
-    if raw is None:
-        return []
-    if not isinstance(raw, Mapping):
-        raise BookConfigError("art must be a mapping when provided")
-    placements_raw = raw.get("placements") or []
-    if not isinstance(placements_raw, list):
-        raise BookConfigError("art.placements must be a list when provided")
-    placements: list[ArtPlacementSpec] = []
-    for i, placement_raw in enumerate(placements_raw):
-        if not isinstance(placement_raw, Mapping):
-            raise BookConfigError(
-                "art.placements"
-                f"[{i}] must be a mapping, got {type(placement_raw).__name__}"
-            )
-        placements.append(ArtPlacementSpec.from_dict(placement_raw, index=i))
-    return placements
-
-
 def _parse_contents(
     contents_raw: Sequence[Mapping[str, object]],
 ) -> list[ContentItemSpec]:
@@ -296,27 +238,6 @@ def _validate_chapter_sources(
             f"{here}.children",
             declared_vaults=declared_vaults,
         )
-
-
-def _cover_spec(
-    cover_raw: Mapping[str, object] | None,
-) -> CoverSpec:
-    """Build cover settings from explicit top-level cover config."""
-    return CoverSpec.from_dict(cover_raw)
-
-
-def _reject_legacy_recipe_shape(raw: Mapping[str, object]) -> None:
-    """Fail fast for the pre-contents recipe fields."""
-    legacy = {
-        "build": "move build defaults to papercrown.yaml",
-        "chapters": "use contents instead",
-        "front_matter": "make these ordinary contents items before kind: toc",
-        "back_matter": "make these ordinary contents items after kind: toc",
-        "include_chapters": "use include_contents instead",
-    }
-    for key, hint in legacy.items():
-        if key in raw:
-            raise BookConfigError(f"{key} is no longer supported; {hint}")
 
 
 def _reject_inline_title_content(contents: Sequence[Mapping[str, object]]) -> None:
@@ -426,20 +347,13 @@ def _normalize_recipe_filesystem_paths(
             str(name): str(_resolve_vault_path(str(path), recipe_dir))
             for name, path in vaults_raw.items()
         }
-    art_dir_raw = raw.get("art_dir")
-    if isinstance(art_dir_raw, str) and art_dir_raw.strip():
-        raw["art_dir"] = str(_resolve_vault_path(art_dir_raw, recipe_dir))
-    art_dirs_raw = raw.get("art_dirs")
-    if isinstance(art_dirs_raw, list):
-        resolved = [
-            str(_resolve_vault_path(item, recipe_dir))
-            for item in art_dirs_raw
-            if isinstance(item, str) and item.strip()
-        ]
-        if resolved and "art_dir" not in raw:
-            # The renderer currently consumes one primary art library; project
-            # defaults accept the new list shape and use the first library.
-            raw["art_dir"] = resolved[0]
+    art_raw = raw.get("art")
+    if isinstance(art_raw, Mapping):
+        art = {str(key): value for key, value in art_raw.items()}
+        library_raw = art.get("library")
+        if isinstance(library_raw, str) and library_raw.strip():
+            art["library"] = str(_resolve_vault_path(library_raw, recipe_dir))
+        raw["art"] = art
     output_dir_raw = raw.get("output_dir")
     if isinstance(output_dir_raw, str) and output_dir_raw.strip():
         raw["output_dir"] = str(_resolve_vault_path(output_dir_raw, recipe_dir))

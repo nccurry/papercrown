@@ -3,49 +3,103 @@ subtitle: A framework for building TTRPG material
 cover_eyebrow: Documentation
 output_dir: site
 output_name: papercrown-docs
-art_dir: assets
 theme: papercrown-docs
-cover:
-  enabled: true
 
 art:
+  library: assets
+  cover:
+    enabled: true
   placements:
     - id: quick-start-core-flow
-      art: papercrown-docs/splashes/splash-core-flow-launch-sequence.png
+      image: papercrown-docs/splashes/splash-core-flow-launch-sequence.png
       target: after-heading
       chapter: quick-start
       heading: Core Flow
       placement: bottom-half
     - id: architecture-product-model
-      art: papercrown-docs/splashes/splash-product-model-codex-route.png
+      image: papercrown-docs/splashes/splash-product-model-codex-route.png
       target: after-heading
       chapter: architecture
       heading: Product Model
       placement: bottom-half
     - id: book-configs-compact-reference
-      art: papercrown-docs/splashes/splash-compact-reference-casefile-ritual.png
+      image: papercrown-docs/splashes/splash-compact-reference-casefile-ritual.png
       target: after-heading
       chapter: book-configs
       heading: Compact Field Reference
       placement: bottom-half
     - id: themes-local-example
-      art: papercrown-docs/splashes/splash-theme-gallery-spread.png
+      image: papercrown-docs/splashes/splash-theme-gallery-spread.png
       target: after-heading
       chapter: themes
       heading: Local Theme Example
       placement: bottom-half
     - id: publishing-github-pages
-      art: papercrown-docs/splashes/splash-pages-field-guide-press.png
+      image: papercrown-docs/splashes/splash-pages-field-guide-press.png
       target: after-heading
       chapter: builds-and-publishing
       heading: GitHub Pages
       placement: bottom-half
     - id: developer-bootstrap
-      art: papercrown-docs/splashes/splash-repository-bootstrap-launch-panel.png
+      image: papercrown-docs/splashes/splash-repository-bootstrap-launch-panel.png
       target: after-heading
       chapter: developer-guide
       heading: Repository Bootstrap
       placement: bottom-half
+  fillers:
+    enabled: true
+    folder: papercrown-docs
+    slots:
+      chapter-end:
+        min_space: 0.75in
+        max_space: 6.00in
+        shapes:
+          - tailpiece
+          - spot
+          - small-wide
+          - plate
+          - page-finish
+    assets:
+      - id: filler-spot-codex-crown
+        image: fillers/spot/filler-spot-codex-crown-01.png
+        shape: spot
+        height: 1.10in
+      - id: filler-spot-launch-console
+        image: fillers/spot/filler-spot-launch-console-01.png
+        shape: spot
+        height: 1.10in
+      - id: filler-spot-casefile-orbit
+        image: fillers/spot/filler-spot-casefile-orbit-01.png
+        shape: spot
+        height: 1.10in
+      - id: filler-spot-field-guide-tag
+        image: fillers/spot/filler-spot-field-guide-tag-01.png
+        shape: spot
+        height: 1.10in
+      - id: filler-wide-codex-route
+        image: fillers/wide/filler-wide-codex-route-01.png
+        shape: small-wide
+        height: 0.72in
+      - id: filler-wide-launch-panel
+        image: fillers/wide/filler-wide-launch-panel-01.png
+        shape: small-wide
+        height: 0.72in
+      - id: filler-wide-casefile-ritual
+        image: fillers/wide/filler-wide-casefile-ritual-01.png
+        shape: small-wide
+        height: 0.72in
+  wear:
+    enabled: true
+    folder: papercrown-docs/page-wear
+    seed: papercrown-docs-v2
+    density: 0.32
+    max_assets_per_page: 1
+    opacity: 0.22
+    skip:
+      - cover
+      - toc
+      - divider
+      - splash
 
 metadata:
   authors:
@@ -61,61 +115,6 @@ metadata:
     design:
       - Paper Crown maintainers
 
-fillers:
-  enabled: true
-  art_dir: papercrown-docs
-  slots:
-    chapter-end:
-      min_space: 0.75in
-      max_space: 6.00in
-      shapes:
-        - tailpiece
-        - spot
-        - small-wide
-        - plate
-        - page-finish
-  assets:
-    - id: filler-spot-codex-crown
-      art: fillers/spot/filler-spot-codex-crown-01.png
-      shape: spot
-      height: 1.10in
-    - id: filler-spot-launch-console
-      art: fillers/spot/filler-spot-launch-console-01.png
-      shape: spot
-      height: 1.10in
-    - id: filler-spot-casefile-orbit
-      art: fillers/spot/filler-spot-casefile-orbit-01.png
-      shape: spot
-      height: 1.10in
-    - id: filler-spot-field-guide-tag
-      art: fillers/spot/filler-spot-field-guide-tag-01.png
-      shape: spot
-      height: 1.10in
-    - id: filler-wide-codex-route
-      art: fillers/wide/filler-wide-codex-route-01.png
-      shape: small-wide
-      height: 0.72in
-    - id: filler-wide-launch-panel
-      art: fillers/wide/filler-wide-launch-panel-01.png
-      shape: small-wide
-      height: 0.72in
-    - id: filler-wide-casefile-ritual
-      art: fillers/wide/filler-wide-casefile-ritual-01.png
-      shape: small-wide
-      height: 0.72in
-page_damage:
-  enabled: true
-  art_dir: papercrown-docs/page-wear
-  seed: papercrown-docs-v2
-  density: 0.32
-  max_assets_per_page: 1
-  opacity: 0.22
-  skip:
-    - cover
-    - toc
-    - divider
-    - splash
-
 vaults:
   docs: vault
 
@@ -127,7 +126,8 @@ contents:
     title: Overview
     slug: overview
     eyebrow: Documentation
-    art: papercrown-docs/dividers/divider-overview-docs-crown.png
+    art:
+      divider: papercrown-docs/dividers/divider-overview-docs-crown.png
     toc_depth: 3
     source: docs:Overview.md
   - kind: file
@@ -135,7 +135,8 @@ contents:
     title: Quick Start
     slug: quick-start
     eyebrow: First Build
-    art: papercrown-docs/dividers/divider-quick-start-launch-checklist.png
+    art:
+      divider: papercrown-docs/dividers/divider-quick-start-launch-checklist.png
     toc_depth: 3
     source: docs:Quick Start.md
   - kind: file
@@ -143,7 +144,8 @@ contents:
     title: Architecture
     slug: architecture
     eyebrow: System Model
-    art: papercrown-docs/dividers/divider-overview-fantasy-codex.png
+    art:
+      divider: papercrown-docs/dividers/divider-overview-fantasy-codex.png
     toc_depth: 3
     source: docs:Architecture.md
   - kind: file
@@ -151,7 +153,8 @@ contents:
     title: Book Configs
     slug: book-configs
     eyebrow: Book Contract
-    art: papercrown-docs/dividers/divider-authoring-occult-casefile.png
+    art:
+      divider: papercrown-docs/dividers/divider-authoring-occult-casefile.png
     toc_depth: 3
     source: docs:Book Configs.md
   - kind: file
@@ -159,7 +162,8 @@ contents:
     title: Vaults and Markdown
     slug: vaults-and-markdown
     eyebrow: Content Sources
-    art: papercrown-docs/dividers/divider-vaults-markdown-archive.png
+    art:
+      divider: papercrown-docs/dividers/divider-vaults-markdown-archive.png
     toc_depth: 3
     source: docs:Vaults and Markdown.md
   - kind: file
@@ -167,7 +171,8 @@ contents:
     title: Themes
     slug: themes
     eyebrow: Visual System
-    art: papercrown-docs/dividers/divider-themes-gallery-spread.png
+    art:
+      divider: papercrown-docs/dividers/divider-themes-gallery-spread.png
     toc_depth: 3
     source: docs:Themes.md
   - kind: file
@@ -175,7 +180,8 @@ contents:
     title: Art
     slug: art
     eyebrow: Asset Library
-    art: papercrown-docs/dividers/divider-authoring-occult-casefile.png
+    art:
+      divider: papercrown-docs/dividers/divider-authoring-occult-casefile.png
     toc_depth: 3
     source: docs:Art.md
   - kind: file
@@ -183,7 +189,8 @@ contents:
     title: Builds and Publishing
     slug: builds-and-publishing
     eyebrow: Output Routes
-    art: papercrown-docs/dividers/divider-maintaining-industrial-guide.png
+    art:
+      divider: papercrown-docs/dividers/divider-maintaining-industrial-guide.png
     toc_depth: 3
     source: docs:Builds and Publishing.md
   - kind: file
@@ -191,6 +198,7 @@ contents:
     title: Developer Guide
     slug: developer-guide
     eyebrow: Repository Workflows
-    art: papercrown-docs/dividers/divider-setup-launch-manual.png
+    art:
+      divider: papercrown-docs/dividers/divider-setup-launch-manual.png
     toc_depth: 3
     source: docs:Developer Guide.md

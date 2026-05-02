@@ -15,8 +15,8 @@ from papercrown.build.options import (
     BuildTarget,
     DraftMode,
     OutputProfile,
-    PageDamageMode,
     PaginationMode,
+    WearMode,
 )
 from papercrown.project.recipe import BookConfigError, _load_book_config_mapping
 
@@ -37,7 +37,7 @@ _BUILD_KEYS = {
     "clean_pdf",
     "pagination",
     "draft_mode",
-    "page_damage",
+    "wear",
     "timings",
 }
 # Supported keys at the project configuration root.
@@ -65,7 +65,7 @@ class BuildConfig:
     clean_pdf: bool = True
     pagination_mode: PaginationMode = PaginationMode.REPORT
     draft_mode: DraftMode = DraftMode.FAST
-    page_damage_mode: PageDamageMode = PageDamageMode.AUTO
+    wear_mode: WearMode = WearMode.AUTO
     timings: bool = False
 
 
@@ -86,7 +86,7 @@ class BuildConfigPatch:
     clean_pdf: bool | None = None
     pagination_mode: PaginationMode | None = None
     draft_mode: DraftMode | None = None
-    page_damage_mode: PageDamageMode | None = None
+    wear_mode: WearMode | None = None
     timings: bool | None = None
 
     def apply(self, config: BuildConfig) -> BuildConfig:
@@ -103,7 +103,7 @@ class BuildConfigPatch:
             ("clean_pdf", "clean_pdf"),
             ("pagination_mode", "pagination_mode"),
             ("draft_mode", "draft_mode"),
-            ("page_damage_mode", "page_damage_mode"),
+            ("wear_mode", "wear_mode"),
             ("timings", "timings"),
             ("project_defaults", "project_defaults"),
             ("project_defaults_base_dir", "project_defaults_base_dir"),
@@ -130,9 +130,7 @@ def load_project_config(
     config_path = (path or default_project_config_path()).resolve()
     if not config_path.exists():
         if path is None:
-            return BuildConfigPatch(
-                book_path=_find_book_config(config_path.parent)
-            )
+            return BuildConfigPatch(book_path=_find_book_config(config_path.parent))
         raise ConfigError(f"config file not found: {config_path}")
     raw = _read_yaml_mapping(config_path, label="config")
     unknown = set(raw) - _PROJECT_KEYS
@@ -249,7 +247,7 @@ def _patch_enum_fields(
         ("profile", "profile", OutputProfile),
         ("pagination", "pagination_mode", PaginationMode),
         ("draft_mode", "draft_mode", DraftMode),
-        ("page_damage", "page_damage_mode", PageDamageMode),
+        ("wear", "wear_mode", WearMode),
     )
     for key, field_name, enum_type in enum_fields:
         if key in raw:
@@ -415,6 +413,6 @@ def _merge_patches(
         clean_pdf=base.clean_pdf if override.clean_pdf is None else override.clean_pdf,
         pagination_mode=override.pagination_mode or base.pagination_mode,
         draft_mode=override.draft_mode or base.draft_mode,
-        page_damage_mode=override.page_damage_mode or base.page_damage_mode,
+        wear_mode=override.wear_mode or base.wear_mode,
         timings=base.timings if override.timings is None else override.timings,
     )

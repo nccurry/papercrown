@@ -10,8 +10,8 @@ from papercrown.build.options import (
     BuildTarget,
     DraftMode,
     OutputProfile,
-    PageDamageMode,
     PaginationMode,
+    WearMode,
 )
 from papercrown.project.manifest import Manifest
 from papercrown.project.recipe import BookConfig
@@ -33,7 +33,7 @@ class BuildRequest:
     clean_pdf: bool = True
     pagination_mode: PaginationMode = PaginationMode.REPORT
     draft_mode: DraftMode = DraftMode.FAST
-    page_damage_mode: PageDamageMode = PageDamageMode.AUTO
+    wear_mode: WearMode = WearMode.AUTO
     filler_debug_overlay: bool = False
     timings: bool = False
 

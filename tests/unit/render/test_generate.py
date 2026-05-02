@@ -17,7 +17,7 @@ from papercrown.build.options import (
     BuildScope,
     DraftMode,
     OutputProfile,
-    PageDamageMode,
+    WearMode,
 )
 from papercrown.media.fillers import FillerDecision, FillerMeasurement, FillerPlacement
 from papercrown.project import paths, resources
@@ -343,15 +343,15 @@ def test_no_art_chapter_context_omits_chapter_art(tmp_path):
     assert ctx.chapter_art is None
 
 
-def test_auto_page_damage_resolves_to_fast_except_fast_draft():
+def test_auto_wear_resolves_to_fast_except_fast_draft():
     base = build.BuildRequest(
         recipe=SimpleNamespace(),
         manifest=SimpleNamespace(),
     )
 
-    assert build._effective_page_damage_mode(base) is PageDamageMode.FAST
+    assert build._effective_wear_mode(base) is WearMode.FAST
     assert (
-        build._effective_page_damage_mode(
+        build._effective_wear_mode(
             build.BuildRequest(
                 recipe=SimpleNamespace(),
                 manifest=SimpleNamespace(),
@@ -359,10 +359,10 @@ def test_auto_page_damage_resolves_to_fast_except_fast_draft():
                 draft_mode=DraftMode.FAST,
             )
         )
-        is PageDamageMode.OFF
+        is WearMode.OFF
     )
     assert (
-        build._effective_page_damage_mode(
+        build._effective_wear_mode(
             build.BuildRequest(
                 recipe=SimpleNamespace(),
                 manifest=SimpleNamespace(),
@@ -370,17 +370,17 @@ def test_auto_page_damage_resolves_to_fast_except_fast_draft():
                 draft_mode=DraftMode.VISUAL,
             )
         )
-        is PageDamageMode.FAST
+        is WearMode.FAST
     )
     assert (
-        build._effective_page_damage_mode(
+        build._effective_wear_mode(
             build.BuildRequest(
                 recipe=SimpleNamespace(),
                 manifest=SimpleNamespace(),
-                page_damage_mode=PageDamageMode.FULL,
+                wear_mode=WearMode.FULL,
             )
         )
-        is PageDamageMode.FULL
+        is WearMode.FULL
     )
 
 
@@ -768,18 +768,19 @@ def test_build_chapter_pdf_passes_page_damage_catalog(tmp_path, monkeypatch):
         tmp_path,
         """
         title: B
-        art_dir: art
+        art:
+          library: art
+          wear:
+            enabled: true
+            folder: page-wear
+            seed: build-test
+            density: 1.0
+            max_assets_per_page: 1
+            opacity: 0.25
+            glaze_opacity: 0.65
+            glaze_texture: surface-dust-speckle.png
         vaults:
           v: vault
-        page_damage:
-          enabled: true
-          art_dir: page-wear
-          seed: build-test
-          density: 1.0
-          max_assets_per_page: 1
-          opacity: 0.25
-          glaze_opacity: 0.65
-          glaze_texture: surface-dust-speckle.png
         contents:
           - kind: file
             title: Foo
@@ -836,25 +837,26 @@ def test_fast_draft_chapter_pdf_skips_page_art_and_cleanup(tmp_path, monkeypatch
         tmp_path,
         """
         title: B
-        art_dir: art
+        art:
+          library: art
+          wear:
+            enabled: true
+            folder: page-wear
+          fillers:
+            enabled: true
+            folder: fillers
+            slots:
+              chapter-end:
+                min_space: 0.65in
+                max_space: 3.5in
+                shapes: [tailpiece]
+            assets:
+              - id: tail
+                image: tail.png
+                shape: tailpiece
+                height: 0.65in
         vaults:
           v: vault
-        page_damage:
-          enabled: true
-          art_dir: page-wear
-        fillers:
-          enabled: true
-          art_dir: fillers
-          slots:
-            chapter-end:
-              min_space: 0.65in
-              max_space: 3.5in
-              shapes: [tailpiece]
-          assets:
-            - id: tail
-              art: tail.png
-              shape: tailpiece
-              height: 0.65in
         contents:
           - kind: file
             title: Foo

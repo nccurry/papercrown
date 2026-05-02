@@ -30,7 +30,7 @@ contents:
 
 With no `vaults:` mapping, Paper Crown treats the book file's directory as a single
 content vault. `output_dir` defaults to the book file's directory, `output_name` is
-derived from the top-level title text, `art_dir` defaults to `Art/`, and a
+derived from the top-level title text, `art.library` defaults to `Art/`, and a
 matching local `themes/<theme>/` wins over bundled themes. The subtitle is not
 included in the default output folder name; set `output_name` only when you
 need a release-specific name or two books would otherwise collide.
@@ -91,7 +91,7 @@ untouched or the art is managed by Paper Crown's dynamic systems:
 art:
   placements:
     - id: character-creation-opening
-      art: splash-section-general-boarding-queue-bottom-01.png
+      image: splash-section-general-boarding-queue-bottom-01.png
       target: after-heading
       chapter: character-creation
       heading: Why are you out here?
@@ -99,7 +99,7 @@ art:
 ```
 
 Images render without filters or blend modes by default. Use
-`image_treatments` only when a role needs an intentional treatment such as
+`art.treatments` only when a role needs an intentional treatment such as
 `ink-blend` for decorative line art.
 
 ## How It Works
@@ -114,27 +114,28 @@ decides which marker families exist, which slots they use, and which filler
 shapes are eligible for those slots.
 
 ```yaml
-fillers:
-  enabled: true
-  art_dir: papercrown-docs
-  slots:
-    chapter-end:
-      min_space: 0.75in
-      max_space: 6.00in
-      shapes: [tailpiece, spot, small-wide, plate, page-finish]
-  assets:
-    - id: bridge-plate
-      art: fillers/plate/filler-plate-general-bridge-01.png
-      shape: plate
-      height: 3.25in
+art:
+  fillers:
+    enabled: true
+    folder: papercrown-docs
+    slots:
+      chapter-end:
+        min_space: 0.75in
+        max_space: 6.00in
+        shapes: [tailpiece, spot, small-wide, plate, page-finish]
+    assets:
+      - id: bridge-plate
+        image: fillers/plate/filler-plate-general-bridge-01.png
+        shape: plate
+        height: 3.25in
 ```
 
-If `fillers.markers` is omitted, Paper Crown uses the default marker policy.
+If `art.fillers.markers` is omitted, Paper Crown uses the default marker policy.
 Set a marker family such as `terminal`, `source_boundary`, or `subclass` to
 `false` to disable it, or use `headings: []` to disable generated heading
 markers.
 
-Chapters can disable generated filler markers with `fillers: false`.
+Chapters can disable generated filler markers with `art.fillers: false`.
 Individual items inside a `sequence` can disable the source-boundary marker
 after that source with `filler: false`.
 
@@ -149,13 +150,13 @@ Common chapter shapes:
 | Field | Purpose |
 | --- | --- |
 | `contents` inline title item | Book identity, cover title text, and default output name |
-| `theme`, `theme_options`, `image_treatments` | Visual system and opt-in image role treatments |
-| `art.placements` | Dynamic art injected by Paper Crown, such as chapter splashes and cover/back-cover placements |
+| `theme`, `theme_options`, `art.treatments` | Visual system and opt-in image role treatments |
+| `art` | Art library, cover settings, dynamic placements, fillers, wear, ornaments, and treatments |
 | `vaults`, `vault_overlay` | Optional named Markdown roots and fallback search order |
 | `output_dir`, `output_name`, `cache_dir` | Optional caller-owned output and cache overrides |
-| `cover` | Optional cover settings; cover art can be inferred from canonical Art filenames |
-| `contents` | Ordered book structure using `inline`, `toc`, `generated`, `file`, `sequence`, `folder`, `catalog`, `classes-catalog`, or `group` |
-| `fillers`, `page_damage`, `ornaments` | Optional art and page-furniture systems |
+| `art.cover` | Optional cover settings; cover art can be inferred from canonical Art filenames |
+| `contents` | Ordered book structure using `toc`, `generated`, `file`, `sequence`, `folder`, `catalog`, `classes-catalog`, or `group` |
+| `contents[].art` | Content-local divider, ornament, filler opt-out, placement, and child-catalog art settings |
 
 For larger projects, book configs can also share structure with `extends`,
 `include_contents`, and `include_vaults`.
@@ -163,6 +164,8 @@ For larger projects, book configs can also share structure with `extends`,
 Class catalogs can use role-based art patterns:
 
 ```yaml
-class_art_pattern: classes/dividers/class-{slug}.png
-class_spot_art_pattern: classes/spots/spot-class-{slug}.png
+art:
+  children:
+    divider_pattern: classes/dividers/class-{slug}.png
+    opening_spot_pattern: classes/spots/spot-class-{slug}.png
 ```

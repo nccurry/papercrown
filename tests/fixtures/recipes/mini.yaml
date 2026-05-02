@@ -14,8 +14,9 @@ vault_overlay: [base, overlay]
 output_dir: ../output
 output_name: mini-test
 
-cover:
-  enabled: false
+art:
+  cover:
+    enabled: false
 
 contents:
   - kind: file

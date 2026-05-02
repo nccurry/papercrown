@@ -44,8 +44,8 @@ class DraftMode(Enum):
     VISUAL = "visual"
 
 
-class PageDamageMode(Enum):
-    """How recipe page-damage art is applied to PDFs."""
+class WearMode(Enum):
+    """How recipe page-wear art is applied to PDFs."""
 
     AUTO = "auto"
     OFF = "off"

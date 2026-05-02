@@ -16,8 +16,8 @@ from papercrown.build.options import (
     BuildTarget,
     DraftMode,
     OutputProfile,
-    PageDamageMode,
     PaginationMode,
+    WearMode,
 )
 from papercrown.project.starter import StarterBookType
 
@@ -88,9 +88,9 @@ DraftModeOpt = Annotated[
     DraftMode | None,
     typer.Option("--draft-mode", help="Draft build behavior."),
 ]
-PageDamageOpt = Annotated[
-    PageDamageMode | None,
-    typer.Option("--page-damage", help="Page damage application mode."),
+WearOpt = Annotated[
+    WearMode | None,
+    typer.Option("--wear", help="Page wear application mode."),
 ]
 FillerDebugOverlayOpt = Annotated[
     bool,
@@ -259,7 +259,7 @@ def build_command(
     clean_pdf: CleanPdfOpt = None,
     pagination: PaginationOpt = None,
     draft_mode: DraftModeOpt = None,
-    page_damage: PageDamageOpt = None,
+    wear: WearOpt = None,
     filler_debug_overlay: FillerDebugOverlayOpt = False,
     timings: TimingsOpt = None,
     config: ConfigOpt = None,
@@ -281,7 +281,7 @@ def build_command(
             clean_pdf=clean_pdf,
             pagination=pagination,
             draft_mode=draft_mode,
-            page_damage=page_damage,
+            wear=wear,
             filler_debug_overlay=filler_debug_overlay,
             timings=timings,
         )

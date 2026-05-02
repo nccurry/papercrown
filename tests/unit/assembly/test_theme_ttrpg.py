@@ -12,6 +12,7 @@ from papercrown.build.options import OutputProfile
 from papercrown.project import themes
 from papercrown.project.manifest import Chapter
 from papercrown.project.recipe import (
+    ArtSpec,
     BookConfig,
     BookConfigError,
     BookMetadataSpec,
@@ -38,7 +39,7 @@ def _recipe(tmp_path: Path) -> BookConfig:
         cover_footer="Draft",
         vaults={},
         vault_overlay=[],
-        cover=CoverSpec(enabled=False),
+        art=ArtSpec(cover=CoverSpec(enabled=False)),
         contents=[],
         recipe_path=tmp_path / "recipe.yaml",
         metadata=BookMetadataSpec(
@@ -98,10 +99,11 @@ def test_bundled_theme_resolves_css_template_and_options(tmp_path):
         theme: pulp-adventure
         theme_options:
           accent: "#775511"
-        image_treatments:
-          default: raw
-          ornament: ink-blend
-          filler: raw
+        art:
+          treatments:
+            default: raw
+            ornament: ink-blend
+            filler: raw
         vaults:
           v: vault
         contents:

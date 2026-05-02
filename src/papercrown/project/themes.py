@@ -65,7 +65,7 @@ def load_theme(recipe: BookConfig) -> ThemePack:
     asset_roots = _resolve_asset_roots(root, metadata)
     inline_css = _join_css_blocks(
         _theme_options_css(getattr(recipe, "theme_options", {})),
-        image_treatment_css(getattr(recipe, "image_treatments", {})),
+        image_treatment_css(getattr(recipe, "treatments", {})),
     )
     fingerprint_paths = [theme_yaml, *css_files]
     if template != TEMPLATE_FILE:

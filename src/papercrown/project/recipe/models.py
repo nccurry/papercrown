@@ -18,14 +18,13 @@ BookConfig shape:
 
     output_dir: .                  # optional; generated files go under Paper Crown/
     output_name: my-book           # optional; defaults to a slug of the title
-    art_dir: Art                   # optional; relative to the project root
-
-    cover:
-      enabled: true
-      art: cover.png
-
-    ornaments:
-      folio_frame: ornaments/ornament-folio-frame.png
+    art:
+      library: Art                 # optional; relative to the project root
+      cover:
+        enabled: true
+        image: cover.png
+      ornaments:
+        folio_frame: ornaments/ornament-folio-frame.png
 
     contents:
       - kind: file
@@ -33,7 +32,8 @@ BookConfig shape:
         title: Setting Primer
         slug: setting-primer
         eyebrow: Setting Primer
-        art: setting-header.png
+        art:
+          divider: setting-header.png
         source: rules:Setting Primer.md
       - kind: classes-catalog
         source: rules:Heroes/Classes List.md
@@ -41,13 +41,16 @@ BookConfig shape:
         child_style: class
         individual_pdfs: true
         individual_pdf_subdir: classes
-        art_per_class: true
-        class_art_pattern: classes/dividers/class-{slug}.png
-        class_spot_art_pattern: classes/spots/spot-class-{slug}.png
-        replace_existing_opening_art: true
+        art:
+          children:
+            per_child: true
+            divider_pattern: classes/dividers/class-{slug}.png
+            opening_spot_pattern: classes/spots/spot-class-{slug}.png
+            replace_opening_art: true
       - kind: sequence
         title: Combat
-        tailpiece: ornaments/ornament-tailpiece-casing.png
+        art:
+          tailpiece: ornaments/ornament-tailpiece-casing.png
         sources:
           - rules:Combat.md
           - title: Combat Structure
@@ -76,12 +79,12 @@ class BookConfigError(ValueError):
 
 
 # ---------------------------------------------------------------------------
-# Page damage / wear spec
+# Wear spec
 # ---------------------------------------------------------------------------
 
 
 # Page-wear family names accepted in recipe and asset metadata.
-PAGE_DAMAGE_FAMILIES = {
+WEAR_FAMILIES = {
     "coffee",
     "edge-tear",
     "nick-scratch",
@@ -95,68 +98,68 @@ PAGE_DAMAGE_FAMILIES = {
     "printer-misfeed",
 }
 # Page-wear size names accepted in recipe and asset metadata.
-PAGE_DAMAGE_SIZES = {
+WEAR_SIZES = {
     "tiny",
     "small",
     "medium",
     "large",
 }
 # BookConfig skip targets that suppress page-wear on matching pages.
-PAGE_DAMAGE_SKIP_TARGETS = {
+WEAR_SKIP_TARGETS = {
     "cover",
     "toc",
     "divider",
     "splash",
 }
 # Default page-wear exclusions for structural pages.
-DEFAULT_PAGE_DAMAGE_SKIP = ["cover", "toc", "divider", "splash"]
+DEFAULT_WEAR_SKIP = ["cover", "toc", "divider", "splash"]
 
 
 @dataclass(frozen=True)
-class PageDamageSpec:
-    """BookConfig-level page wear configuration."""
+class WearSpec:
+    """BookConfig-level paper wear configuration."""
 
     enabled: bool = False
-    art_dir: str = "page-wear"
+    folder: str = "page-wear"
     seed: str | None = None
     density: float = 0.55
     max_assets_per_page: int = 2
     opacity: float = 0.28
     glaze_opacity: float = 0.0
     glaze_texture: str = "surface-warm-paper-tint-cloud.png"
-    skip: list[str] = field(default_factory=lambda: list(DEFAULT_PAGE_DAMAGE_SKIP))
+    skip: list[str] = field(default_factory=lambda: list(DEFAULT_WEAR_SKIP))
 
     @classmethod
-    def from_dict(cls, raw: Mapping[str, object] | None) -> PageDamageSpec:
-        """Build page-damage settings from an optional recipe mapping."""
+    def from_dict(cls, raw: Mapping[str, object] | None) -> WearSpec:
+        """Build wear settings from an optional ``art.wear`` mapping."""
         if not raw:
             return cls()
         density = _float_between(
             raw.get("density", 0.55),
-            loc="page_damage.density",
+            loc="art.wear.density",
             min_value=0.0,
             max_value=1.0,
         )
         opacity = _float_between(
             raw.get("opacity", 0.28),
-            loc="page_damage.opacity",
+            loc="art.wear.opacity",
             min_value=0.0,
             max_value=1.0,
         )
         glaze_opacity = _float_between(
             raw.get("glaze_opacity", 0.0),
-            loc="page_damage.glaze_opacity",
+            loc="art.wear.glaze_opacity",
             min_value=0.0,
             max_value=1.0,
         )
         max_assets = _positive_int(
             raw.get("max_assets_per_page", 2),
-            loc="page_damage.max_assets_per_page",
+            loc="art.wear.max_assets_per_page",
         )
-        skip = _skip_targets(raw.get("skip", DEFAULT_PAGE_DAMAGE_SKIP))
+        skip = _skip_targets(raw.get("skip", DEFAULT_WEAR_SKIP), loc="art.wear.skip")
         return cls(
             enabled=bool(raw.get("enabled", False)),
-            art_dir=_str_or_none(raw.get("art_dir")) or "page-wear",
+            folder=_str_or_none(raw.get("folder")) or "page-wear",
             seed=_str_or_none(raw.get("seed")),
             density=density,
             max_assets_per_page=max_assets,
@@ -199,7 +202,7 @@ class FillerTerminalMarkersSpec:
 
     @classmethod
     def from_raw(cls, raw: object, *, loc: str) -> FillerTerminalMarkersSpec:
-        """Parse the optional ``fillers.markers.terminal`` value."""
+        """Parse the optional ``art.fillers.markers.terminal`` value."""
         if raw is None:
             return cls()
         if raw is False:
@@ -228,7 +231,7 @@ class FillerSourceBoundaryMarkersSpec:
 
     @classmethod
     def from_raw(cls, raw: object, *, loc: str) -> FillerSourceBoundaryMarkersSpec:
-        """Parse the optional ``fillers.markers.source_boundary`` value."""
+        """Parse the optional ``art.fillers.markers.source_boundary`` value."""
         if raw is None:
             return cls()
         if raw is False:
@@ -254,7 +257,7 @@ class FillerSubclassMarkersSpec:
 
     @classmethod
     def from_raw(cls, raw: object, *, loc: str) -> FillerSubclassMarkersSpec:
-        """Parse the optional ``fillers.markers.subclass`` value."""
+        """Parse the optional ``art.fillers.markers.subclass`` value."""
         if raw is None:
             return cls()
         if raw is False:
@@ -290,8 +293,8 @@ class FillerHeadingMarkerSpec:
         *,
         index: int,
     ) -> FillerHeadingMarkerSpec:
-        """Parse one ``fillers.markers.headings`` entry."""
-        loc = f"fillers.markers.headings[{index}]"
+        """Parse one ``art.fillers.markers.headings`` entry."""
+        loc = f"art.fillers.markers.headings[{index}]"
         chapter = _str_or_none(raw.get("chapter"))
         if chapter is None:
             raise BookConfigError(f"{loc}.chapter is required")
@@ -351,14 +354,14 @@ class FillerMarkersSpec:
 
     @classmethod
     def from_dict(cls, raw: object) -> FillerMarkersSpec:
-        """Build marker policy from the optional ``fillers.markers`` mapping."""
+        """Build marker policy from the optional ``art.fillers.markers`` mapping."""
         if raw is None:
             return cls()
         if not isinstance(raw, Mapping):
-            raise BookConfigError("fillers.markers must be a mapping when provided")
+            raise BookConfigError("art.fillers.markers must be a mapping when provided")
         headings_raw = raw.get("headings", _default_heading_marker_specs())
         if not isinstance(headings_raw, list):
-            raise BookConfigError("fillers.markers.headings must be a list")
+            raise BookConfigError("art.fillers.markers.headings must be a list")
         headings: list[FillerHeadingMarkerSpec] = []
         for i, item in enumerate(headings_raw):
             if isinstance(item, FillerHeadingMarkerSpec):
@@ -366,21 +369,21 @@ class FillerMarkersSpec:
                 continue
             if not isinstance(item, Mapping):
                 raise BookConfigError(
-                    f"fillers.markers.headings[{i}] must be a mapping"
+                    f"art.fillers.markers.headings[{i}] must be a mapping"
                 )
             headings.append(FillerHeadingMarkerSpec.from_dict(item, index=i))
         return cls(
             terminal=FillerTerminalMarkersSpec.from_raw(
                 raw.get("terminal"),
-                loc="fillers.markers.terminal",
+                loc="art.fillers.markers.terminal",
             ),
             source_boundary=FillerSourceBoundaryMarkersSpec.from_raw(
                 raw.get("source_boundary"),
-                loc="fillers.markers.source_boundary",
+                loc="art.fillers.markers.source_boundary",
             ),
             subclass=FillerSubclassMarkersSpec.from_raw(
                 raw.get("subclass"),
-                loc="fillers.markers.subclass",
+                loc="art.fillers.markers.subclass",
             ),
             headings=headings,
         )
@@ -391,29 +394,34 @@ class FillerAssetSpec:
     """One recipe-level filler art asset candidate."""
 
     id: str
-    art: str
+    image: str
     shape: str
     height_in: float
 
     @classmethod
     def from_dict(cls, raw: Mapping[str, object], *, index: int) -> FillerAssetSpec:
-        """Parse and validate one item in ``fillers.assets``."""
-        loc = f"fillers.assets[{index}]"
+        """Parse and validate one item in ``art.fillers.assets``."""
+        loc = f"art.fillers.assets[{index}]"
         asset_id = _slug_or_none(raw.get("id"), loc=loc)
         if asset_id is None:
             raise BookConfigError(f"{loc}.id is required")
-        art = _str_or_none(raw.get("art"))
-        if art is None:
-            raise BookConfigError(f"{loc}.art is required")
+        image = _str_or_none(raw.get("image"))
+        if image is None:
+            raise BookConfigError(f"{loc}.image is required")
         shape = _str_or_none(raw.get("shape"))
         if shape not in FILLER_SHAPES:
             raise BookConfigError(f"{loc}.shape must be one of {sorted(FILLER_SHAPES)}")
         return cls(
             id=asset_id,
-            art=art,
+            image=image,
             shape=shape,
             height_in=_inch_value(raw.get("height"), loc=f"{loc}.height"),
         )
+
+    @property
+    def art(self) -> str:
+        """Return the image path using the internal historical attribute name."""
+        return self.image
 
 
 @dataclass(frozen=True)
@@ -462,47 +470,49 @@ class FillersSpec:
     """BookConfig-level conditional filler art configuration."""
 
     enabled: bool = False
-    art_dir: str | None = None
+    folder: str | None = None
     slots: dict[str, FillerSlotSpec] = field(default_factory=dict)
     assets: list[FillerAssetSpec] = field(default_factory=list)
     markers: FillerMarkersSpec = field(default_factory=FillerMarkersSpec)
 
     @classmethod
     def from_dict(cls, raw: Mapping[str, object] | None) -> FillersSpec:
-        """Build filler settings from the recipe's optional mapping."""
+        """Build filler settings from the recipe's optional ``art.fillers`` mapping."""
         if not raw:
             return cls()
         slots_raw = raw.get("slots") or {}
         if not isinstance(slots_raw, Mapping):
-            raise BookConfigError("fillers.slots must be a mapping when provided")
+            raise BookConfigError("art.fillers.slots must be a mapping when provided")
         slots: dict[str, FillerSlotSpec] = {}
         for name, slot_raw in slots_raw.items():
             slot_name = str(name).strip()
             if not slot_name:
                 raise BookConfigError("fillers.slots keys must be non-empty")
             if not isinstance(slot_raw, Mapping):
-                raise BookConfigError(f"fillers.slots.{slot_name} must be a mapping")
+                raise BookConfigError(
+                    f"art.fillers.slots.{slot_name} must be a mapping"
+                )
             slots[slot_name] = FillerSlotSpec.from_dict(
                 slot_name,
                 slot_raw,
-                loc=f"fillers.slots.{slot_name}",
+                loc=f"art.fillers.slots.{slot_name}",
             )
 
         assets_raw = raw.get("assets") or []
         if not isinstance(assets_raw, list):
-            raise BookConfigError("fillers.assets must be a list when provided")
+            raise BookConfigError("art.fillers.assets must be a list when provided")
         assets: list[FillerAssetSpec] = []
         for i, asset_raw in enumerate(assets_raw):
             if not isinstance(asset_raw, Mapping):
                 raise BookConfigError(
-                    f"fillers.assets[{i}] must be a mapping, "
+                    f"art.fillers.assets[{i}] must be a mapping, "
                     f"got {type(asset_raw).__name__}"
                 )
             assets.append(FillerAssetSpec.from_dict(asset_raw, index=i))
 
         return cls(
             enabled=bool(raw.get("enabled", False)),
-            art_dir=_str_or_none(raw.get("art_dir")),
+            folder=_str_or_none(raw.get("folder")),
             slots=slots,
             assets=assets,
             markers=FillerMarkersSpec.from_dict(raw.get("markers")),
@@ -537,7 +547,7 @@ class ArtPlacementSpec:
 
     id: str | None
     role: str
-    art: str | None
+    image: str | None
     context: str | None
     subject: str | None
     target: str
@@ -586,7 +596,7 @@ class ArtPlacementSpec:
         return cls(
             id=_slug_or_none(raw.get("id"), loc=loc),
             role=role,
-            art=_str_or_none(raw.get("art")),
+            image=_str_or_none(raw.get("image")),
             context=_str_or_none(raw.get("context")),
             subject=_str_or_none(raw.get("subject")),
             target=target,
@@ -595,6 +605,11 @@ class ArtPlacementSpec:
             heading=heading,
         )
 
+    @property
+    def art(self) -> str | None:
+        """Return the image path using the internal historical attribute name."""
+        return self.image
+
 
 @dataclass(frozen=True)
 class ArtInsertSpec:
@@ -602,7 +617,7 @@ class ArtInsertSpec:
 
     id: str | None
     role: str
-    art: str | None
+    image: str | None
     context: str | None
     target: str
     placement: str
@@ -616,8 +631,8 @@ class ArtInsertSpec:
         index: int,
         loc: str,
     ) -> ArtInsertSpec:
-        """Parse one item from a content item's ``art:`` insert list."""
-        item_loc = f"{loc}.art[{index}]"
+        """Parse one item from a content item's ``art.placements`` list."""
+        item_loc = f"{loc}.placements[{index}]"
         role = _str_or_none(raw.get("role")) or "splash"
         if role != "splash":
             raise BookConfigError(f"{item_loc}.role currently supports only 'splash'")
@@ -643,11 +658,150 @@ class ArtInsertSpec:
         return cls(
             id=_slug_or_none(raw.get("id"), loc=item_loc),
             role=role,
-            art=_str_or_none(raw.get("art")),
+            image=_str_or_none(raw.get("image")),
             context=_str_or_none(raw.get("context")),
             target=target,
             placement=placement,
             heading=heading,
+        )
+
+    @property
+    def art(self) -> str | None:
+        """Return the image path using the internal historical attribute name."""
+        return self.image
+
+
+@dataclass(frozen=True)
+class ContentChildrenArtSpec:
+    """Art conventions applied to generated child chapters."""
+
+    per_child: bool = False
+    divider_pattern: str | None = None
+    opening_spot_pattern: str | None = None
+    replace_opening_art: bool = False
+
+    @classmethod
+    def from_dict(
+        cls,
+        raw: Mapping[str, object] | None,
+        *,
+        loc: str,
+    ) -> ContentChildrenArtSpec:
+        """Build generated child art settings from ``contents[].art.children``."""
+        if not raw:
+            return cls()
+        return cls(
+            per_child=bool(raw.get("per_child", False)),
+            divider_pattern=_str_or_none(raw.get("divider_pattern")),
+            opening_spot_pattern=_str_or_none(raw.get("opening_spot_pattern")),
+            replace_opening_art=bool(raw.get("replace_opening_art", False)),
+        )
+
+
+@dataclass(frozen=True)
+class ContentArtSpec:
+    """Art settings attached to one structural content item."""
+
+    divider: str | None = None
+    headpiece: str | None = None
+    break_ornament: str | None = None
+    tailpiece: str | None = None
+    fillers_enabled: bool = True
+    placements: list[ArtInsertSpec] = field(default_factory=list)
+    children: ContentChildrenArtSpec = field(default_factory=ContentChildrenArtSpec)
+
+    @classmethod
+    def from_dict(
+        cls,
+        raw: object,
+        *,
+        loc: str,
+    ) -> ContentArtSpec:
+        """Build content-local art settings from ``contents[].art``."""
+        if raw is None:
+            return cls()
+        if not isinstance(raw, Mapping):
+            raise BookConfigError(f"{loc}.art must be a mapping when provided")
+
+        placements_raw = raw.get("placements") or []
+        if not isinstance(placements_raw, list):
+            raise BookConfigError(f"{loc}.art.placements must be a list")
+        placements: list[ArtInsertSpec] = []
+        for i, placement_raw in enumerate(placements_raw):
+            if not isinstance(placement_raw, Mapping):
+                raise BookConfigError(
+                    f"{loc}.art.placements[{i}] must be a mapping, "
+                    f"got {type(placement_raw).__name__}"
+                )
+            placements.append(
+                ArtInsertSpec.from_dict(placement_raw, index=i, loc=f"{loc}.art")
+            )
+
+        children_raw = raw.get("children")
+        if children_raw is not None and not isinstance(children_raw, Mapping):
+            raise BookConfigError(f"{loc}.art.children must be a mapping")
+
+        return cls(
+            divider=_str_or_none(raw.get("divider")),
+            headpiece=_str_or_none(raw.get("headpiece")),
+            break_ornament=_str_or_none(raw.get("break")),
+            tailpiece=_str_or_none(raw.get("tailpiece")),
+            fillers_enabled=_bool_value(
+                raw.get("fillers", True),
+                loc=f"{loc}.art.fillers",
+            ),
+            placements=placements,
+            children=ContentChildrenArtSpec.from_dict(
+                children_raw,
+                loc=f"{loc}.art.children",
+            ),
+        )
+
+
+@dataclass(frozen=True)
+class ArtSpec:
+    """Top-level art configuration for a book."""
+
+    library: str | None = None
+    cover: CoverSpec = field(default_factory=lambda: CoverSpec())
+    placements: list[ArtPlacementSpec] = field(default_factory=list)
+    fillers: FillersSpec = field(default_factory=FillersSpec)
+    wear: WearSpec = field(default_factory=WearSpec)
+    ornaments: OrnamentsSpec = field(default_factory=lambda: OrnamentsSpec())
+    treatments: dict[str, str] = field(default_factory=dict)
+
+    @classmethod
+    def from_dict(cls, raw: object) -> ArtSpec:
+        """Build the canonical top-level ``art`` configuration."""
+        if raw is None:
+            return cls()
+        if not isinstance(raw, Mapping):
+            raise BookConfigError("art must be a mapping when provided")
+
+        placements_raw = raw.get("placements") or []
+        if not isinstance(placements_raw, list):
+            raise BookConfigError("art.placements must be a list when provided")
+        placements: list[ArtPlacementSpec] = []
+        for i, placement_raw in enumerate(placements_raw):
+            if not isinstance(placement_raw, Mapping):
+                raise BookConfigError(
+                    "art.placements"
+                    f"[{i}] must be a mapping, got {type(placement_raw).__name__}"
+                )
+            placements.append(ArtPlacementSpec.from_dict(placement_raw, index=i))
+
+        return cls(
+            library=_str_or_none(raw.get("library")),
+            cover=CoverSpec.from_dict(_optional_mapping(raw.get("cover"), "art.cover")),
+            placements=placements,
+            fillers=FillersSpec.from_dict(
+                _optional_mapping(raw.get("fillers"), "art.fillers")
+            ),
+            wear=WearSpec.from_dict(_optional_mapping(raw.get("wear"), "art.wear")),
+            ornaments=OrnamentsSpec.from_dict(
+                _optional_mapping(raw.get("ornaments"), "art.ornaments")
+            ),
+            treatments=_art_treatments_mapping(raw.get("treatments")),
         )
 
 
@@ -698,17 +852,22 @@ class CoverSpec:
     """Optional cover art configuration for a combined book."""
 
     enabled: bool = False
-    art: str | None = None  # filename relative to recipe.art_dir
+    image: str | None = None  # filename relative to recipe.art.library
 
     @classmethod
     def from_dict(cls, raw: Mapping[str, object] | None) -> CoverSpec:
-        """Build a cover spec from the recipe's optional ``cover`` mapping."""
+        """Build cover settings from an optional ``art.cover`` mapping."""
         if not raw:
             return cls()
         return cls(
             enabled=bool(raw.get("enabled", False)),
-            art=_str_or_none(raw.get("art")),
+            image=_str_or_none(raw.get("image")),
         )
+
+    @property
+    def art(self) -> str | None:
+        """Return the image path using the internal historical attribute name."""
+        return self.image
 
 
 # ---------------------------------------------------------------------------
@@ -720,12 +879,12 @@ class CoverSpec:
 class OrnamentsSpec:
     """Optional page furniture art shared across a recipe."""
 
-    folio_frame: str | None = None  # filename relative to recipe.art_dir
+    folio_frame: str | None = None  # filename relative to recipe.art.library
     corner_bracket: str | None = None  # reserved; disabled unless explicitly set
 
     @classmethod
     def from_dict(cls, raw: Mapping[str, object] | None) -> OrnamentsSpec:
-        """Build ornament settings from the recipe's optional mapping."""
+        """Build ornament settings from an optional ``art.ornaments`` mapping."""
         if not raw:
             return cls()
         return cls(
@@ -817,10 +976,8 @@ class ContentItemSpec:
     # optional explicit PDF/link anchor
     slug: str | None = None
     eyebrow: str | None = None
-    # filename in recipe.art_dir
-    art: str | None = None
-    # content-scoped art placements
-    art_inserts: list[ArtInsertSpec] = field(default_factory=list)
+    # Content-local art and dynamic art placement settings.
+    art: ContentArtSpec = field(default_factory=ContentArtSpec)
     # CSS hook
     style: str = "default"
     # Wrapper / nesting options (used by classes-catalog AND group)
@@ -836,10 +993,6 @@ class ContentItemSpec:
     sources: list[SourceItem] = field(default_factory=list)
     # heading slugs/titles to start on a new page
     full_page_sections: list[str] = field(default_factory=list)
-    # optional headpiece rendered near the top of the chapter body
-    headpiece: str | None = None
-    # optional ornament used to replace thematic breaks in this chapter
-    break_ornament: str | None = None
     # combined-book TOC depth for this top-level chapter
     toc_depth: int | None = None
     # `kind: toc` depth cap
@@ -849,18 +1002,6 @@ class ContentItemSpec:
     individual_pdfs: bool = False
     # subfolder under output/ for individual PDFs
     individual_pdf_subdir: str | None = None
-    # auto-pick recipe.art_dir/<slug>.png per child
-    art_per_class: bool = False
-    # auto-pick divider art for classes-catalog children from a filename pattern
-    class_art_pattern: str | None = None
-    # auto-pick an opening class spot for classes-catalog children
-    class_spot_art_pattern: str | None = None
-    # remove a leading hand-authored art spot when class spot art is injected
-    replace_existing_opening_art: bool = False
-    # optional end-of-chapter ornament; filename relative to recipe.art_dir
-    tailpiece: str | None = None
-    # disable generated filler markers inside this chapter.
-    fillers_enabled: bool = True
 
     @classmethod
     def from_dict(
@@ -881,7 +1022,7 @@ class ContentItemSpec:
         children = _chapter_children(kind, raw, loc=loc, parser=cls)
         full_page_sections = _chapter_full_page_sections(raw, loc=loc)
         toc_depth, depth = _chapter_toc_depths(kind, raw, loc=loc)
-        chapter_art, art_inserts = _chapter_art_fields(raw, loc=loc)
+        art = ContentArtSpec.from_dict(raw.get("art"), loc=loc)
 
         return cls(
             kind=kind,
@@ -890,8 +1031,7 @@ class ContentItemSpec:
             title=_str_or_none(raw.get("title")),
             slug=_slug_or_none(raw.get("slug"), loc=loc),
             eyebrow=_str_or_none(raw.get("eyebrow")),
-            art=chapter_art,
-            art_inserts=art_inserts,
+            art=art,
             style=str(raw.get("style", "default")),
             wrapper=bool(raw.get("wrapper", False)),
             child_style=str(raw.get("child_style", "default")),
@@ -899,20 +1039,10 @@ class ContentItemSpec:
             children=children,
             sources=sources,
             full_page_sections=full_page_sections,
-            headpiece=_str_or_none(raw.get("headpiece")),
-            break_ornament=_str_or_none(raw.get("break_ornament")),
             toc_depth=toc_depth,
             depth=depth,
             individual_pdfs=bool(raw.get("individual_pdfs", False)),
             individual_pdf_subdir=_str_or_none(raw.get("individual_pdf_subdir")),
-            art_per_class=bool(raw.get("art_per_class", False)),
-            class_art_pattern=_str_or_none(raw.get("class_art_pattern")),
-            class_spot_art_pattern=_str_or_none(raw.get("class_spot_art_pattern")),
-            replace_existing_opening_art=bool(
-                raw.get("replace_existing_opening_art", False)
-            ),
-            tailpiece=_str_or_none(raw.get("tailpiece")),
-            fillers_enabled=_bool_value(raw.get("fillers", True), loc=f"{loc}.fillers"),
         )
 
 
@@ -1067,26 +1197,6 @@ def _chapter_toc_depths(
     return toc_depth, depth
 
 
-def _chapter_art_fields(
-    raw: Mapping[str, object],
-    *,
-    loc: str,
-) -> tuple[str | None, list[ArtInsertSpec]]:
-    """Split divider art and content-scoped art inserts."""
-    art_raw = raw.get("art")
-    if not isinstance(art_raw, list):
-        return _str_or_none(art_raw) if art_raw is not None else None, []
-
-    art_inserts: list[ArtInsertSpec] = []
-    for i, art_item in enumerate(art_raw):
-        if not isinstance(art_item, Mapping):
-            raise BookConfigError(
-                f"{loc}.art[{i}] must be a mapping, got {type(art_item).__name__}"
-            )
-        art_inserts.append(ArtInsertSpec.from_dict(art_item, index=i, loc=loc))
-    return None, art_inserts
-
-
 # ---------------------------------------------------------------------------
 # BookConfig
 # ---------------------------------------------------------------------------
@@ -1157,7 +1267,7 @@ class BookConfig:
     cover_footer: str | None
     vaults: dict[str, VaultSpec]  # name -> VaultSpec
     vault_overlay: list[str]  # priority order, first = lowest
-    cover: CoverSpec
+    art: ArtSpec
     contents: list[ContentItemSpec]
     recipe_path: Path  # where this recipe was loaded from
     output_dir_override: Path | None = None
@@ -1166,13 +1276,7 @@ class BookConfig:
     theme: str = DEFAULT_THEME
     theme_dir_override: Path | None = None
     theme_options: dict[str, str] = field(default_factory=dict)
-    image_treatments: dict[str, str] = field(default_factory=dict)
     metadata: BookMetadataSpec = field(default_factory=BookMetadataSpec)
-    art_dir_override: Path | None = None  # optional override for art assets
-    ornaments: OrnamentsSpec = field(default_factory=OrnamentsSpec)
-    art_placements: list[ArtPlacementSpec] = field(default_factory=list)
-    fillers: FillersSpec = field(default_factory=FillersSpec)
-    page_damage: PageDamageSpec = field(default_factory=PageDamageSpec)
 
     def vault_priority_paths(self) -> list[Path]:
         """Return vault paths in overlay priority order (first = lowest priority)."""
@@ -1190,7 +1294,42 @@ class BookConfig:
     @property
     def art_dir(self) -> Path:
         """Return the directory used for cover and chapter art assets."""
-        return self.art_dir_override or (self.project_dir / "Art")
+        if self.art.library:
+            library = Path(self.art.library)
+            if library.is_absolute():
+                return library.resolve()
+            return (self.project_dir / library).resolve()
+        return self.project_dir / "Art"
+
+    @property
+    def cover(self) -> CoverSpec:
+        """Return book cover art settings."""
+        return self.art.cover
+
+    @property
+    def ornaments(self) -> OrnamentsSpec:
+        """Return global ornament art settings."""
+        return self.art.ornaments
+
+    @property
+    def art_placements(self) -> list[ArtPlacementSpec]:
+        """Return globally managed dynamic art placements."""
+        return self.art.placements
+
+    @property
+    def fillers(self) -> FillersSpec:
+        """Return conditional filler art settings."""
+        return self.art.fillers
+
+    @property
+    def wear(self) -> WearSpec:
+        """Return paper wear art settings for the internal renderer."""
+        return self.art.wear
+
+    @property
+    def treatments(self) -> dict[str, str]:
+        """Return image treatment overrides."""
+        return self.art.treatments
 
     @property
     def output_dir(self) -> Path:
@@ -1241,6 +1380,15 @@ def _str_or_none(value: object) -> str | None:
         return None
     s = str(value).strip()
     return s if s else None
+
+
+def _optional_mapping(value: object, loc: str) -> Mapping[str, object] | None:
+    """Return an optional mapping value or raise a located config error."""
+    if value is None:
+        return None
+    if not isinstance(value, Mapping):
+        raise BookConfigError(f"{loc} must be a mapping when provided")
+    return value
 
 
 def _bool_value(value: object, *, loc: str) -> bool:
@@ -1356,32 +1504,32 @@ def _theme_options_mapping(value: object) -> dict[str, str]:
     return options
 
 
-def _image_treatments_mapping(value: object) -> dict[str, str]:
+def _art_treatments_mapping(value: object) -> dict[str, str]:
     """Validate recipe image role -> treatment preset overrides."""
     if value is None:
         return {}
     if not isinstance(value, Mapping):
-        raise BookConfigError("image_treatments must be a mapping")
+        raise BookConfigError("art.treatments must be a mapping")
     treatments: dict[str, str] = {}
     for raw_role, raw_treatment in value.items():
         role = str(raw_role).strip()
         if not role:
-            raise BookConfigError("image_treatments keys must be non-empty")
+            raise BookConfigError("art.treatments keys must be non-empty")
         if role not in IMAGE_TREATMENT_ROLE_SELECTORS:
             choices = ", ".join(sorted(IMAGE_TREATMENT_ROLE_SELECTORS))
             raise BookConfigError(
-                f"image_treatments role {role!r} is not supported; "
+                f"art.treatments role {role!r} is not supported; "
                 f"choose one of: {choices}"
             )
         treatment = str(raw_treatment).strip()
         if not treatment:
-            raise BookConfigError(f"image_treatments.{role} must be non-empty")
+            raise BookConfigError(f"art.treatments.{role} must be non-empty")
         if treatment == "none":
             treatment = "raw"
         if treatment not in IMAGE_TREATMENT_PRESETS:
             choices = ", ".join(sorted(IMAGE_TREATMENT_PRESETS))
             raise BookConfigError(
-                f"image_treatments.{role} preset {treatment!r} is not supported; "
+                f"art.treatments.{role} preset {treatment!r} is not supported; "
                 f"choose one of: {choices}"
             )
         treatments[role] = treatment
@@ -1439,17 +1587,16 @@ def _positive_int(value: object, *, loc: str) -> int:
     return int(value)
 
 
-def _skip_targets(value: object) -> list[str]:
-    """Validate page-damage skip target names."""
+def _skip_targets(value: object, *, loc: str) -> list[str]:
+    """Validate paper wear skip target names."""
     if not isinstance(value, list) or not all(isinstance(item, str) for item in value):
-        raise BookConfigError("page_damage.skip must be a list of strings")
+        raise BookConfigError(f"{loc} must be a list of strings")
     skip: list[str] = []
     for item in value:
         target = item.strip()
-        if target not in PAGE_DAMAGE_SKIP_TARGETS:
+        if target not in WEAR_SKIP_TARGETS:
             raise BookConfigError(
-                "page_damage.skip entries must be one of "
-                f"{sorted(PAGE_DAMAGE_SKIP_TARGETS)}"
+                f"{loc} entries must be one of {sorted(WEAR_SKIP_TARGETS)}"
             )
         if target not in skip:
             skip.append(target)

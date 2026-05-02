@@ -1,8 +1,9 @@
 title: Minimal Convention Book
 subtitle: Smoke Fixture
 theme: clean-srd
-cover:
-  enabled: true
+art:
+  cover:
+    enabled: true
 
 contents:
   - kind: toc
