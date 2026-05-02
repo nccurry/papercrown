@@ -10,7 +10,7 @@ from urllib.parse import urlparse
 
 from papercrown.project.manifest import build_manifest
 from papercrown.project.recipe import load_book_config
-from papercrown.render import build
+from papercrown.render import build, web
 from papercrown.system.export import Tools
 
 
@@ -121,6 +121,33 @@ def test_static_web_export_writes_self_contained_tree(tmp_path, require_pandoc):
     for ref in _local_refs(html):
         assert not Path(ref).is_absolute()
         assert (web_root / ref).exists(), ref
+
+
+def test_static_web_bundle_includes_art_role_css_outside_theme_root(tmp_path):
+    (tmp_path / "styles").mkdir()
+    _write(tmp_path / "styles" / "power-header.css", ".power-header-art{float:right;}")
+    recipe_path = _make_web_recipe(tmp_path)
+    raw = recipe_path.read_text(encoding="utf-8")
+    recipe_path.write_text(
+        raw
+        + textwrap.dedent(
+            """
+            art_roles:
+              power-header:
+                prefix: power-header
+                css: ../styles/power-header.css
+            """
+        ),
+        encoding="utf-8",
+    )
+    recipe = load_book_config(recipe_path)
+    web_root = tmp_path / "web"
+
+    web.copy_web_static_assets(web_root, recipe=recipe)
+    css = (web_root / "styles" / "book.css").read_text(encoding="utf-8")
+
+    assert "power-header.css" in css
+    assert ".power-header-art{float:right;}" in css
 
 
 def test_static_web_export_recovers_lossy_spell_list_embeds(tmp_path, require_pandoc):

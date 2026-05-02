@@ -1423,6 +1423,7 @@ def _art_roles_mapping(value: object) -> dict[str, ArtRoleSpec]:
             ),
             auto_placeable=bool(raw_spec.get("auto_placeable", False)),
             prefixes=_role_prefixes(raw_spec.get("prefixes", raw_spec.get("prefix"))),
+            css_files=_role_css_files(raw_spec.get("css", raw_spec.get("css_files"))),
         )
     return roles
 
@@ -1467,6 +1468,26 @@ def _role_prefixes(value: object) -> tuple[str, ...]:
         if prefix is not None:
             prefixes.append(prefix)
     return tuple(prefixes)
+
+
+def _role_css_files(value: object) -> tuple[Path, ...]:
+    """Normalize project art role CSS file references."""
+    if value is None:
+        return ()
+    raw_paths: list[object]
+    if isinstance(value, str):
+        raw_paths = [value]
+    elif isinstance(value, list):
+        raw_paths = value
+    else:
+        raise BookConfigError("art_roles css must be a string or list")
+    paths: list[Path] = []
+    for item in raw_paths:
+        css_path = _str_or_none(item)
+        if css_path is None:
+            continue
+        paths.append(Path(css_path))
+    return tuple(paths)
 
 
 def _slug_or_none(value: object, *, loc: str) -> str | None:

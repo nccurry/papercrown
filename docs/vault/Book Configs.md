@@ -151,6 +151,7 @@ Common chapter shapes:
 | --- | --- |
 | `contents` inline title item | Book identity, cover title text, and default output name |
 | `theme`, `theme_options`, `image_treatments` | Visual system and opt-in image role treatments |
+| `art_roles` | Book-specific art filename roles, nominal sizes, transparency checks, and role CSS |
 | `vaults`, `vault_overlay` | Optional named Markdown roots and fallback search order |
 | `output_dir`, `output_name`, `cache_dir` | Optional caller-owned output and cache overrides |
 | `cover` | Optional cover settings; cover art can be inferred from canonical Art filenames |

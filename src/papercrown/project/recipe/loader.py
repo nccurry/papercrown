@@ -444,6 +444,34 @@ def _normalize_recipe_filesystem_paths(
     theme_dir_raw = raw.get("theme_dir")
     if isinstance(theme_dir_raw, str) and theme_dir_raw.strip():
         raw["theme_dir"] = str(_resolve_vault_path(theme_dir_raw, recipe_dir))
+    _normalize_art_role_css_paths(raw, recipe_dir)
+
+
+def _normalize_art_role_css_paths(raw: dict[str, object], recipe_dir: Path) -> None:
+    """Rewrite art-role CSS paths as absolute strings in place."""
+    art_roles_raw = raw.get("art_roles")
+    if not isinstance(art_roles_raw, Mapping):
+        return
+    normalized: dict[str, object] = {}
+    for role, spec in art_roles_raw.items():
+        if not isinstance(spec, Mapping):
+            normalized[str(role)] = spec
+            continue
+        role_spec = {str(key): value for key, value in spec.items()}
+        for key in ("css", "css_files"):
+            css_raw = role_spec.get(key)
+            if isinstance(css_raw, str) and css_raw.strip():
+                role_spec[key] = str(_resolve_vault_path(css_raw, recipe_dir))
+                continue
+            if isinstance(css_raw, list):
+                role_spec[key] = [
+                    str(_resolve_vault_path(item, recipe_dir))
+                    if isinstance(item, str) and item.strip()
+                    else item
+                    for item in css_raw
+                ]
+        normalized[str(role)] = role_spec
+    raw["art_roles"] = normalized
 
 
 def _merge_vault_includes(

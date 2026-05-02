@@ -54,6 +54,20 @@ diagrams that need to carry their own rectangular composition. Use transparent
 PNGs for ornaments, spots, page wear, and decorative fillers that should sit on
 the paper surface.
 
+Book-specific art vocabularies belong in `art_roles`. Declare the filename
+prefix, nominal print size, transparency expectation, and any supporting CSS in
+the same role entry. Role CSS is loaded after the selected theme CSS.
+
+```yaml
+art_roles:
+  power-header:
+    prefix: power-header
+    width: 6.0
+    height: 2.0
+    transparent: false
+    css: styles/power-header.css
+```
+
 ## How It Works
 
 The art audit classifies filenames, checks image metadata, verifies book config
