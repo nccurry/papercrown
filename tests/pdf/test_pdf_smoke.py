@@ -528,6 +528,13 @@ def test_build_outputs_supports_parallel_fast_draft(
 
     result = build.build_outputs(tools, request)
 
-    assert result.produced
+    produced_names = sorted(path.name for path in result.produced)
+    assert produced_names == [
+        "Mage (Draft).pdf",
+        "Mini Test Book (Draft).pdf",
+        "Rogue (Draft).pdf",
+        "Setting (Draft).pdf",
+    ]
+    assert result.skipped == []
     assert all(path.is_file() for path in result.produced)
     assert all(recipe.generated_root in path.parents for path in result.produced)

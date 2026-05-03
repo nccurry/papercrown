@@ -13,6 +13,7 @@ from papercrown.app import actions, cli
 from papercrown.app.config import parse_jobs
 from papercrown.build.options import (
     BuildScope,
+    BuildTarget,
     DraftMode,
     OutputProfile,
     PaginationMode,
@@ -208,6 +209,47 @@ def test_build_command_applies_config_recipe_and_cli_precedence(
     assert request.clean_pdf is False
     assert request.filler_debug_overlay is True
     assert request.timings is True
+
+
+def test_web_build_command_does_not_require_weasyprint(tmp_path, monkeypatch):
+    recipe = _write_recipe(
+        tmp_path,
+        """
+        title: Web Cli Book
+        vaults:
+          v: vault
+        contents:
+          - kind: file
+            title: Foo
+            source: v:Foo.md
+        """,
+    )
+    captured = {}
+    out_html = tmp_path / "out.html"
+
+    def fake_discover_tools(*, require_weasyprint=True):
+        captured["require_weasyprint"] = require_weasyprint
+        return Tools(
+            pandoc="pandoc",
+            obsidian_export="obsidian-export",
+            weasyprint="",
+        )
+
+    def fake_build_outputs(tools, request, *, log=None):
+        captured["tools"] = tools
+        captured["request"] = request
+        out_html.write_text("<!doctype html>", encoding="utf-8")
+        return BuildResult(produced=[out_html], skipped=[], export_map={})
+
+    monkeypatch.setattr(actions, "discover_tools", fake_discover_tools)
+    monkeypatch.setattr(actions, "build_outputs", fake_build_outputs)
+
+    result = runner.invoke(cli.app, ["build", str(recipe), "--target", "web"])
+
+    assert result.exit_code == 0, result.output
+    assert captured["require_weasyprint"] is False
+    assert captured["tools"].weasyprint == ""
+    assert captured["request"].target is BuildTarget.WEB
 
 
 def test_verify_command_uses_config_scope_and_profile(tmp_path, monkeypatch):
