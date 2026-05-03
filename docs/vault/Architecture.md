@@ -1,63 +1,46 @@
 # Architecture
 
-Paper Crown is organized around a simple publishing pipeline: collect Markdown
-from vaults, resolve a book config into a manifest, apply a theme and art
-library, then render PDF and web outputs.
+Paper Crown is a small publishing pipeline: resolve vault content, turn a book
+config into a manifest, assemble Markdown, apply theme and art rules, then
+render PDF or web output.
 
 ## Product Model
 
-| Layer | What you own | What Paper Crown does |
+| Layer | Owner | Contract |
 | --- | --- | --- |
-| Vault | Markdown notes, images, and Obsidian-style links | Resolves source files and embeds |
-| Book Config | Book structure, metadata, themes, art, and outputs | Builds a render manifest |
-| Theme | CSS, template, page furniture, and visual identity | Applies consistent print and web layout |
-| Build | CLI options for target, scope, profile, and speed | Emits PDFs, HTML, caches, and reports |
+| `papercrown.yaml` | Project | Build defaults such as target, scope, profile, jobs, pagination, wear, and timings |
+| `book.yml` | Book | Title, metadata, vaults, contents, theme, art, output names, and generated pages |
+| Vaults | Author | Markdown files, images, Obsidian links, and normal editor-friendly source |
+| Theme | Designer | CSS files, optional template, optional art labels, and theme assets |
+| Manifest | Paper Crown | The resolved chapter tree, art paths, fillers, wear catalog, and warnings |
 
 ## Data Flow
 
-The book config is the center of the system. It gives each vault an alias,
-declares chapter order, selects a bundled or local theme, and points at
-optional art systems. `papercrown manifest` shows the resolved structure before
-rendering so you can check paths, headings, art references, and output names
-without waiting for a full PDF build.
+`papercrown manifest` is the first useful readout. It shows the book file,
+vault overlay, output root, chapters, styles, sources, and art before rendering.
 
-Markdown assembly happens before either renderer runs. That means PDF and web
-exports share the same source resolution, filters, typed TTRPG blocks, internal
-links, generated matter, and book-config-driven art declarations.
+After that, both PDF and web builds share the same assembled Markdown. Internal
+links, Obsidian exports, TTRPG widgets, generated pages, dividers, splashes,
+fillers, and image treatments are resolved before a target-specific renderer
+writes files.
 
 ## Output Model
 
-Paper Crown can render one assembled book to PDF outputs, static HTML, or both.
-PDF builds can emit a combined book, section PDFs, individual chapter PDFs, and
-draft diagnostics. Web builds emit a static site that can be copied to GitHub
-Pages, GitLab Pages, or any plain file host.
+PDF builds can emit a combined book, section PDFs, individual PDFs, or draft
+diagnostics. Web builds emit one static tree under `web/`; it can be copied
+directly to GitHub Pages, GitLab Pages, or any static host.
 
 ## Package Map
 
-- `papercrown.app`: CLI commands, command actions, console output, and layered
-  build configuration.
-- `papercrown.build`: command-neutral build options, build requests, and build
-  results shared by the CLI, render orchestration, paths, and diagnostics.
-- `papercrown.project`: book config models/loading, manifest construction, vault and
-  catalog resolution, project scaffolding, bundled resource paths, output paths,
-  and themes.
-- `papercrown.assembly`: Markdown assembly, heading/source normalization, art
-  blocks, filler markers, and TTRPG block preprocessing.
-- `papercrown.render`: build orchestration, render jobs, Pandoc/WeasyPrint/PDF
-  pipeline code, pagination analysis, static web export, and render snapshots.
-- `papercrown.media`: image diagnostics/optimization, image treatments,
-  conditional filler placement, and page-wear rendering.
-- `papercrown.art`: art role classification and book art audit/reporting.
-- `papercrown.system`: diagnostics, cache fingerprints, dependency checks,
-  Obsidian export, doctor checks, and post-build verification.
-
-## Placement Rules
-
-New code should live where its main owner lives. A new book config field belongs in
-`project`, a new PDF stamping step belongs in `render`, and a new image
-preprocessing policy belongs in `media`. Shared dataclasses should stay near
-the subsystem that creates them unless several packages already depend on them.
-
-Avoid adding new top-level modules under `papercrown`. The root package is kept
-for package initialization and bundled resources; behavior belongs in one of
-the subpackages above.
+- `papercrown.app`: CLI, command actions, output, and layered build config.
+- `papercrown.project`: book loading, manifest construction, vaults, themes,
+  scaffolding, paths, and bundled resources.
+- `papercrown.assembly`: Markdown assembly, headings, art blocks, source
+  normalization, filler markers, and TTRPG preprocessing.
+- `papercrown.render`: build orchestration, Pandoc, WeasyPrint, PDFs,
+  pagination, static web export, and snapshots.
+- `papercrown.media`: images, treatments, filler layout, and page wear.
+- `papercrown.art`: art roles, filename classification, audits, and contact
+  sheets.
+- `papercrown.system`: diagnostics, dependency checks, cache fingerprints,
+  export helpers, doctor checks, and verification.

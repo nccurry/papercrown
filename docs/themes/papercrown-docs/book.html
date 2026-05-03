@@ -62,7 +62,7 @@ $if(cover)$
 <section class="cover docs-cover" data-cover>
   <div class="cover-art-wrap">
 $if(cover-art)$
-    <img class="cover-art" src="$cover-art$" alt="" />
+    <img class="cover-art" src="$cover-art$" alt="" loading="eager" decoding="async" fetchpriority="high" />
 $endif$
 $if(draft-placeholders)$
 $if(cover-art)$$else$

@@ -286,16 +286,8 @@ body.paper-anthology {
   color: #201914;
 }
 
-.chapter-wrap.section-codex,
-body.section-codex .book-body {
-  --accent: #b8860b;
-  --accent-deep: #7a271a;
-  --tint-block: #f6e8c2;
-  --tint-callout: #fff3d0;
-}
-
-.chapter-wrap.section-overview,
-body.section-overview .book-body {
+.chapter-wrap.section-fantasy,
+body.section-fantasy .book-body {
   --paper: #fbf3e2;
   --ink: #211914;
   --ink-soft: #4a3826;
@@ -308,8 +300,8 @@ body.section-overview .book-body {
   --tint-callout: #fff2cc;
 }
 
-.chapter-wrap.section-launch,
-body.section-launch .book-body {
+.chapter-wrap.section-space-opera,
+body.section-space-opera .book-body {
   --paper: #eef7f4;
   --ink: #102232;
   --ink-soft: #294552;
@@ -322,36 +314,22 @@ body.section-launch .book-body {
   --tint-callout: #eaf6f2;
 }
 
-.chapter-wrap.section-vault,
-body.section-vault .book-body {
-  --paper: #eff5ec;
-  --ink: #17251f;
-  --ink-soft: #31483e;
-  --muted: #607667;
-  --rule: #17372d;
-  --rule-light: #88b89e;
-  --accent: #34795d;
-  --accent-deep: #204f43;
-  --tint-block: #dcebdd;
-  --tint-callout: #f0f4dc;
+.chapter-wrap.section-comic-book,
+body.section-comic-book .book-body {
+  --paper: #fff7dc;
+  --ink: #1f1a16;
+  --ink-soft: #3f3732;
+  --muted: #77634d;
+  --rule: #1f3d78;
+  --rule-light: #d6b344;
+  --accent: #c33d2b;
+  --accent-deep: #1f4f91;
+  --tint-block: #f8e7ac;
+  --tint-callout: #e6f0ff;
 }
 
-.chapter-wrap.section-theme-lab,
-body.section-theme-lab .book-body {
-  --paper: #f7edf3;
-  --ink: #241926;
-  --ink-soft: #4f334e;
-  --muted: #755f77;
-  --rule: #4c254e;
-  --rule-light: #c79ab8;
-  --accent: #a63374;
-  --accent-deep: #512664;
-  --tint-block: #efdeea;
-  --tint-callout: #fff1d9;
-}
-
-.chapter-wrap.section-casefile,
-body.section-casefile .book-body {
+.chapter-wrap.section-occult-casefile,
+body.section-occult-casefile .book-body {
   --paper: #f7efe6;
   --ink: #211820;
   --ink-soft: #4f3344;
@@ -364,8 +342,50 @@ body.section-casefile .book-body {
   --tint-callout: #fff2dc;
 }
 
-.chapter-wrap.section-field-guide,
-body.section-field-guide .book-body {
+.chapter-wrap.section-hexcrawl,
+body.section-hexcrawl .book-body {
+  --paper: #eff5ec;
+  --ink: #17251f;
+  --ink-soft: #31483e;
+  --muted: #607667;
+  --rule: #17372d;
+  --rule-light: #88b89e;
+  --accent: #34795d;
+  --accent-deep: #204f43;
+  --tint-block: #dcebdd;
+  --tint-callout: #f0f4dc;
+}
+
+.chapter-wrap.section-zine-lab,
+body.section-zine-lab .book-body {
+  --paper: #f7edf3;
+  --ink: #241926;
+  --ink-soft: #4f334e;
+  --muted: #755f77;
+  --rule: #4c254e;
+  --rule-light: #c79ab8;
+  --accent: #a63374;
+  --accent-deep: #512664;
+  --tint-block: #efdeea;
+  --tint-callout: #fff1d9;
+}
+
+.chapter-wrap.section-bestiary-gallery,
+body.section-bestiary-gallery .book-body {
+  --paper: #f6f0de;
+  --ink: #1f2118;
+  --ink-soft: #434936;
+  --muted: #68715c;
+  --rule: #31452c;
+  --rule-light: #9eab79;
+  --accent: #6b7d32;
+  --accent-deep: #7b3d2c;
+  --tint-block: #e8ead0;
+  --tint-callout: #fff0ce;
+}
+
+.chapter-wrap.section-steampunk,
+body.section-steampunk .book-body {
   --paper: #fbefd9;
   --ink: #251c16;
   --ink-soft: #584235;
@@ -376,6 +396,20 @@ body.section-field-guide .book-body {
   --accent-deep: #7a3524;
   --tint-block: #f2dfbd;
   --tint-callout: #fff1cf;
+}
+
+.chapter-wrap.section-cyberpunk,
+body.section-cyberpunk .book-body {
+  --paper: #eef5f5;
+  --ink: #111e24;
+  --ink-soft: #2d424a;
+  --muted: #61767d;
+  --rule: #183844;
+  --rule-light: #8bb3b8;
+  --accent: #2a9aa5;
+  --accent-deep: #7a356d;
+  --tint-block: #dfeeed;
+  --tint-callout: #f4e9ff;
 }
 
 .paper-anthology .chapter-wrap {
@@ -658,7 +692,7 @@ body.mode-web.paper-anthology .section-divider-eyebrow {
   margin-bottom: 0.2rem;
   font-size: 0.66rem;
   line-height: 1.2;
-  letter-spacing: 0.12em;
+  letter-spacing: 0;
 }
 
 body.mode-web.paper-anthology .section-divider-title {
@@ -816,7 +850,8 @@ body.mode-web.paper-anthology .generated-matter::after {
   opacity: 0.74;
 }
 
-body.mode-web.paper-anthology .chapter-wrap.section-launch::after {
+body.mode-web.paper-anthology .chapter-wrap.section-space-opera::after,
+body.mode-web.paper-anthology .chapter-wrap.section-cyberpunk::after {
   background-position:
     center,
     right 1rem top 6rem,
@@ -826,7 +861,9 @@ body.mode-web.paper-anthology .chapter-wrap.section-launch::after {
     right 1.4rem bottom 7rem;
 }
 
-body.mode-web.paper-anthology .chapter-wrap.section-casefile::after {
+body.mode-web.paper-anthology .chapter-wrap.section-occult-casefile::after,
+body.mode-web.paper-anthology .chapter-wrap.section-bestiary-gallery::after,
+body.mode-web.paper-anthology .chapter-wrap.section-zine-lab::after {
   background-position:
     center,
     left 1.1rem bottom 6.2rem,
@@ -836,7 +873,8 @@ body.mode-web.paper-anthology .chapter-wrap.section-casefile::after {
     left 1rem top 18rem;
 }
 
-body.mode-web.paper-anthology .chapter-wrap.section-field-guide::after {
+body.mode-web.paper-anthology .chapter-wrap.section-steampunk::after,
+body.mode-web.paper-anthology .chapter-wrap.section-hexcrawl::after {
   background-position:
     center,
     right 1.2rem bottom 6.6rem,

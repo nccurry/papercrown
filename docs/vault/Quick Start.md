@@ -1,79 +1,72 @@
 # Quick Start
 
-Install the CLI once:
+Install the CLI from a GitHub release wheel:
 
 ```sh
 uv tool install https://github.com/nccurry/papercrown/releases/download/v1.0.0/papercrown-1.0.0-py3-none-any.whl
 ```
 
-Replace `1.0.0` with the release version you want. Paper Crown release
-artifacts live on GitHub Releases, not PyPI. If your shell cannot find
-`papercrown` after installation, run `uv tool update-shell` and open a new
-terminal.
+Replace `1.0.0` with the release you want. If your shell cannot find
+`papercrown`, run `uv tool update-shell` and open a new terminal.
 
 <div class="art-rule art-rule-launch" aria-hidden="true"></div>
 
-Create a new Paper Crown project:
+Create and build a starter book:
 
 ```sh
-papercrown new my-book
+papercrown new my-book --book-type rules
 cd my-book
 papercrown manifest
 papercrown doctor
-papercrown build
-papercrown verify
+papercrown build --scope book --profile draft
+papercrown verify --scope book --profile draft
 ```
 
-`papercrown init` is the same scaffold command if you prefer the older verb.
+`papercrown init` is the same scaffold command as `papercrown new`.
 
 ## Core Flow
 
-1. Write Markdown in a vault.
+1. Write Markdown in the project vault.
 2. Describe the book in `book.yml`.
-3. Run `papercrown manifest` to inspect the resolved book.
-4. Run `papercrown doctor` to catch missing tools, paths, and content issues.
-5. Run `papercrown build` for PDFs, or add `--target web` for static HTML.
-6. Run `papercrown verify` before publishing PDFs. If web output exists,
-   `verify` also checks generated local `src` assets.
+3. Put repeatable build defaults in `papercrown.yaml`.
+4. Run `papercrown manifest` to inspect the resolved book.
+5. Run `papercrown doctor` to catch missing tools, files, and image references.
+6. Run `papercrown build` for PDFs, or `papercrown build --target web` for HTML.
+7. Run `papercrown verify` before publishing.
 
 :::: {.rule #first-build-loop title="First Build Loop" tags="docs,build,quickstart"}
 ### First Build Loop
 
-Use `manifest` to inspect what Paper Crown will build, `doctor` to validate the
-machine and content, `build` to render outputs, and `verify` to check PDFs
-after rendering.
+Use `manifest` before rendering, `doctor` before waiting on output, `build` to
+write the artifact, and `verify` as the release check.
 ::::
 
 :::: {.flourish-note .flourish-launch}
-When no book path is provided, Paper Crown reads `book.yml` in the current
-directory. A project `papercrown.yaml` can still point to another book file with
-`book:`.
+When no book path is passed, Paper Crown uses `papercrown.yaml` if it names a
+`book:`, otherwise it looks for `book.yml` in the current directory.
 ::::
 
 ## Example Project
 
-You can also run the bundled public example from a repository checkout:
+From a repository checkout, build the public sample:
 
 ```sh
 papercrown manifest examples/starfall/book.yml
 papercrown build examples/starfall/book.yml
-```
-
-For a static web export, use:
-
-```sh
 papercrown build examples/starfall/book.yml --target web
 ```
 
-Generated output is always caller-owned and goes under:
+Generated output is caller-owned:
 
 ```text
 <output_dir>/Paper Crown/<output_name>/
-  pdf/
+  pdf/book/
+  pdf/sections/
+  pdf/individuals/
   web/
   cache/
 ```
 
 By default, `output_dir` is the project root and `output_name` is the slugged
-book title. `output_dir` and `output_name` may point elsewhere when you want
-source, generated files, and publishing artifacts to stay separate.
+book title. Set them when source files, generated files, and publishing folders
+need to stay separate.

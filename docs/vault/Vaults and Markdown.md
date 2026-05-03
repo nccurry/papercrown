@@ -1,58 +1,49 @@
 # Vaults and Markdown
 
 :::: {.flourish-note .flourish-folder}
-Vaults are named content roots. They let a book config assemble Markdown from
-one or more folders without moving the source into Paper Crown or into the
-repository.
+Vaults are named Markdown roots. They let one book pull from reusable rules,
+setting notes, campaign material, or local overrides without moving source
+files into Paper Crown.
 ::::
 
-Markdown stays ordinary first. Paper Crown adds source resolution, Obsidian-style
-links, embedded images, and optional TTRPG components when a book needs richer
-game objects.
+Markdown should stay readable in your editor first. Paper Crown adds source
+resolution, Obsidian-style links, embedded images, and optional TTRPG widgets.
 
 <div class="art-rule art-rule-folder" aria-hidden="true"></div>
 
 ## How to Use It
 
-Give each content root an alias in the book config:
+Give each content root an alias:
 
 ```yaml
 vaults:
-  rules: ../vault
+  rules: ../rules-vault
   setting: ../setting-notes
-```
 
-Then refer to files through that alias:
-
-```yaml
 contents:
   - kind: file
     title: Primer
     source: rules:Primer.md
 ```
 
-Keep source Markdown readable outside Paper Crown. Headings, lists, tables,
-code blocks, images, and links should still make sense in your editor.
+If a source has no vault prefix, Paper Crown searches the vault overlay by path
+or stem. Prefer explicit aliases in larger books so moves and overrides are
+obvious.
 
-## How to Adapt It
+## Markdown
 
-Use multiple vaults when a book combines reusable rules, campaign-specific
-setting material, or local overrides. Use a single vault when the project is a
-small book and the extra naming would not buy clarity.
+Headings, paragraphs, lists, tables, code blocks, links, and images are normal
+Markdown. Internal Markdown links and Obsidian wikilinks are resolved during
+assembly when the target exists in the vault set.
 
-Paper Crown supports ordinary Markdown first. Use optional components when a
-rule needs to stand out as a reusable game object rather than a plain
-paragraph, list, or table.
+Use ordinary Markdown for ordinary rules. Reach for widgets only when the text
+is a reusable game object.
 
 ## Rules Widgets
 
-Rules widgets use Pandoc fenced divs. They work in the same source Markdown as
-the rest of your book and do not require book config changes.
+Widgets use Pandoc fenced divs.
 
 ### Feature
-
-Use `pc-feature` for class features, ancestry features, rule features, or
-notable abilities.
 
 ```markdown
 :::: {.pc-feature title="Sneak Attack" level="1" tags="rogue,damage"}
@@ -62,25 +53,13 @@ Once per turn, add extra damage when you have advantage or an ally is adjacent.
 
 ### Ability
 
-Use `pc-ability` for action, spell, power, move, or technique cards. Optional
-metadata can describe cost, trigger, duration, usage, or recharge.
-
 ```markdown
 :::: {.pc-ability title="Overcharge" cost="1 Charge" duration="Instant"}
 Push the engine past its limit, then mark heat.
 ::::
 ```
 
-```markdown
-:::: {.pc-ability title="Guardian Intercept" trigger="An ally is hit" usage="Reaction"}
-Move up to your speed toward the ally and become the target instead.
-::::
-```
-
 ### Procedure
-
-Use `pc-procedure` for ordered rules processes such as combat loops, travel
-turns, downtime, clocks, or scene procedures.
 
 ```markdown
 :::: {.pc-procedure title="Recovery Turn" usage="Downtime"}
@@ -91,39 +70,22 @@ turns, downtime, clocks, or scene procedures.
 ```
 
 If a widget does not have a `title` attribute, Paper Crown uses the first
-heading inside the fenced div as the title:
-
-```markdown
-:::: {.pc-procedure usage="Travel"}
-### Overland Watch
-
-1. Choose pace.
-2. Check for discoveries.
-3. Roll for hazards.
-::::
-```
+heading inside it as the title.
 
 ## Metadata
 
-Supported metadata fields are:
+Supported widget metadata:
 
 | Field | Common use |
 | --- | --- |
-| `title` | Display title for the widget |
+| `title` | Display title |
 | `level` | Feature level or tier |
 | `cost` | Resource, action, slot, or price |
 | `trigger` | Timing condition |
 | `duration` | How long the effect lasts |
-| `usage` | At-will, reaction, downtime, travel, per rest, or similar |
-| `recharge` | Recharge rule or refresh condition |
-| `tags` | Comma-separated labels for the author or theme |
+| `usage` | At-will, reaction, downtime, travel, or per rest |
+| `recharge` | Refresh rule |
+| `tags` | Comma-separated labels for authors or themes |
 
-Keep metadata short. Put rulings, exceptions, examples, and table text in the
-body of the widget.
-
-## How It Works
-
-During assembly, Paper Crown resolves each chapter source through the configured
-vault aliases, exports Obsidian-style content when needed, normalizes headings,
-and runs the Markdown filters used by both PDF and web renderers. The same
-assembled HTML then flows into the selected theme.
+Keep metadata short and put rulings, examples, and table text in the widget
+body.

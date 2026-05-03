@@ -1,209 +1,82 @@
 # Art
 
-Paper Crown treats `art.library` as a named art library. The book owns the files;
-Paper Crown classifies them by role, validates the names, and only auto-places
-art from roles that are explicitly safe for automatic layout.
-
-Art is book-config-driven for the same reason chapters are: finished books need
-repeatable references, predictable naming, and checks that catch missing or
-mis-sized assets before a release build.
+Paper Crown treats `art.library` as the book's art library. It classifies image
+files by role, validates references, and only auto-places roles that are safe
+for automatic layout.
 
 :::: {.sidebar #art-library title="Art Library Contract" tags="docs,art"}
 ### Art Library Contract
 
-Keep art under the book config's `art.library`, use role-shaped filenames, and reserve
-transparent PNGs for assets that should float on paper instead of carrying
-their own rectangular background. Art can either live in the canonical role
-folders below or directly in the art library when filenames are globally unique.
+Use role-shaped filenames under the art library. Opaque images are best for
+covers, splashes, maps, and screenshots; transparent PNGs are best for
+ornaments, spots, fillers, and page wear.
 ::::
 
 ## How to Use It
 
-Put finished images under `Art/` and use the lightest API that expresses your
-intent:
+Use the lightest API that matches the intent:
 
-- Use ordinary Markdown images for inline art that belongs exactly where it
-  appears: `![](map-station.png)`.
-- Use top-level `art.placements` for Paper Crown-managed dynamic art such as
-  chapter splashes, cover/back-cover art, and after-heading splashes.
-- Add fixed book-specific art labels by creating `styles/<label>.css`; images
-  whose filenames start with `<label>-` get matching classes automatically.
+- Markdown images for art that belongs exactly where it appears.
+- `contents[].art` for dividers, ornaments, child catalog art, and local filler
+  opt-outs.
+- Top-level `art.placements` for Paper Crown-managed cover, back-cover,
+  chapter-start, and after-heading splash art.
+- `art.fillers` and `art.wear` for automatic page finish and paper-wear systems.
 
-Set `art.library` only when the art library lives somewhere other than `Art/`. Use
-`papercrown art audit book.yml` when adding or moving art.
+Run these when adding or moving art:
 
-```markdown
-![Void engine](power-header-void-engine.png)
+```sh
+papercrown art audit book.yml
+papercrown art audit book.yml --format markdown --strict
+papercrown art contact-sheet book.yml --output art-contact-sheet.html
 ```
+
+## Roles
+
+Common canonical folders:
+
+| Role | Folder | Use |
+| --- | --- | --- |
+| `cover-front`, `cover-back` | `covers/` | Full cover plates |
+| `chapter-divider`, `chapter-header` | `dividers/`, `headers/` | Chapter identity art |
+| `splash` | `splashes/` | Large injected section art |
+| `ornament-headpiece`, `ornament-tailpiece`, `ornament-break` | `ornaments/` | Reusable page furniture |
+| `filler-spot`, `filler-wide`, `filler-plate`, `filler-bottom`, `page-finish` | `fillers/` | Automatic blank-space art |
+| `page-wear` | `page-wear/` | Transparent paper damage overlays |
+| `map`, `diagram`, `screenshot`, `icon`, `logo` | Content or asset folders | Explicit reference art |
+
+`unused/`, contact sheets, and non-image files are ignored by automatic
+discovery.
+
+## Fillers
+
+Filler slots describe blank-space opportunities. Assets can be listed
+explicitly or discovered from canonical filler folders.
 
 ```yaml
 art:
-  placements:
-    - id: character-creation-opening
-      image: splash-dock-queue.png
-      target: after-heading
-      chapter: character-creation
-      heading: Why are you out here?
-      placement: bottom-half
+  fillers:
+    enabled: true
+    slots:
+      chapter-end:
+        min_space: 0.75in
+        max_space: 6.00in
+        shapes: [tailpiece, spot, small-wide, plate, page-finish]
 ```
 
-## How to Adapt It
+Use larger roles for larger gaps: `spot` under roughly `2in`, `small-wide` for
+short horizontal gaps, `plate` for medium page space, and `page-finish` for
+large in-flow endings. `bottom-band` is for true bottom-anchored strip art and
+should not be mixed into ordinary in-flow slots.
 
-Use opaque images for covers, splashes, dividers, screenshots, maps, and
-diagrams that need to carry their own rectangular composition. Use transparent
-PNGs for ornaments, spots, page wear, and decorative fillers that should sit on
-the paper surface.
+## Wear and Treatments
 
-Book-specific fixed art vocabularies are CSS conventions, not book-config
-schema. Create `styles/<label>.css` in the project, or `art-labels/<label>.css`
-inside a theme. The label name, filename prefix, and CSS class are all the same
-value. For example, `styles/power-header.css` declares the `power-header`
-label, and `power-header-void-engine.png` receives `.power-header` and
-`.art-role-power-header` during rendering. Existing Markdown image classes are
-preserved as variant classes.
+Page-wear assets use filenames like `wear-smudge-grime-small-01.png` and must
+have alpha. Configure density, opacity, seed, and skip targets under
+`art.wear`.
 
-```css
-.power-header {
-  margin-block: 1rem;
-}
-
-.power-header img {
-  width: 6in;
-}
-```
-
-## How It Works
-
-The art audit classifies filenames, checks image metadata, verifies book config
-references, and reports assets that do not match the role contract. Automatic
-filler placement only considers roles that are safe to place without explicit
-source Markdown references.
-
-## Canonical Roles
-
-| Role | Folder | Filename shape | Automatic |
-| --- | --- | --- | --- |
-| `cover-front` | `covers/` | `cover-front-{slug}.png` | No |
-| `cover-back` | `covers/` | `cover-back-{slug}.png` | No |
-| `chapter-divider` | `dividers/` | `divider-{slug}.png` | No |
-| `chapter-header` | `headers/` | `header-{slug}.png` | No |
-| `class-divider` | `classes/dividers/` | `class-{slug}.png` | No |
-| `class-opening-spot` | `classes/spots/` | `spot-class-{slug}.png` | No |
-| `frame-divider` | `frames/dividers/` | `frame-{slug}.png` | No |
-| `splash` | `splashes/` | `splash-{context}-{subject}-{variant}.png` | No |
-| `spread` | `spreads/` | `spread-{slug}.png` | No |
-| `ornament-headpiece` | `ornaments/headpieces/` | `ornament-headpiece-{slug}.png` | No |
-| `ornament-break` | `ornaments/breaks/` | `ornament-break-{slug}.png` | No |
-| `ornament-tailpiece` | `ornaments/tailpieces/` | `ornament-tailpiece-{slug}.png` | No |
-| `ornament-corner` | `ornaments/corners/` | `ornament-corner-{slug}.png` | No |
-| `ornament-folio` | `ornaments/folios/` | `ornament-folio-{slug}.png` | No |
-| `filler-spot` | `fillers/spot/` | `filler-spot-{context}-{subject}-{variant}.png` | Yes |
-| `filler-wide` | `fillers/wide/` | `filler-wide-{context}-{subject}-{variant}.png` | Yes |
-| `filler-plate` | `fillers/plate/` | `filler-plate-{context}-{subject}-{variant}.png` | Yes |
-| `filler-bottom` | `fillers/bottom/` | `filler-bottom-{context}-{subject}-{variant}.png` | Yes |
-| `page-finish` | `fillers/page-finish/` | `page-finish-{context}-{subject}-{variant}.png` | Yes |
-| `page-wear` | `page-wear/` | `wear-{family}-{size}-{variant}.png` | Yes |
-| `faction` | `content/factions/` | `faction-{slug}.png` | No |
-| `gear` | `content/gear/` | `gear-{slug}.png` | No |
-| `vista` | `content/vistas/` | `vista-{slug}.png` | No |
-| `spot` | `content/spots/` or `content/background-spots/` | `spot-{slug}.png`, `bg-{slug}.png` | No |
-| `portrait` | `content/portraits/` | `portrait-{slug}.png` | No |
-| `map` | `content/maps/` | `map-{slug}.png` | No |
-| `diagram` | `content/diagrams/` | `diagram-{slug}.png` | No |
-| `screenshot` | `content/screenshots/` | `screenshot-{slug}.png` | No |
-| `icon` | `icons/` | `icon-{slug}.png` | No |
-| `logo` | `logos/` | `logo-{slug}.png` | No |
-| `item` | `content/items/` | `item-{slug}.png` | No |
-| `npc` | `content/npcs/` | `npc-{slug}.png` | No |
-| `location` | `content/locations/` | `location-{slug}.png` | No |
-| `handout` | `content/handouts/` | `handout-{slug}.png` | No |
-| `scene` | project root or campaign art folders | `scene-{slug}.png` | No |
-
-Front and back covers are cover plates, not splashes or torn-picture interior
-art. Opaque/full-bleed backgrounds are allowed when the image is composed for
-the cover. Interior cinematic art belongs in `splashes/`.
-
-`unused/`, contact sheets, and non-image files are ignored by automatic
-discovery. Legacy campaign art folders are ignored by automatic discovery, but
-flat `scene-*` filenames can be referenced explicitly by campaign book configs.
-
-## Automatic Placement
-
-The automatic filler pass discovers only roles marked auto-placeable by the
-registry: `filler-spot`, `filler-wide`, `filler-plate`, `filler-bottom`, and
-`page-finish`. The page-wear pass discovers `page-wear` assets separately.
-Explicit book config filler assets can still use `tailpiece`. Filler selection
-matches the available blank space to the nominal role size, and renderers do not
-upscale small art to fill large spaces. When a gap is large enough, Paper Crown
-prefers larger dedicated art and may downscale it to the measured space instead
-of reusing a smaller role.
-
-Book config `art.library` is the root for the whole art library. If
-`art.fillers.folder` is set, filler asset paths are resolved under
-`art.library / art.fillers.folder`;
-auto-discovery and audit still report roles according to the canonical folders
-inside that library.
-
-The supported automatic filler shapes are:
-
-- `tailpiece`: tiny ornamental closer.
-- `spot`: small centered object or vignette.
-- `small-wide`: short landscape filler.
-- `plate`: medium/large non-bleed art for roughly half-page gaps.
-- `bottom-band`: true bottom-anchored strip art.
-- `page-finish`: large in-flow page-ending art.
-
-`page-finish` assets are placed in normal flow, not stamped against the
-physical bottom edge. `filler-bottom` assets remain bottom-bleed art and are
-stamped with a small bottom safety inset. Slots must explicitly allow
-`page-finish` when large page-ending art is desired; `bottom-band` is only for
-true bottom-band art in a dedicated bottom-bleed slot.
-
-Do not mix `bottom-band` with in-flow shapes such as `spot`, `small-wide`,
-`plate`, or `page-finish` in ordinary chapter/section-end slots. Bottom-band art
-should be a wide transparent strip with most visual weight near the lower page
-edge and a soft or empty top edge. Generic horizontal illustrations belong in
-`fillers/wide/`, `fillers/plate/`, or `fillers/page-finish/`.
-
-The filler size tiers are:
-
-- Under `2.0in`: spot, wide, or tailpiece art can be used.
-- `2.0in` to `3.25in`: spot and wide art are preferred, and art should fill at
-  least 45% of the usable gap.
-- `3.25in` to `4.75in`: plate art is preferred, and art should fill at least
-  50% of the usable gap.
-- `4.75in` and larger: page-finish art is preferred, and art should fill at
-  least 60% of the usable gap.
-
-Slot context is semantic, not just positional. Terminal chapter slots and
-source-boundary `section-end` slots can emit contexts such as `reference`,
-`combat`, `equipment`, `powers`, `class`, `frame`, `setting`, `languages`, and
-`general`. Purpose-named filler files use the `{context}` segment of the
-filename to match those slots; `general`, `generic`, and `neutral` remain
-fallback contexts.
-
-Use larger art in larger roles:
-
-- Small isolated art goes in `fillers/spot/`.
-- Short landscape art goes in `fillers/wide/`.
-- Medium and large in-flow art goes in `fillers/plate/`.
-- Bottom band art goes in `fillers/bottom/`.
-- Large blank-page art goes in `fillers/page-finish/`.
-- Transparent paper wear goes in `page-wear/`.
-
-The planner avoids reusing the same filler asset while unused matching art is
-available. If a build has to reuse filler art, the draft filler report and build
-log include a non-fatal `filler warning` with the later slot and first use.
-Draft filler reports also list undersized opportunities when only smaller art
-was available for a large gap.
-
-`page-wear` assets must have alpha. Other transparent PNGs are welcome when the
-art should float over the page, but opacity is not a naming-contract error for
-illustrations that already include their own background.
-
-Paper Crown renders image pixels as authored by default. Book config
-`art.treatments` can opt specific roles into a named visual treatment when an
-asset set is intentionally designed for it:
+Image pixels render raw by default. Use `art.treatments` only for role-wide
+effects:
 
 ```yaml
 art:
@@ -213,130 +86,10 @@ art:
     cover: raw
 ```
 
-Supported treatments are:
+Supported presets include `raw`, `ink-blend`, `print-punch`, `subtle-punch`,
+`strong-punch`, and `soft-print`.
 
-- `raw`: no blend, filter, or opacity adjustment.
-- `ink-blend`: multiply blending plus a mild contrast lift for simple ink art
-  that needs to sit on the paper color.
-- `print-punch`, `subtle-punch`, and `strong-punch`: contrast-only boosts.
-- `soft-print`: a gentler multiply treatment for intentionally soft art.
+## This Docs Book
 
-Supported role keys include `default`, `inline`, `cover`, `cover-back`,
-`chapter`, `divider`, `filler`, `ornament`, `tailpiece`, `headpiece`, `break`,
-`splash`, `splash-inline`, `splash-page`, `spot`, `diagram`, `screenshot`,
-`map`, `logo`, and `icon`.
-
-Use treatments sparingly. Fix finished illustrations in the source asset when
-possible; treatments are best for reusable decorative ink systems. Diagrams,
-screenshots, maps, logos, and icons are crisp-rendering roles, so they should
-usually remain `raw`.
-
-## Filler Marker Policy
-
-The book config controls where invisible filler measurement markers are
-inserted. Markdown headings provide the measured anchor points, but source
-Markdown is not the primary control surface for automatic filler policy.
-If `art.fillers.markers` is omitted, Paper Crown synthesizes the historical default
-policy: terminal chapter/class markers, sequence source-boundary markers,
-subclass markers, frame-family markers, and background-section markers.
-
-```yaml
-art:
-  fillers:
-    enabled: true
-    slots:
-      chapter-end:
-        min_space: 0.65in
-        max_space: 6.0in
-        shapes: [tailpiece, spot, small-wide, plate, page-finish]
-    markers:
-      terminal:
-        chapter_slots: [chapter-end]
-        class_slots: [class-end]
-      source_boundary:
-        sequence_slots: [section-end]
-      subclass:
-        slots: [subclass-end]
-      headings:
-        - chapter: frames
-          slot: frame-family-end
-          heading_level: 1
-          slot_kind: frame-family
-          skip_first: true
-          context: frame
-```
-
-Set `terminal`, `source_boundary`, or `subclass` to `false` to disable that
-marker family. Set `headings: []` to disable generated heading-section markers.
-
-Chapters can opt out of generated filler markers:
-
-```yaml
-contents:
-  - kind: file
-    title: Legal
-    source: rules:Legal.md
-    art:
-      fillers: false
-```
-
-Sequence sources can opt out of source-boundary markers after that source:
-
-```yaml
-sources:
-  - source: rules:Combat.md
-    filler: false
-```
-
-Use @sidebar.art-library when deciding whether a new asset should be a framed
-illustration, a transparent ornament, or an automatically placed filler.
-
-## Class Catalog Art
-
-Class catalogs can name both divider art and opening spot art by slug:
-
-```yaml
-art:
-  children:
-    divider_pattern: classes/dividers/class-{slug}.png
-    opening_spot_pattern: classes/spots/spot-class-{slug}.png
-```
-
-The slug is the normalized class entry slug used by the catalog.
-
-## Audit
-
-Run the art audit against a book config:
-
-```sh
-papercrown art audit book.yml
-papercrown art audit book.yml --format markdown --strict
-papercrown art contact-sheet book.yml --output art-contact-sheet.html
-```
-
-The audit prints role counts, recognized and unclassified assets, image metadata
-warnings, missing book config references, role mismatches, and suggested filenames
-for missing filler opportunities. It also warns about low print resolution,
-large aspect-ratio mismatches, missing alpha for transparent roles, visible
-content near trim/gutter safety zones, and exact duplicate art.
-
-The contact sheet writes a grouped HTML inventory with thumbnails, dimensions,
-roles, and per-asset warnings. Use it to spot inventory gaps such as many combat
-fillers but no setting plates.
-
-Draft builds write filler reports and missing-art reports beside draft PDFs.
-Use `papercrown build --filler-debug-overlay` to also write a sibling
-`*.filler-debug.pdf` with measured filler regions and slot decisions overlaid.
-
-## Common Book Patterns
-
-Rulebooks usually want chapter dividers, class/opening spots, spot/wide fillers,
-plates for dense rule sections, diagrams, icons, and occasional full-page
-page-finish art.
-
-Campaign books usually want maps, locations, portraits, handouts, spreads,
-splashes, plates, faction/gear/vista art, and page-wear if the theme supports
-in-world artifacts.
-
-Documentation books usually want screenshots, diagrams, logos, icons, crisp
-maps, and fewer automatic decorative fillers.
+The full art inventory and future generation prompts live in
+`docs/Art Brief.md`. It is intentionally not part of the served book.

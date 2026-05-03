@@ -1,21 +1,18 @@
 # Book Configs
 
-A book config is the contract between your Markdown vaults and the generated book.
-It declares the theme, ordered contents, and only the overrides that differ
-from Paper Crown's book defaults.
+`book.yml` is the book contract. It names the book, selects content, chooses a
+theme, declares art, and decides where generated files are written.
 
 :::: {.handout #book-config-contract title="Book Config Contract" tags="docs,book-config"}
 ### Book Config Contract
 
-Book configs are convention-first. The common book shape is inferred from the
-contents stream, local `themes/`, local `Art/`, and the project root unless
-the config says otherwise.
+Keep authoring shape in `book.yml`; keep repeatable command defaults in
+`papercrown.yaml`.
 ::::
 
 ## How to Use It
 
-Start with top-level title fields, a theme, and ordered content. Paths are resolved
-relative to the book file unless they are absolute.
+Minimal books only need a title and contents:
 
 ```yaml
 title: Starfall Field Guide
@@ -28,144 +25,110 @@ contents:
     source: vault/Primer.md
 ```
 
-With no `vaults:` mapping, Paper Crown treats the book file's directory as a single
-content vault. `output_dir` defaults to the book file's directory, `output_name` is
-derived from the top-level title text, `art.library` defaults to `Art/`, and a
-matching local `themes/<theme>/` wins over bundled themes. The subtitle is not
-included in the default output folder name; set `output_name` only when you
-need a release-specific name or two books would otherwise collide.
+With no `vaults:` mapping, the book file's directory is treated as one vault.
+`output_dir` defaults to the book directory, `output_name` defaults to the
+slugged top-level `title`, `art.library` defaults to `Art/`, and a local
+`themes/<theme>/` directory wins over bundled themes.
 
-Use `papercrown manifest` whenever a book config changes. The manifest shows exactly
-which files, chapters, themes, and art references Paper Crown resolved before
-you spend time rendering.
+Use `papercrown manifest` after changing a book config. It is the fastest way
+to confirm source files, chapter slugs, output paths, art references, and theme
+resolution.
 
-## How to Adapt It
+## Project Defaults
 
-Book-level pages are ordinary content items. Put them before `kind: toc` for
-front matter, or after the main chapters for back matter:
+Put build defaults in `papercrown.yaml`:
 
 ```yaml
-# vault/Legal & Support.md
-# Legal & Support
+book: book.yml
 
-This book is an independent product.
+build:
+  target: pdf
+  scope: book
+  profile: print
+  jobs: auto
+  pagination: report
+  wear: auto
+```
 
-# book.yml
+CLI options override project defaults for one run. Book-local `build:` blocks
+are no longer supported.
+
+## Contents
+
+Content items are ordered. Most books use `toc`, `file`, `sequence`, `group`,
+and `generated`:
+
+```yaml
 contents:
-  - style: legal
-    title: Legal & Support
-    source: rules:Legal & Support.md
-  - kind: toc
-  - title: Primer
-    source: rules:Primer.md
   - kind: generated
-    type: appendix-index
-    title: Game Object Index
+    type: title-page
+    title: Title Page
+  - kind: toc
+    depth: 3
+  - kind: file
+    title: Primer
+    source: rules:Primer.md
+  - kind: sequence
+    title: Playing the Game
+    sources:
+      - rules:Core Rules.md
+      - source: rules:Examples.md
+        title: Examples
+        filler: false
 ```
 
-Computed pages, such as `appendix-index`, are explicit `kind: generated` items
-in the same `contents:` stream.
+Other supported shapes are `folder`, `catalog`, `composite`,
+`classes-catalog`, and nested `group` entries. Use them when they match the
+book structure; otherwise a small list of `file` and `sequence` entries is
+easier to maintain.
 
-Art lives under `Art/` by default and follows the [art contract](Art.md). Most
-books use three art APIs:
+## Art
 
-- Markdown images for ordinary inline art: `![](map-station.png)`.
-- CSS-declared fixed labels for book-specific visual treatments:
-  `styles/power-header.css` styles `power-header-*.png`.
-- Top-level `art.placements` when Paper Crown should inject dynamic art without
-  editing source Markdown.
+Most explicit in-flow art belongs in Markdown:
 
-The art contract defines canonical folders, filename shapes, automatic filler
-roles, and the checks performed by `papercrown art audit`.
+Use normal Markdown image syntax, with optional Pandoc classes such as
+`{.wide}` when the theme provides a matching treatment.
 
-Most explicit in-flow art belongs in Markdown next to the content it supports:
-
-```markdown
-![Power header](power-header-void-engine.png){.wide}
-```
-
-Use top-level YAML placements only when the source Markdown should stay
-untouched or the art is managed by Paper Crown's dynamic systems:
+Use book-config placements when Paper Crown should inject the art:
 
 ```yaml
 art:
   placements:
     - id: character-creation-opening
-      image: splash-section-general-boarding-queue-bottom-01.png
+      image: splashes/splash-section-general-boarding-queue-01.png
       target: after-heading
       chapter: character-creation
       heading: Why are you out here?
       placement: bottom-half
 ```
 
-Images render without filters or blend modes by default. Use
-`art.treatments` only when a role needs an intentional treatment such as
-`ink-blend` for decorative line art.
-
-## How It Works
-
-Paper Crown loads the book config into typed models, resolves each vault alias to a
-real folder, then turns the chapter list into a render manifest. The manifest
-is the handoff between project configuration and the assembly/render pipeline.
-
-Automatic filler policy usually lives in project defaults in `papercrown.yaml`.
-Source Markdown may opt out of a local marker, but project/book configuration
-decides which marker families exist, which slots they use, and which filler
-shapes are eligible for those slots.
-
-```yaml
-art:
-  fillers:
-    enabled: true
-    folder: papercrown-docs
-    slots:
-      chapter-end:
-        min_space: 0.75in
-        max_space: 6.00in
-        shapes: [tailpiece, spot, small-wide, plate, page-finish]
-    assets:
-      - id: bridge-plate
-        image: fillers/plate/filler-plate-general-bridge-01.png
-        shape: plate
-        height: 3.25in
-```
-
-If `art.fillers.markers` is omitted, Paper Crown uses the default marker policy.
-Set a marker family such as `terminal`, `source_boundary`, or `subclass` to
-`false` to disable it, or use `headings: []` to disable generated heading
-markers.
-
-Chapters can disable generated filler markers with `art.fillers: false`.
-Individual items inside a `sequence` can disable the source-boundary marker
-after that source with `filler: false`.
-
-Common chapter shapes:
-
-- `file`: one Markdown source becomes one chapter.
-- `sequence`: several Markdown sources are assembled in order.
-- `folder`, `catalog`, and related kinds support larger structured books.
+Use `art.treatments` only when a whole role needs an intentional visual
+treatment, such as `ink-blend` for reusable line ornaments.
 
 ## Compact Field Reference
 
 | Field | Purpose |
 | --- | --- |
-| `contents` inline title item | Book identity, cover title text, and default output name |
-| `theme`, `theme_options`, `art.treatments` | Visual system and opt-in image role treatments |
-| `art` | Art library, cover settings, dynamic placements, fillers, wear, ornaments, and treatments |
-| `vaults`, `vault_overlay` | Optional named Markdown roots and fallback search order |
-| `output_dir`, `output_name`, `cache_dir` | Optional caller-owned output and cache overrides |
-| `art.cover` | Optional cover settings; cover art can be inferred from canonical Art filenames |
-| `contents` | Ordered book structure using `toc`, `generated`, `file`, `sequence`, `folder`, `catalog`, `classes-catalog`, or `group` |
-| `contents[].art` | Content-local divider, ornament, filler opt-out, placement, and child-catalog art settings |
+| `title`, `subtitle`, `cover_eyebrow`, `cover_footer` | Book identity and cover text |
+| `metadata` | Authors, version, license, description, keywords, and credits |
+| `contents` | Ordered book structure and generated pages |
+| `vaults`, `vault_overlay` | Named Markdown roots and fallback search order |
+| `theme`, `theme_dir`, `theme_options` | Bundled or local theme selection and CSS variables |
+| `art` | Library, cover, placements, fillers, wear, ornaments, and treatments |
+| `output_dir`, `output_name`, `cache_dir` | Generated output and cache locations |
+| `extends`, `include_contents`, `include_vaults` | Shared recipe fragments for larger projects |
 
-For larger projects, book configs can also share structure with `extends`,
-`include_contents`, and `include_vaults`.
+## Includes
 
-Class catalogs can use role-based art patterns:
+Use includes when several books share vault declarations or front/back matter:
 
 ```yaml
-art:
-  children:
-    divider_pattern: classes/dividers/class-{slug}.png
-    opening_spot_pattern: classes/spots/spot-class-{slug}.png
+extends: shared/base-book.yml
+include_vaults: shared/vaults.yml
+include_contents:
+  - shared/legal.yml
+  - shared/license.yml
 ```
+
+Local fields override inherited fields. Included contents are prepended to the
+local `contents:` list.

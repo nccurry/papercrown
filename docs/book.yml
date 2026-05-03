@@ -122,83 +122,83 @@ contents:
   - kind: toc
     title: Contents
   - kind: file
-    style: overview
+    style: fantasy
     title: Overview
     slug: overview
-    eyebrow: Documentation
+    eyebrow: Fantasy Primer
     art:
-      divider: papercrown-docs/dividers/divider-overview-docs-crown.png
+      divider: papercrown-docs/classes/dividers/class-overview-title-plate.jpg
     toc_depth: 3
     source: docs:Overview.md
   - kind: file
-    style: launch
+    style: space-opera
     title: Quick Start
     slug: quick-start
-    eyebrow: First Build
+    eyebrow: Launch Sequence
     art:
-      divider: papercrown-docs/dividers/divider-quick-start-launch-checklist.png
+      divider: papercrown-docs/classes/dividers/class-quick-start-title-plate.jpg
     toc_depth: 3
     source: docs:Quick Start.md
   - kind: file
-    style: codex
+    style: comic-book
     title: Architecture
     slug: architecture
-    eyebrow: System Model
+    eyebrow: Panel Layout
     art:
-      divider: papercrown-docs/dividers/divider-overview-fantasy-codex.png
+      divider: papercrown-docs/classes/dividers/class-architecture-title-plate.jpg
     toc_depth: 3
     source: docs:Architecture.md
   - kind: file
-    style: casefile
+    style: occult-casefile
     title: Book Configs
     slug: book-configs
-    eyebrow: Book Contract
+    eyebrow: Binding Contract
     art:
-      divider: papercrown-docs/dividers/divider-authoring-occult-casefile.png
+      divider: papercrown-docs/classes/dividers/class-book-configs-title-plate.jpg
     toc_depth: 3
     source: docs:Book Configs.md
   - kind: file
-    style: vault
+    style: hexcrawl
     title: Vaults and Markdown
     slug: vaults-and-markdown
-    eyebrow: Content Sources
+    eyebrow: Map and Notes
     art:
-      divider: papercrown-docs/dividers/divider-vaults-markdown-archive.png
+      divider: papercrown-docs/classes/dividers/class-vaults-markdown-title-plate.jpg
     toc_depth: 3
     source: docs:Vaults and Markdown.md
   - kind: file
-    style: theme-lab
+    style: zine-lab
     title: Themes
     slug: themes
-    eyebrow: Visual System
+    eyebrow: Paste-Up Lab
     art:
-      divider: papercrown-docs/dividers/divider-themes-gallery-spread.png
+      divider: papercrown-docs/classes/dividers/class-themes-title-plate.jpg
     toc_depth: 3
     source: docs:Themes.md
   - kind: file
-    style: casefile
+    style: bestiary-gallery
     title: Art
     slug: art
-    eyebrow: Asset Library
+    eyebrow: Field Plates
     art:
-      divider: papercrown-docs/dividers/divider-authoring-occult-casefile.png
+      divider: papercrown-docs/classes/dividers/class-art-title-plate.jpg
     toc_depth: 3
     source: docs:Art.md
   - kind: file
-    style: field-guide
+    style: steampunk
     title: Builds and Publishing
     slug: builds-and-publishing
-    eyebrow: Output Routes
+    eyebrow: Pressworks
     art:
-      divider: papercrown-docs/dividers/divider-maintaining-industrial-guide.png
+      divider: papercrown-docs/classes/dividers/class-builds-publishing-title-plate.jpg
     toc_depth: 3
     source: docs:Builds and Publishing.md
   - kind: file
-    style: launch
+    style: cyberpunk
     title: Developer Guide
     slug: developer-guide
-    eyebrow: Repository Workflows
+    eyebrow: Console Ops
     art:
-      divider: papercrown-docs/dividers/divider-setup-launch-manual.png
+      divider: papercrown-docs/classes/dividers/class-developer-guide-title-plate.jpg
     toc_depth: 3
     source: docs:Developer Guide.md

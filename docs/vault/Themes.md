@@ -1,111 +1,87 @@
 # Themes
 
 :::: {.flourish-note .flourish-theme}
-Themes control typography, page furniture, colors, and layout. They are the
-visual system that turns the same assembled Markdown into a clean SRD, a
-parchment book, an industrial manual, a zine, or a custom publication.
+Themes control typography, page furniture, colors, component styling, and web
+layout. The same Markdown can read as a clean SRD, field manual, zine, occult
+casefile, or custom book.
 ::::
 
-Paper Crown ships with six bundled themes: clean SRD, industrial, parchment
-classic, occult casefile, pulp adventure, and risograph zine.
+Paper Crown ships with `clean-srd`, `industrial`, `parchment-classic`,
+`occult-casefile`, `pulp-adventure`, and `risograph-zine`.
 
 <div class="art-rule art-rule-theme" aria-hidden="true"></div>
 
 :::: {.sidebar #theme-pack title="Theme Pack" tags="docs,theme"}
 ### Theme Pack
 
-A theme is a directory with `theme.yaml`, one or more CSS files, optional
-template overrides, and optional assets. Local themes let a book define its own
-visual language without changing Paper Crown itself.
+A theme is a directory with `theme.yaml`, declared CSS files, optional assets,
+optional art-label CSS, and an optional template.
 ::::
 
 ## How to Use It
 
-List bundled themes:
+List and copy themes:
 
 ```sh
 papercrown themes list
-```
-
-Copy a bundled theme into a project for customization:
-
-```sh
 papercrown themes copy clean-srd themes/my-clean-srd
 ```
 
-Then point a book config at the custom theme:
+Select the local theme in `book.yml`:
 
 ```yaml
-theme_dir: ../themes
 theme: my-clean-srd
 ```
 
-Theme assets are treated as render inputs. Changing theme CSS, templates, or
-resources invalidates the build cache for affected outputs.
+Set `theme_dir` only when themes live somewhere other than the project
+`themes/` directory.
 
 ## How to Adapt It
 
-Start with tokens when the book only needs a different palette or typography.
-Move into component CSS when the layout itself needs a different treatment for
-cover pages, section dividers, tables, code, callouts, typed TTRPG blocks,
-generated matter, or web navigation.
+Start with tokens when the book only needs a palette or type change. Move into
+component CSS when covers, dividers, tables, code, callouts, TTRPG widgets, or
+web navigation need their own treatment.
 
-Theme packs usually override tokens and a few components in their own CSS. The
-theme declares its source files in `theme.yaml`; Paper Crown loads those files
-in order and does not infer filenames.
+`theme.yaml` declares load order:
 
-## How It Works
+```yaml
+name: My Clean SRD
+css:
+  - tokens.css
+  - components.css
+template: book.html
+```
 
-Paper Crown's shared book foundation lives in ordered modules under
-`resources/styles/core/`. Those core modules provide fonts, page rules,
-document typography, art placement, TTRPG components, book structure,
-generated matter, and web/print fixes.
-
-At render time, Paper Crown layers styles in this order:
+The renderer layers styles in this order:
 
 ```text
 Paper Crown core CSS modules
 selected theme CSS files
-book config theme_options
+book theme_options
+role image-treatment CSS
 ```
 
-Web export writes that stack into a generated `styles/book.css` bundle in the
-output folder. Theme authors edit their own declared theme files, not the
-generated bundle.
+Web export writes the stack into `web/styles/book.css`.
 
 ## Local Theme Example
 
-This documentation is rendered with its own local theme. The book config
-selects a theme directory instead of using a bundled theme:
+This site uses a local `papercrown-docs` theme. Its book config only needs:
 
 ```yaml
-theme_dir: ../themes
 theme: papercrown-docs
 ```
 
-The local theme declares its CSS files in order:
+Because the theme lives at `docs/themes/papercrown-docs`, Paper Crown finds it
+before looking at bundled themes.
+
+Theme options become CSS custom properties:
 
 ```yaml
-name: Paper Crown Docs
-css:
-  - tokens.css
-  - components.css
-  - polish.css
-template: book.html
+theme_options:
+  accent: "#8f2d5d"
+  paper: "#fff8e8"
 ```
 
-The first file sets broad tokens:
-
-```css
-:root {
-  --paper: #fbf6e9;
-  --ink: #201914;
-  --accent: #9a3f2b;
-  --accent-deep: #5f2b68;
-}
-```
-
-The component layer handles the docs-specific book treatment, and the later
-polish file adds narrow adjustments without turning the theme into one giant
-stylesheet. That is the intended pattern for custom themes: start with tokens,
-then add component overrides where the book needs its own voice.
+Book-specific art labels are CSS files too. A project file such as
+`styles/power-header.css` makes filenames beginning with `power-header-` render
+with `.power-header` and `.art-role-power-header`.

@@ -1,26 +1,34 @@
 # Overview
 
 :::: {.flourish-note .flourish-crown}
-Paper Crown builds polished tabletop RPG PDFs and static web exports from
-Markdown. Your source stays in ordinary folders, your book config describes the
-book, and your theme gives the finished output its visual voice.
+Paper Crown turns Markdown vaults into polished tabletop RPG books. The same
+source can become print-ready PDFs, split section PDFs, or a static web site
+ready for GitHub Pages.
 ::::
 
-This documentation is also a Paper Crown book. The public site is rendered by
-Paper Crown, so the chapter dividers, callouts, art, theme overrides, generated
-navigation, and static HTML are the same systems available to your own books.
+This documentation is also a Paper Crown book. Its chapters, dividers, callouts,
+art, table of contents, and static HTML are produced by the framework it
+documents.
 
 :::: {.sidebar #docs-as-book title="Docs As A Book" tags="docs,overview"}
 ### Docs As A Book
 
-Read this site as documentation and as a working example: Markdown files are
-assembled by a book config, styled by a local theme, decorated with an art
-library, and exported as static web pages.
+Read the site as a guide and as a working sample: `docs/book.yml` assembles the
+vault, `docs/themes/papercrown-docs` styles it, and `docs/assets` supplies the
+art library.
 ::::
 
-The fastest path is to build the sample project in [[Quick Start]], then use
-[[Architecture]] to understand how vaults, book configs, themes, art, and
-render outputs fit together. The rest of the guide follows those same pieces
-in more detail.
+Paper Crown has five pieces:
+
+| Piece | You provide | Paper Crown does |
+| --- | --- | --- |
+| Vault | Markdown, images, and links | Resolves source files and embeds |
+| Book config | Title, contents, theme, art, and output names | Builds a manifest |
+| Project config | Build defaults in `papercrown.yaml` | Applies repeatable CLI defaults |
+| Theme | CSS, templates, fonts, and assets | Shapes print and web output |
+| Build | A CLI command | Writes PDFs, static HTML, caches, and reports |
+
+Start with [[Quick Start]], then use [[Book Configs]], [[Vaults and Markdown]],
+[[Themes]], and [[Art]] when you need one layer in more detail.
 
 <div class="art-rule art-rule-crown" aria-hidden="true"></div>

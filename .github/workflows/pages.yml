@@ -40,7 +40,7 @@ jobs:
       - uses: actions/cache@v4
         with:
           path: 'docs/site/Paper Crown/papercrown-docs/cache'
-          key: docs-cache-${{ hashFiles('versions.env', 'docs/recipes/papercrown-docs.yaml', 'docs/vault/**', 'docs/themes/**', 'docs/assets/**', 'src/papercrown/**') }}
+          key: docs-cache-${{ hashFiles('versions.env', 'docs/book.yml', 'docs/papercrown.yaml', 'docs/vault/**', 'docs/themes/**', 'docs/assets/**', 'src/papercrown/**') }}
           restore-keys: |
             docs-cache-
       - name: Log in to GHCR
