@@ -859,6 +859,10 @@ body.mode-web.paper-anthology .splash-img {
   max-height: 30rem;
 }
 
+body.mode-web.paper-anthology .splash-bottom-half {
+  min-height: 0;
+}
+
 body.mode-web.paper-anthology #splash-product-model-codex-route,
 body.mode-web.paper-anthology #splash-repository-bootstrap-launch-panel,
 body.mode-web.paper-anthology #splash-compact-reference-casefile-ritual {
