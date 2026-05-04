@@ -529,7 +529,7 @@ class TestAssembleChapterMarkdown:
         )
         out = assembly.assemble_chapter_markdown(ch)
         assert ".class-opening-spot .art-right .art-spot" in out
-        assert f"![](<{spot.as_posix()}>)" in out
+        assert f"![Class spot illustration for A.](<{spot.as_posix()}>)" in out
         assert "old-spot.png" not in out
         assert out.index(".class-opening-spot") < out.index("intro")
 
@@ -635,11 +635,13 @@ class TestAssembleChapterMarkdown:
 
         assert ".section-divider-frame-art" in out
         assert (
-            "![](<frame-baseline-human.png>)"
+            "![Section divider illustration for Baseline Human.]"
+            "(<frame-baseline-human.png>)"
             "{.section-divider-art .section-divider-frame-art}" in out
         )
         assert (
-            "![](<frame-heavyworlder-native.png>)"
+            "![Section divider illustration for Heavyworlder Native.]"
+            "(<frame-heavyworlder-native.png>)"
             "{.section-divider-art .section-divider-frame-art}" in out
         )
         assert ".art-frame" not in out
@@ -870,7 +872,7 @@ class TestAssembleChapterMarkdown:
         out = assembly.assemble_chapter_markdown(ch)
         assert "\n---\n" not in out
         assert ".ornament-break" in out
-        assert f"![](<{ornament.as_posix()}>)" in out
+        assert f"![Break ornament: break.](<{ornament.as_posix()}>)" in out
 
     def test_tailpiece_can_render_as_explicit_art(self, tmp_path):
         f = _write(tmp_path / "a.md", "# A\nbody\n")
@@ -888,7 +890,7 @@ class TestAssembleChapterMarkdown:
 
         assert ".ornament-tailpiece" not in default
         assert ".ornament-tailpiece" in explicit
-        assert f"![](<{tailpiece.as_posix()}>)" in explicit
+        assert f"![Tailpiece ornament: tail.](<{tailpiece.as_posix()}>)" in explicit
         assert explicit.index("body") < explicit.index(".ornament-tailpiece")
 
     def test_splash_blocks_insert_at_chapter_start_and_after_heading(self, tmp_path):

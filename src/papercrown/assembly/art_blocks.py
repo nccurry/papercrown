@@ -8,6 +8,15 @@ from papercrown.assembly.headings import attribute_value
 from papercrown.project.manifest import ChapterFillerSlot, Splash
 
 
+def alt_text_from_path(path: Path, *, role: str = "Illustration") -> str:
+    """Return readable fallback alt text for generated art blocks."""
+    label = path.stem.replace("_", " ").replace("-", " ").strip()
+    label = " ".join(label.split())
+    if label:
+        return f"{role}: {label}."
+    return f"{role}."
+
+
 def render_back_cover_splashes(splashes: list[Splash] | None) -> str:
     """Render back-cover splash placements as terminal cover pages."""
     return "\n\n".join(
@@ -46,6 +55,7 @@ def render_splash_block(splash: Splash) -> str:
     """Render an in-flow splash art block."""
     if splash.art_path is None:
         return ""
+    alt = alt_text_from_path(splash.art_path, role="Splash illustration")
     placement_class = {
         "corner-left": ".splash-corner-left",
         "corner-right": ".splash-corner-right",
@@ -53,7 +63,7 @@ def render_splash_block(splash: Splash) -> str:
     }.get(splash.placement, ".splash-bottom-half")
     return (
         f":::: {{.splash-art {placement_class} #splash-{splash.id}}}\n"
-        f"![](<{splash.art_path.as_posix()}>){{.splash-img}}\n"
+        f"![{alt}](<{splash.art_path.as_posix()}>){{.splash-img}}\n"
         "::::"
     )
 
@@ -62,14 +72,17 @@ def render_splash_page(splash: Splash) -> str:
     """Render a full-page book splash, currently used for the back cover."""
     if splash.art_path is None:
         return ""
+    alt = alt_text_from_path(splash.art_path, role="Back-cover illustration")
     placement_class = ".splash-back-cover .cover-back-page"
     return (
         f":::: {{.splash-page {placement_class} #splash-{splash.id}}}\n\n"
-        f"![](<{splash.art_path.as_posix()}>){{.splash-page-art .cover-back-art}}\n\n"
+        f"![{alt}](<{splash.art_path.as_posix()}>)"
+        "{.splash-page-art .cover-back-art}\n\n"
         "::::"
     )
 
 
-def render_image_block(path: Path, *, classes: str) -> str:
+def render_image_block(path: Path, *, classes: str, alt: str | None = None) -> str:
     """Render a markdown image wrapped in a Pandoc fenced div."""
-    return f":::: {{{classes}}}\n![](<{path.as_posix()}>)\n::::"
+    resolved_alt = alt or alt_text_from_path(path)
+    return f":::: {{{classes}}}\n![{resolved_alt}](<{path.as_posix()}>)\n::::"

@@ -573,9 +573,10 @@ def _render_section_divider(
 
     art_block = ""
     if include_art and art_src:
+        alt = _generated_art_alt("Section divider illustration", title)
         art_block = (
             "::: section-divider-art-wrap\n"
-            f"![]({_markdown_image_target(art_src)})"
+            f"![{alt}]({_markdown_image_target(art_src)})"
             "{.section-divider-art .section-divider-frame-art}\n"
             ":::\n\n"
         )
@@ -589,9 +590,10 @@ def _render_section_divider(
         # The angle brackets let the path contain spaces without
         # URL-encoding; forward slashes keep Pandoc's path parser happy.
         art_path = chapter.art_path.as_posix()
+        alt = _generated_art_alt("Section divider illustration", title)
         art_block = (
             "::: section-divider-art-wrap\n"
-            f"![](<{art_path}>){{.section-divider-art}}\n"
+            f"![{alt}](<{art_path}>){{.section-divider-art}}\n"
             ":::\n\n"
         )
 
@@ -702,6 +704,7 @@ def _inject_class_spot(text: str, chapter: Chapter) -> str:
     block = _art_blocks.render_image_block(
         chapter.spot_art_path,
         classes=".class-opening-spot .art-right .art-spot",
+        alt=_generated_art_alt("Class spot illustration", chapter.title),
     )
     return f"{prefix}\n\n{block}\n\n{suffix}".rstrip() + "\n"
 
@@ -1051,6 +1054,10 @@ def _inject_headpiece(text: str, headpiece_path: Path | None) -> str:
     block = _art_blocks.render_image_block(
         headpiece_path,
         classes=".ornament-headpiece",
+        alt=_art_blocks.alt_text_from_path(
+            headpiece_path,
+            role="Headpiece ornament",
+        ),
     )
     return _insert_block_at_line(text, insert_at, block)
 
@@ -1065,6 +1072,10 @@ def _replace_thematic_breaks_with_ornament(
     block = _art_blocks.render_image_block(
         break_ornament_path,
         classes=".ornament-break",
+        alt=_art_blocks.alt_text_from_path(
+            break_ornament_path,
+            role="Break ornament",
+        ),
     )
     out: list[str] = []
     in_code = False
@@ -1088,6 +1099,10 @@ def _append_tailpiece(text: str, tailpiece_path: Path | None) -> str:
     block = _art_blocks.render_image_block(
         tailpiece_path,
         classes=".ornament-tailpiece",
+        alt=_art_blocks.alt_text_from_path(
+            tailpiece_path,
+            role="Tailpiece ornament",
+        ),
     )
     return f"{text.rstrip()}\n\n{block}\n"
 
@@ -1246,6 +1261,12 @@ def _markdown_image_target(src: str) -> str:
     if re.match(r"^[A-Za-z][A-Za-z0-9+.-]*:", value):
         return value
     return f"<{value}>"
+
+
+def _generated_art_alt(role: str, title: str) -> str:
+    """Return escaped alt text for generated chapter and section art."""
+    clean_title = _headings.plain_heading_title(title).strip() or title.strip()
+    return _headings.markdown_link_text(f"{role} for {clean_title}.")
 
 
 def _after_leading_h1_index(text: str) -> int | None:
