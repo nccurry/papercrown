@@ -161,10 +161,11 @@ def make_base_context(
         title_prefix=recipe.title,
     )
     image_settings = images.image_profile_settings(image_profile)
+    optimize_pdf_images = image_settings.final_pdf_optimize_images
     ctx.pdf_settings = pipeline.PdfRenderSettings(
-        optimize_images=True,
-        dpi=image_settings.target_dpi,
-        jpeg_quality=image_settings.jpeg_quality,
+        optimize_images=optimize_pdf_images,
+        dpi=image_settings.target_dpi if optimize_pdf_images else None,
+        jpeg_quality=image_settings.jpeg_quality if optimize_pdf_images else None,
     )
     ctx.image_profile = image_profile
     ctx.clean_pdf = clean_pdf and not _is_fast_draft(profile, draft_mode)

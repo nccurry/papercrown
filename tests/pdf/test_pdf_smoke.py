@@ -458,6 +458,51 @@ def test_pdf_render_settings_cap_oversized_embedded_image(tmp_path):
     assert max(max(size) for size in image_sizes) <= 200
 
 
+def test_splash_bottom_half_figure_embeds_image(tmp_path):
+    """Pandoc renders standalone images as figures; splash flex art must keep width."""
+    try:
+        import fitz
+    except ImportError:
+        pytest.skip("PyMuPDF required for embedded image assertions")
+
+    image_path = tmp_path / "splash.png"
+    Image.new("LA", (180, 54), color=(128, 255)).save(image_path)
+    src = quote(image_path.as_posix(), safe="/:")
+
+    out_pdf = tmp_path / "splash.pdf"
+    ctx = pipeline.RenderContext(
+        pandoc="pandoc",
+        weasyprint="weasyprint",
+        template=TEMPLATE_FILE,
+        css_files=list(CORE_CSS_FILES),
+        lua_filters=[],
+        resource_paths=[],
+        pdf_settings=pipeline.PdfRenderSettings(optimize_images=False),
+    )
+    pipeline.render_html_to_pdf(
+        (
+            '<!doctype html><html><body class="mode-print">'
+            '<div class="splash-art splash-bottom-half">'
+            f'<figure><img src="{src}" class="splash-img" /></figure>'
+            "</div></body></html>"
+        ),
+        out_pdf,
+        ctx,
+    )
+
+    doc = fitz.open(out_pdf)
+    try:
+        image_sizes: list[tuple[int, int]] = []
+        for page in doc:
+            for raw_image in page.get_images(full=True):
+                extracted = doc.extract_image(raw_image[0])
+                image_sizes.append((extracted["width"], extracted["height"]))
+    finally:
+        doc.close()
+
+    assert (180, 54) in image_sizes
+
+
 def test_pagination_report_and_fix_mode_render(tmp_path):
     css = tmp_path / "book.css"
     css.write_text(

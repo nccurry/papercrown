@@ -23,19 +23,34 @@ def test_diagnose_image_reports_missing_file(tmp_path):
     assert diagnostics[0].code == "image.missing"
 
 
-def test_print_profile_writes_cached_high_quality_jpeg(tmp_path):
+def test_print_profile_preserves_source_when_resize_is_unneeded(tmp_path):
     image = tmp_path / "cover.png"
     cache = tmp_path / "cache"
     Image.new("RGB", (10, 10), color="red").save(image)
 
     optimized = optimize_image(image, profile=OutputProfile.PRINT, cache_root=cache)
 
+    assert optimized == image.resolve()
+
+
+def test_print_profile_resizes_png_losslessly_when_needed(tmp_path):
+    image = tmp_path / "cover.png"
+    cache = tmp_path / "cache"
+    Image.new("RGB", (1000, 1000), color="red").save(image)
+
+    optimized = optimize_image(
+        image,
+        profile=OutputProfile.PRINT,
+        cache_root=cache,
+        max_long_edge=200,
+    )
+
     assert optimized != image.resolve()
-    assert optimized.suffix == ".jpg"
+    assert optimized.suffix == ".png"
     assert optimized.is_file()
     assert "print" in optimized.parts
     with Image.open(optimized) as result:
-        assert result.size == (10, 10)
+        assert result.size == (200, 200)
 
 
 def test_digital_profile_writes_cached_resized_copy(tmp_path):

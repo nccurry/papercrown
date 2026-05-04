@@ -36,6 +36,9 @@ class ImageOptimizationSettings:
     max_long_edge: int | None
     jpeg_quality: int
     jpeg_subsampling: int = 2
+    preserve_source_when_possible: bool = False
+    lossless_non_jpeg: bool = False
+    final_pdf_optimize_images: bool = True
 
     def with_max_long_edge(
         self,
@@ -47,6 +50,9 @@ class ImageOptimizationSettings:
             max_long_edge=max_long_edge,
             jpeg_quality=self.jpeg_quality,
             jpeg_subsampling=self.jpeg_subsampling,
+            preserve_source_when_possible=self.preserve_source_when_possible,
+            lossless_non_jpeg=self.lossless_non_jpeg,
+            final_pdf_optimize_images=self.final_pdf_optimize_images,
         )
 
     def fingerprint_payload(self) -> dict[str, int | str | None]:
@@ -57,6 +63,9 @@ class ImageOptimizationSettings:
             "max_long_edge": self.max_long_edge,
             "jpeg_quality": self.jpeg_quality,
             "jpeg_subsampling": self.jpeg_subsampling,
+            "preserve_source_when_possible": self.preserve_source_when_possible,
+            "lossless_non_jpeg": self.lossless_non_jpeg,
+            "final_pdf_optimize_images": self.final_pdf_optimize_images,
         }
 
 
@@ -71,7 +80,7 @@ class ImageOptimizationSession:
 
 
 # Cache-busting version for optimized image output fingerprints.
-IMAGE_OPTIMIZATION_VERSION = "image-optimization-v2"
+IMAGE_OPTIMIZATION_VERSION = "image-optimization-v3"
 # Letter page long edge used to derive profile-specific pixel caps.
 LETTER_LONG_EDGE_IN = 11.0
 
@@ -81,8 +90,11 @@ IMAGE_PROFILES: dict[str, ImageOptimizationSettings] = {
     OutputProfile.PRINT.value: ImageOptimizationSettings(
         target_dpi=300,
         max_long_edge=round(LETTER_LONG_EDGE_IN * 300),
-        jpeg_quality=95,
+        jpeg_quality=100,
         jpeg_subsampling=0,
+        preserve_source_when_possible=True,
+        lossless_non_jpeg=True,
+        final_pdf_optimize_images=False,
     ),
     OutputProfile.DIGITAL.value: ImageOptimizationSettings(
         target_dpi=220,
@@ -205,8 +217,18 @@ def optimize_image(
     try:
         with Image.open(source) as image:
             image.load()
-            has_alpha = _has_alpha(image)
-            extension = ".png" if has_alpha else ".jpg"
+            transposed = ImageOps.exif_transpose(image)
+            if settings.preserve_source_when_possible and not _needs_resize(
+                transposed,
+                settings.max_long_edge,
+            ):
+                resolved = source.resolve()
+                if session is not None:
+                    session.optimized_paths[session_key] = resolved
+                return resolved
+
+            has_alpha = _has_alpha(transposed)
+            extension = _optimized_extension(source, has_alpha, settings)
             dest = output_dir / f"{source.stem}-{digest[:12]}{extension}"
             if dest.is_file():
                 resolved = dest.resolve()
@@ -216,10 +238,12 @@ def optimize_image(
 
             optimized = _resized_image(image, settings.max_long_edge)
             temp = _temp_output_path(dest)
-            if has_alpha:
-                if optimized.mode not in {"RGBA", "LA"}:
+            if extension == ".png":
+                if has_alpha and optimized.mode not in {"RGBA", "LA"}:
                     optimized = optimized.convert("RGBA")
-                optimized.save(temp, format="PNG", optimize=True)
+                elif not has_alpha and optimized.mode not in {"RGB", "L", "P"}:
+                    optimized = optimized.convert("RGB")
+                optimized.save(temp, format="PNG", optimize=True, compress_level=6)
             else:
                 optimized = optimized.convert("RGB")
                 optimized.save(
@@ -390,6 +414,9 @@ def _image_cache_key(
         str(settings.max_long_edge),
         str(settings.jpeg_quality),
         str(settings.jpeg_subsampling),
+        str(settings.preserve_source_when_possible),
+        str(settings.lossless_non_jpeg),
+        str(settings.final_pdf_optimize_images),
     ):
         digest.update(value.encode("utf-8"))
         digest.update(b"\0")
@@ -410,6 +437,26 @@ def _has_alpha(image: Image.Image) -> bool:
         or mode.endswith("A")
         or (mode == "P" and "transparency" in image.info)
     )
+
+
+def _needs_resize(image: Image.Image, max_long_edge: int | None) -> bool:
+    """Return whether an image exceeds the requested long-edge cap."""
+    if max_long_edge is None:
+        return False
+    return max(image.size) > max_long_edge
+
+
+def _optimized_extension(
+    source: Path,
+    has_alpha: bool,
+    settings: ImageOptimizationSettings,
+) -> str:
+    """Return the optimized cache extension for an image and profile."""
+    if has_alpha:
+        return ".png"
+    if settings.lossless_non_jpeg and source.suffix.lower() not in {".jpg", ".jpeg"}:
+        return ".png"
+    return ".jpg"
 
 
 def _resized_image(image: Image.Image, max_long_edge: int | None) -> Image.Image:

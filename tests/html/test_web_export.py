@@ -140,7 +140,7 @@ def test_static_web_export_writes_self_contained_tree(tmp_path, require_pandoc):
     tailpiece_img = next(
         img for img in re.findall(r"<img\b[^>]*>", html) if "tail-" in img
     )
-    assert 'alt=""' in tailpiece_img
+    assert 'alt="Tailpiece ornament: tail."' in tailpiece_img
 
     for ref in _local_refs(html):
         assert not Path(ref).is_absolute()

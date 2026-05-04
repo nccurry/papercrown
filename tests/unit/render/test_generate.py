@@ -119,6 +119,57 @@ def test_book_context_leaves_pandoc_toc_disabled():
     assert ctx.include_toc is False
 
 
+def test_print_book_context_preserves_pdf_image_quality():
+    recipe = SimpleNamespace(
+        title="B",
+        subtitle=None,
+        cover_eyebrow=None,
+        cover_footer=None,
+        cover=SimpleNamespace(enabled=False, art=None),
+        art_dir=Path.cwd(),
+    )
+    manifest = SimpleNamespace(chapters=[Chapter(title="Foo", slug="foo")])
+    tools = export_mod.Tools(
+        pandoc="pandoc",
+        obsidian_export="obsidian-export",
+        weasyprint="weasyprint",
+    )
+
+    ctx = build.context_for_book(tools, recipe, manifest, profile=OutputProfile.PRINT)
+
+    assert ctx.pdf_settings.optimize_images is False
+    assert ctx.pdf_settings.dpi is None
+    assert ctx.pdf_settings.jpeg_quality is None
+
+
+def test_digital_book_context_keeps_pdf_image_optimization():
+    recipe = SimpleNamespace(
+        title="B",
+        subtitle=None,
+        cover_eyebrow=None,
+        cover_footer=None,
+        cover=SimpleNamespace(enabled=False, art=None),
+        art_dir=Path.cwd(),
+    )
+    manifest = SimpleNamespace(chapters=[Chapter(title="Foo", slug="foo")])
+    tools = export_mod.Tools(
+        pandoc="pandoc",
+        obsidian_export="obsidian-export",
+        weasyprint="weasyprint",
+    )
+
+    ctx = build.context_for_book(
+        tools,
+        recipe,
+        manifest,
+        profile=OutputProfile.DIGITAL,
+    )
+
+    assert ctx.pdf_settings.optimize_images is True
+    assert ctx.pdf_settings.dpi == 220
+    assert ctx.pdf_settings.jpeg_quality == 92
+
+
 def test_book_context_resolves_folio_ornament(tmp_path):
     folio = tmp_path / "ornaments" / "folio.png"
     folio.parent.mkdir()
@@ -1048,8 +1099,7 @@ def test_draft_page_damage_catalog_is_boosted_for_inspection(tmp_path):
     assert print_catalog.enabled == catalog.enabled
     assert print_catalog.seed == catalog.seed
     assert print_catalog.density == catalog.density
-    assert print_catalog.assets[0].art_path != asset_path
-    assert print_catalog.assets[0].art_path.is_file()
+    assert print_catalog.assets[0].art_path == asset_path.resolve()
     assert draft_catalog is not None
     assert draft_catalog.density == 1.0
     assert draft_catalog.max_assets_per_page == 4

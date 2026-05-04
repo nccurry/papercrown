@@ -353,7 +353,13 @@ figcaption {
   width: 100%;
 }
 
+.splash-art figure {
+  margin: 0;
+  width: 100%;
+}
+
 .splash-img {
+  display: block;
   width: 100%;
   height: auto;
   object-fit: contain;
